@@ -138,7 +138,7 @@ export default function SettingsPage() {
                 step="0.5"
                 min="0.5"
                 max="10000"
-                className="form-input pl-8"
+                className="form-input !pl-8"
                 placeholder="0.00"
                 value={inputPrice}
                 onChange={(e) => setInputPrice(e.target.value)}

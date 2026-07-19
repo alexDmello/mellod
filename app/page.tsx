@@ -111,7 +111,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  className="form-input pr-11"
+                  className="form-input !pr-11"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

@@ -602,7 +602,7 @@ export default function OnboardingPage() {
             <input
               type="text"
               placeholder="Search by name or username..."
-              className="form-input pl-9 text-sm"
+              className="form-input !pl-9 text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

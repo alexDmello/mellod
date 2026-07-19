@@ -207,7 +207,7 @@ export default function PickupPage({ params }: Props) {
               min="0.1"
               max="10000"
               inputMode="decimal"
-              className="form-input pl-10 text-xl font-bold"
+              className="form-input !pl-10 !pr-8 text-xl font-bold"
               placeholder="0.0"
               value={liters}
               onChange={(e) => setLiters(e.target.value)}

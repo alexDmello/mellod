@@ -117,7 +117,7 @@ export default function RoutesPage() {
               <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="date"
-                className="form-input pl-9"
+                className="form-input !pl-9"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
               />
