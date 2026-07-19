@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatTime, formatLiters, formatCurrency } from "@/lib/utils";
+import { formatDate, formatTime, formatLiters } from "@/lib/utils";
 import { Droplets, History } from "lucide-react";
 
 export default async function PickerHistoryPage() {
@@ -21,7 +21,6 @@ export default async function PickerHistoryPage() {
     .limit(50);
 
   const totalLiters = (pickups ?? []).reduce((s, p) => s + Number(p.liters), 0);
-  const totalEarnings = (pickups ?? []).reduce((s, p) => s + Number(p.total_amount), 0);
 
   return (
     <div className="animate-fade-in">
@@ -34,8 +33,8 @@ export default async function PickerHistoryPage() {
             <p className="text-white font-bold text-lg">{formatLiters(totalLiters)}</p>
           </div>
           <div className="bg-white/15 rounded-xl p-3">
-            <p className="text-green-200 text-xs">Total Earned</p>
-            <p className="text-white font-bold text-lg">{formatCurrency(totalEarnings)}</p>
+            <p className="text-green-200 text-xs">Total Stops</p>
+            <p className="text-white font-bold text-lg">{(pickups ?? []).length}</p>
           </div>
         </div>
       </div>
@@ -58,9 +57,8 @@ export default async function PickerHistoryPage() {
                   {formatDate(pickup.picked_up_at)} · {formatTime(pickup.picked_up_at)}
                 </p>
               </div>
-              <div className="text-right flex-shrink-0">
+              <div className="text-right flex-shrink-0 animate-fade-in">
                 <p className="text-sm font-bold text-gray-800">{formatLiters(Number(pickup.liters))}</p>
-                <p className="text-xs text-green-600 font-medium">{formatCurrency(Number(pickup.total_amount))}</p>
               </div>
             </div>
           ))

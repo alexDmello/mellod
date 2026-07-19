@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/utils";
 import {
   Camera, Droplets, Loader2, CheckCircle2,
   ArrowLeft, ImageIcon, X, AlertCircle
@@ -148,10 +147,6 @@ export default function PickupPage({ params }: Props) {
     setTimeout(() => router.push("/picker"), 2500);
   }
 
-  const estimatedEarning = liters && currentPrice
-    ? formatCurrency(parseFloat(liters) * currentPrice)
-    : null;
-
   if (success) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center animate-slide-up">
@@ -162,9 +157,6 @@ export default function PickupPage({ params }: Props) {
         <p className="text-gray-500 text-sm">
           {liters}L collected from {fbo?.business_name}
         </p>
-        {estimatedEarning && (
-          <p className="mt-2 text-green-600 font-semibold">{estimatedEarning} earned</p>
-        )}
         <p className="text-xs text-gray-400 mt-4">Returning to route...</p>
       </div>
     );
@@ -201,16 +193,6 @@ export default function PickupPage({ params }: Props) {
           </div>
         )}
 
-        {/* Market price info */}
-        {currentPrice > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
-            <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-            <p className="text-xs text-blue-700">
-              Today&apos;s rate: <strong>{formatCurrency(currentPrice)}/L</strong>
-            </p>
-          </div>
-        )}
-
         {/* Liters input */}
         <div className="card p-4">
           <label htmlFor="liters" className="form-label text-base mb-3">
@@ -233,11 +215,6 @@ export default function PickupPage({ params }: Props) {
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">L</span>
           </div>
-          {estimatedEarning && (
-            <p className="text-sm text-green-600 font-medium mt-2 flex items-center gap-1">
-              <span>≈ {estimatedEarning} for this pickup</span>
-            </p>
-          )}
         </div>
 
         {/* Camera photo capture */}
