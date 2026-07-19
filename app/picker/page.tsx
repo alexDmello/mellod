@@ -18,6 +18,7 @@ import {
   RefreshCw,
   AlertCircle,
   LogOut,
+  Leaf,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -133,7 +134,29 @@ export default function PickerDashboard() {
   return (
     <div className="animate-fade-in min-h-screen bg-gray-50 pb-12">
       {/* Premium Header */}
-      <div className="bg-green-700 px-4 pt-5 pb-9 relative rounded-b-[2rem] shadow-md">
+      <div className="bg-green-700 px-4 pt-8 pb-9 relative rounded-b-[2rem] shadow-md safe-top">
+        {/* Merged Header & Logo bar */}
+        <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
+              <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <div className="text-white font-bold text-sm leading-none">Mellod</div>
+              <div className="text-green-200 text-xs mt-0.5">Picker App</div>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-green-200 hover:text-white transition-colors text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-lg"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign Out
+          </button>
+        </div>
+
+        {/* Welcome Section */}
         <div className="flex justify-between items-center">
           <div>
             <p className="text-green-200 text-xs tracking-wide uppercase font-semibold">Logistics Portal</p>
@@ -142,22 +165,13 @@ export default function PickerDashboard() {
             </h1>
             <p className="text-green-300 text-xs mt-1">{formatDate(new Date())}</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={fetchData}
-              className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-all"
-              title="Refresh"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="w-9 h-9 bg-red-600/30 rounded-xl flex items-center justify-center text-white hover:bg-red-600/50 transition-all"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={fetchData}
+            className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-all"
+            title="Refresh Data"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Progress Card */}
@@ -181,7 +195,7 @@ export default function PickerDashboard() {
         )}
       </div>
 
-      <div className="px-4 -mt-4 space-y-4">
+      <div className="px-4 mt-6 space-y-4">
         {loading ? (
           <div className="card p-12 text-center flex flex-col items-center justify-center bg-white border border-gray-100 shadow-sm mt-4">
             <Loader2 className="w-8 h-8 animate-spin text-green-700 mb-3" />
