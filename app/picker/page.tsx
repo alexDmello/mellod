@@ -38,6 +38,7 @@ export default function PickerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedFboId, setExpandedFboId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"pending" | "completed">("pending");
 
   const supabase = createClient();
   const router = useRouter();
@@ -180,7 +181,7 @@ export default function PickerDashboard() {
         )}
       </div>
 
-      <div className="px-4 -mt-4 space-y-6">
+      <div className="px-4 -mt-4 space-y-4">
         {loading ? (
           <div className="card p-12 text-center flex flex-col items-center justify-center bg-white border border-gray-100 shadow-sm mt-4">
             <Loader2 className="w-8 h-8 animate-spin text-green-700 mb-3" />
@@ -203,21 +204,50 @@ export default function PickerDashboard() {
             </p>
           </div>
         ) : (
-          <>
-            {/* ================= SECTION 1: PENDING PICKUPS ================= */}
-            <div className="space-y-3">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
-                <Clock className="w-4 h-4 text-amber-500" />
-                Pending Collection ({pendingStops.length})
-              </h2>
+          <div className="space-y-4">
+            {/* Pill-Style Premium Tab Switcher */}
+            <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("pending");
+                  setExpandedFboId(null);
+                }}
+                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === "pending"
+                    ? "bg-white text-green-800 shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Pending ({pendingStops.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("completed");
+                  setExpandedFboId(null);
+                }}
+                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  activeTab === "completed"
+                    ? "bg-white text-green-800 shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Completed ({completedStops.length})
+              </button>
+            </div>
 
-              {pendingStops.length === 0 ? (
-                <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl bg-white text-xs text-gray-400 font-medium">
-                  🎉 Outstanding! All collections completed for today.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {pendingStops.map((route, idx) => {
+            {/* Conditionally Render Active Tab Panel */}
+            {activeTab === "pending" ? (
+              <div className="space-y-2.5">
+                {pendingStops.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed border-gray-200 rounded-2xl bg-white text-xs text-gray-400 font-medium">
+                    🎉 All collections completed for today!
+                  </div>
+                ) : (
+                  pendingStops.map((route, idx) => {
                     const isExpanded = expandedFboId === route.fbo_id;
                     const phoneHref = route.fbo.phone ? `tel:${route.fbo.phone}` : null;
                     const destination = route.fbo.latitude && route.fbo.longitude
@@ -229,7 +259,6 @@ export default function PickerDashboard() {
                         key={route.id}
                         className="card overflow-hidden bg-white border border-gray-100 shadow-sm transition-all"
                       >
-                        {/* Header bar toggle button */}
                         <button
                           type="button"
                           onClick={() => setExpandedFboId(isExpanded ? null : route.fbo_id)}
@@ -253,7 +282,6 @@ export default function PickerDashboard() {
                           </div>
                         </button>
 
-                        {/* Expandable Details Container */}
                         {isExpanded && (
                           <div className="px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/30 space-y-4">
                             <div className="space-y-2 text-xs">
@@ -281,7 +309,6 @@ export default function PickerDashboard() {
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="flex gap-2">
                               {destination ? (
                                 <a
@@ -297,7 +324,6 @@ export default function PickerDashboard() {
                                 <button
                                   disabled
                                   className="btn btn-secondary flex-1 text-xs py-2 opacity-50 cursor-not-allowed bg-white"
-                                  title="No coordinates defined for FBO"
                                 >
                                   No Location Coords
                                 </button>
@@ -314,25 +340,17 @@ export default function PickerDashboard() {
                         )}
                       </div>
                     );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* ================= SECTION 2: COMPLETED PICKUPS ================= */}
-            <div className="space-y-3">
-              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                Completed Collection ({completedStops.length})
-              </h2>
-
-              {completedStops.length === 0 ? (
-                <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl bg-white text-xs text-gray-400 italic">
-                  Stops will appear here once you log their pickups.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {completedStops.map((route) => {
+                  })
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {completedStops.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed border-gray-200 rounded-2xl bg-white text-xs text-gray-400 italic">
+                    Stops will appear here once you log their pickups.
+                  </div>
+                ) : (
+                  completedStops.map((route) => {
                     const isExpanded = expandedFboId === route.fbo_id;
                     const phoneHref = route.fbo.phone ? `tel:${route.fbo.phone}` : null;
                     const pickup = route.pickup!;
@@ -340,9 +358,8 @@ export default function PickerDashboard() {
                     return (
                       <div
                         key={route.id}
-                        className="card overflow-hidden bg-white border border-gray-100 shadow-sm opacity-90"
+                        className="card overflow-hidden bg-white border border-gray-100 shadow-sm opacity-95"
                       >
-                        {/* Header bar toggle button */}
                         <button
                           type="button"
                           onClick={() => setExpandedFboId(isExpanded ? null : route.fbo_id)}
@@ -368,7 +385,6 @@ export default function PickerDashboard() {
                           </div>
                         </button>
 
-                        {/* Expandable Details (NO maps/navigation, shows Pickup details) */}
                         {isExpanded && (
                           <div className="px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/30 space-y-4">
                             <div className="space-y-2 text-xs">
@@ -396,7 +412,6 @@ export default function PickerDashboard() {
                               </div>
                             </div>
 
-                            {/* Collection Details Section */}
                             <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-2.5">
                               <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-50 pb-1.5 flex items-center gap-1">
                                 <FileText className="w-3.5 h-3.5 text-green-700" />
@@ -434,11 +449,11 @@ export default function PickerDashboard() {
                         )}
                       </div>
                     );
-                  })}
-                </div>
-              )}
-            </div>
-          </>
+                  })
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
