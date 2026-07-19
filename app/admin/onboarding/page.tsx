@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -9,7 +9,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { generateCredentials } from "@/lib/utils";
 import {
   UserPlus, Copy, Check, Eye, EyeOff, Loader2,
-  Building2, Truck, ChevronDown, ChevronUp, Search, Key
+  Building2, Truck, ChevronDown, ChevronUp, Search, Key, MapPin
 } from "lucide-react";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
@@ -18,6 +18,8 @@ const fboSchema = z.object({
   contact_person: z.string().min(2, "Contact person name is required"),
   address: z.string().optional(),
   phone: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 const pickerSchema = z.object({
@@ -137,10 +139,141 @@ function CredentialCard({ account }: { account: GeneratedAccount }) {
   );
 }
 
+// ── Location Picker (Leaflet CDN based) ──────────────────────────────────────
+interface LocationPickerProps {
+  onLocationSelect: (lat: number, lng: number) => void;
+  initialLat?: number;
+  initialLng?: number;
+}
+
+function LocationPicker({ onLocationSelect, initialLat = 12.9716, initialLng = 77.5946 }: LocationPickerProps) {
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: initialLat, lng: initialLng });
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    if ((window as any).L) {
+      setMapLoaded(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.async = true;
+    script.onload = () => {
+      setMapLoaded(true);
+    };
+    document.body.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!mapLoaded || !mapContainerRef.current || typeof window === "undefined") return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current).setView([coords.lat, coords.lng], 13);
+      
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map);
+
+      // Custom themed pin marker
+      const customIcon = L.divIcon({
+        html: `<div style="background-color: #15803d; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: white;">📍</div>`,
+        className: "",
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
+      });
+
+      const marker = L.marker([coords.lat, coords.lng], { draggable: true, icon: customIcon }).addTo(map);
+
+      marker.on("dragend", () => {
+        const position = marker.getLatLng();
+        setCoords({ lat: position.lat, lng: position.lng });
+        onLocationSelect(position.lat, position.lng);
+      });
+
+      map.on("click", (e: any) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        setCoords({ lat, lng });
+        onLocationSelect(lat, lng);
+      });
+
+      mapInstanceRef.current = map;
+      markerRef.current = marker;
+    } else {
+      const map = mapInstanceRef.current;
+      const marker = markerRef.current;
+      if (marker && map) {
+        const currentMarkerLatLng = marker.getLatLng();
+        if (currentMarkerLatLng.lat !== coords.lat || currentMarkerLatLng.lng !== coords.lng) {
+          marker.setLatLng([coords.lat, coords.lng]);
+          map.setView([coords.lat, coords.lng], map.getZoom());
+        }
+      }
+    }
+  }, [mapLoaded, coords.lat, coords.lng]);
+
+  const handleLocateMe = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setCoords({ lat, lng });
+        onLocationSelect(lat, lng);
+      },
+      (error) => {
+        console.error("Error getting geolocation:", error);
+      }
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="form-label font-semibold text-gray-700">Pinpoint exact location *</label>
+        <button
+          type="button"
+          onClick={handleLocateMe}
+          className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg hover:bg-green-100 transition-colors font-semibold"
+        >
+          <MapPin className="w-3.5 h-3.5" /> Use Current Location
+        </button>
+      </div>
+
+      <div
+        ref={mapContainerRef}
+        className="w-full h-[220px] rounded-xl border border-gray-200 bg-gray-50 overflow-hidden relative z-10"
+      />
+      
+      <div className="grid grid-cols-2 gap-3 text-xs font-mono bg-gray-100 p-2.5 rounded-lg border border-gray-200 text-gray-600">
+        <div>Lat: {coords.lat.toFixed(6)}</div>
+        <div>Lng: {coords.lng.toFixed(6)}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── FBO Registration Form ─────────────────────────────────────────────────────
 function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FBOForm>({
     resolver: zodResolver(fboSchema),
@@ -168,6 +301,8 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
           phone: data.phone,
           businessName: data.business_name,
           address: data.address,
+          latitude: selectedCoords.lat,
+          longitude: selectedCoords.lng,
         }),
       });
 
@@ -213,6 +348,10 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
           <label className="form-label">Address</label>
           <input className="form-input" placeholder="Full address" {...register("address")} />
         </div>
+      </div>
+
+      <div className="border border-gray-200 p-4 rounded-xl bg-white space-y-4 shadow-sm">
+        <LocationPicker onLocationSelect={(lat, lng) => setSelectedCoords({ lat, lng })} />
       </div>
 
       {error && <p className="form-error bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}

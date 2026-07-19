@@ -31,6 +31,8 @@ CREATE TABLE public.fbos (
   contact_person TEXT,
   phone         TEXT,
   is_active     BOOLEAN DEFAULT TRUE,
+  latitude      NUMERIC(9, 6),
+  longitude     NUMERIC(9, 6),
   created_at    TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at    TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

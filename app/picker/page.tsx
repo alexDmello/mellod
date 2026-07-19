@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { MapPin, CheckCircle2, Clock, ChevronRight, Droplets } from "lucide-react";
 import Link from "next/link";
 import type { FBO, Pickup } from "@/lib/types";
+import RouteMap from "./RouteMap";
 
 interface RouteWithDetails {
   id: string;
@@ -102,7 +103,13 @@ export default async function PickerRoutePage() {
       </div>
 
       {/* Route list — raised card style */}
-      <div className="px-4 -mt-4 space-y-3 pb-4">
+      <div className="px-4 -mt-4 space-y-4 pb-6">
+        {routes.length > 0 && (
+          <div className="mt-4">
+            <RouteMap routes={routes as any} />
+          </div>
+        )}
+
         {routes.length === 0 ? (
           <div className="card p-10 text-center mt-4">
             <MapPin className="w-10 h-10 text-gray-200 mx-auto mb-3" />
