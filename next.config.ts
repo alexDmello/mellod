@@ -2,7 +2,7 @@
 
 // next-pwa uses webpack. Next.js 16 defaults to Turbopack in dev.
 // We use withPWA which adds webpack config — force webpack mode for builds.
-const withPWA = require("next-pwa")({
+const withPWA = require("@ducanh2912/next-pwa").default({
   dest: "public",
   register: true,
   skipWaiting: true,
