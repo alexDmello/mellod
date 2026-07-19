@@ -80,6 +80,8 @@ export interface FBO {
   contact_person: string | null;
   phone: string | null;
   is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   updated_at: string;
 }

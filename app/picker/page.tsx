@@ -1,11 +1,27 @@
-import { createClient } from "@/lib/supabase/server";
-import { formatDate, todayISO } from "@/lib/utils";
+"use client";
 
-export const dynamic = "force-dynamic";
-import { MapPin, CheckCircle2, Clock, ChevronRight, Droplets } from "lucide-react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { formatDate, todayISO } from "@/lib/utils";
+import {
+  MapPin,
+  CheckCircle2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Droplets,
+  Navigation,
+  Phone,
+  User,
+  FileText,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+  LogOut,
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { FBO, Pickup } from "@/lib/types";
-import RouteMap from "./RouteMap";
 
 interface RouteWithDetails {
   id: string;
@@ -16,153 +32,413 @@ interface RouteWithDetails {
   pickup?: Pickup;
 }
 
-async function getTodayRoutes() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { routes: [], pickerName: "" };
+export default function PickerDashboard() {
+  const [pickerName, setPickerName] = useState("");
+  const [routes, setRoutes] = useState<RouteWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedFboId, setExpandedFboId] = useState<string | null>(null);
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .single();
+  const supabase = createClient();
+  const router = useRouter();
 
-  const { data: picker } = await supabase
-    .from("pickers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .single();
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  if (!picker) return { routes: [], pickerName: profile?.full_name ?? "" };
+  async function fetchData() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/");
+        return;
+      }
 
-  const today = todayISO();
-  const { data: routes } = await supabase
-    .from("routes")
-    .select(`
-      id, fbo_id, route_date, sort_order,
-      fbo:fbos(*)
-    `)
-    .eq("picker_id", picker.id)
-    .eq("route_date", today)
-    .order("sort_order");
+      // Fetch profile name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      setPickerName(profile?.full_name ?? "Picker");
 
-  // Get today's pickups for this picker to mark completed stops
-  const { data: pickups } = await supabase
-    .from("pickups")
-    .select("*")
-    .eq("picker_id", picker.id)
-    .gte("picked_up_at", `${today}T00:00:00`)
-    .lt("picked_up_at", `${today}T23:59:59`);
+      // Fetch picker relation
+      const { data: picker } = await supabase
+        .from("pickers")
+        .select("id")
+        .eq("profile_id", user.id)
+        .single();
 
-  const pickupsByFBO = (pickups ?? []).reduce((acc, p) => {
-    acc[p.fbo_id] = p;
-    return acc;
-  }, {} as Record<string, Pickup>);
+      if (!picker) {
+        setError("Picker account details could not be found. Contact admin.");
+        setLoading(false);
+        return;
+      }
 
-  const enrichedRoutes: RouteWithDetails[] = (routes ?? []).map((r: any) => ({
-    ...r,
-    pickup: pickupsByFBO[r.fbo_id],
-  }));
+      const today = todayISO();
 
-  return { routes: enrichedRoutes, pickerName: profile?.full_name ?? "" };
-}
+      // Fetch today's assigned routes
+      const { data: routesData } = await supabase
+        .from("routes")
+        .select(`
+          id, fbo_id, route_date, sort_order,
+          fbo:fbos(*)
+        `)
+        .eq("picker_id", picker.id)
+        .eq("route_date", today)
+        .order("sort_order");
 
-export default async function PickerRoutePage() {
-  const { routes, pickerName } = await getTodayRoutes();
+      // Fetch today's logged pickups for this picker
+      const { data: pickupsData } = await supabase
+        .from("pickups")
+        .select("*")
+        .eq("picker_id", picker.id)
+        .gte("picked_up_at", `${today}T00:00:00`)
+        .lt("picked_up_at", `${today}T23:59:59`);
 
-  const completed = routes.filter((r) => r.pickup).length;
-  const total = routes.length;
-  const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const pickupsByFBO = (pickupsData ?? []).reduce((acc, p) => {
+        acc[p.fbo_id] = p;
+        return acc;
+      }, {} as Record<string, Pickup>);
+
+      const enrichedRoutes: RouteWithDetails[] = (routesData ?? []).map((r: any) => ({
+        ...r,
+        pickup: pickupsByFBO[r.fbo_id],
+      }));
+
+      setRoutes(enrichedRoutes);
+    } catch (err: any) {
+      setError(err.message || "An error occurred fetching dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
+  const pendingStops = routes.filter((r) => !r.pickup);
+  const completedStops = routes.filter((r) => r.pickup);
+
+  const completedCount = completedStops.length;
+  const totalStops = routes.length;
+  const progressPct = totalStops > 0 ? Math.round((completedCount / totalStops) * 100) : 0;
 
   return (
-    <div className="animate-fade-in">
-      {/* Hero header */}
-      <div className="bg-green-700 px-4 pt-4 pb-8">
-        <p className="text-green-200 text-sm">Good morning,</p>
-        <h1 className="text-white text-2xl font-bold mt-0.5">
-          {pickerName.split(" ")[0]} 👋
-        </h1>
-        <p className="text-green-300 text-xs mt-1">{formatDate(new Date())}</p>
+    <div className="animate-fade-in min-h-screen bg-gray-50 pb-12">
+      {/* Premium Header */}
+      <div className="bg-green-700 px-4 pt-5 pb-9 relative rounded-b-[2rem] shadow-md">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-green-200 text-xs tracking-wide uppercase font-semibold">Logistics Portal</p>
+            <h1 className="text-white text-2xl font-black mt-0.5">
+              Hello, {pickerName.split(" ")[0]} 👋
+            </h1>
+            <p className="text-green-300 text-xs mt-1">{formatDate(new Date())}</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={fetchData}
+              className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 transition-all"
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-9 h-9 bg-red-600/30 rounded-xl flex items-center justify-center text-white hover:bg-red-600/50 transition-all"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-        {/* Progress */}
-        {total > 0 && (
-          <div className="mt-4 bg-white/10 rounded-xl p-4">
+        {/* Progress Card */}
+        {totalStops > 0 && (
+          <div className="mt-5 bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/10">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-green-100 text-sm font-medium">Today&apos;s Progress</span>
-              <span className="text-white font-bold text-sm">{completed}/{total} stops</span>
+              <span className="text-green-100 text-sm font-semibold">Today's Progress</span>
+              <span className="text-white font-black text-sm">{completedCount} / {totalStops} Stops Done</span>
             </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
               <div
-                className="h-full bg-white rounded-full transition-all duration-500"
+                className="h-full bg-white rounded-full transition-all duration-700"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
-            <p className="text-green-300 text-xs mt-1.5">{progressPct}% complete</p>
+            <div className="flex justify-between text-green-200 text-[10px] mt-1.5 font-medium">
+              <span>{progressPct}% Completed</span>
+              <span>{totalStops - completedCount} pending collections</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Route list — raised card style */}
-      <div className="px-4 -mt-4 space-y-4 pb-6">
-        {routes.length > 0 && (
-          <div className="mt-4">
-            <RouteMap routes={routes as any} />
+      <div className="px-4 -mt-4 space-y-6">
+        {loading ? (
+          <div className="card p-12 text-center flex flex-col items-center justify-center bg-white border border-gray-100 shadow-sm mt-4">
+            <Loader2 className="w-8 h-8 animate-spin text-green-700 mb-3" />
+            <p className="text-sm font-medium text-gray-600">Loading daily route stops...</p>
           </div>
-        )}
-
-        {routes.length === 0 ? (
-          <div className="card p-10 text-center mt-4">
-            <MapPin className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No stops assigned today</p>
-            <p className="text-gray-400 text-sm mt-1">Check with your admin for today&apos;s route.</p>
+        ) : error ? (
+          <div className="card p-8 text-center bg-white border border-red-100 shadow-sm mt-4 text-red-600">
+            <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-500" />
+            <p className="font-semibold">{error}</p>
+            <button onClick={fetchData} className="btn btn-primary mt-4 btn-sm">
+              Try Again
+            </button>
+          </div>
+        ) : totalStops === 0 ? (
+          <div className="card p-12 text-center bg-white border border-gray-100 shadow-sm mt-4">
+            <MapPin className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+            <h3 className="font-bold text-gray-700">No Stops Assigned Today</h3>
+            <p className="text-sm text-gray-400 mt-1 max-w-xs mx-auto">
+              Your supervisor has not dispatched any collection routes to you for today.
+            </p>
           </div>
         ) : (
-          routes.map((route, idx) => {
-            const isCompleted = !!route.pickup;
-            return (
-              <Link
-                key={route.id}
-                href={isCompleted ? "#" : `/picker/pickup/${route.fbo_id}?routeId=${route.id}`}
-                className={`card card-interactive flex items-center gap-4 p-4 mt-${idx === 0 ? "4" : "0"} ${isCompleted ? "opacity-75 pointer-events-none" : "cursor-pointer"}`}
-                style={{ marginTop: idx === 0 ? "1rem" : undefined }}
-              >
-                {/* Stop number */}
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                    isCompleted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {isCompleted ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : idx + 1}
-                </div>
+          <>
+            {/* ================= SECTION 1: PENDING PICKUPS ================= */}
+            <div className="space-y-3">
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                <Clock className="w-4 h-4 text-amber-500" />
+                Pending Collection ({pendingStops.length})
+              </h2>
 
-                <div className="flex-1 min-w-0">
-                  <p className={`font-semibold truncate ${isCompleted ? "text-gray-500" : "text-gray-800"}`}>
-                    {route.fbo?.business_name}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">{route.fbo?.address ?? "No address"}</p>
-                  {isCompleted && route.pickup && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Droplets className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-green-600 font-medium">
-                        {route.pickup.liters}L collected
-                      </span>
-                    </div>
-                  )}
+              {pendingStops.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl bg-white text-xs text-gray-400 font-medium">
+                  🎉 Outstanding! All collections completed for today.
                 </div>
+              ) : (
+                <div className="space-y-2">
+                  {pendingStops.map((route, idx) => {
+                    const isExpanded = expandedFboId === route.fbo_id;
+                    const phoneHref = route.fbo.phone ? `tel:${route.fbo.phone}` : null;
+                    const destination = route.fbo.latitude && route.fbo.longitude
+                      ? `${route.fbo.latitude},${route.fbo.longitude}`
+                      : null;
 
-                <div className="flex-shrink-0">
-                  {isCompleted ? (
-                    <span className="badge badge-green">Done</span>
-                  ) : (
-                    <div className="flex items-center gap-1 text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <ChevronRight className="w-4 h-4" />
-                    </div>
-                  )}
+                    return (
+                      <div
+                        key={route.id}
+                        className="card overflow-hidden bg-white border border-gray-100 shadow-sm transition-all"
+                      >
+                        {/* Header bar toggle button */}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedFboId(isExpanded ? null : route.fbo_id)}
+                          className="w-full text-left p-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 font-black text-xs flex items-center justify-center flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-gray-800 text-sm truncate">
+                                {route.fbo.business_name}
+                              </h3>
+                              <p className="text-xs text-gray-400 truncate mt-0.5">
+                                {route.fbo.address || "No address defined"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-gray-400 flex-shrink-0">
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </button>
+
+                        {/* Expandable Details Container */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/30 space-y-4">
+                            <div className="space-y-2 text-xs">
+                              {route.fbo.contact_person && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <User className="w-3.5 h-3.5 text-gray-400" />
+                                  <span className="font-medium">Contact:</span> {route.fbo.contact_person}
+                                </div>
+                              )}
+                              {route.fbo.phone && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                  <span className="font-medium">Phone:</span>{" "}
+                                  <a href={phoneHref!} className="text-green-700 font-semibold hover:underline">
+                                    {route.fbo.phone}
+                                  </a>
+                                </div>
+                              )}
+                              <div className="flex items-start gap-2 text-gray-600">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                                <div>
+                                  <span className="font-medium">Full Address:</span>
+                                  <p className="text-gray-500 mt-0.5 leading-relaxed">{route.fbo.address}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              {destination ? (
+                                <a
+                                  href={`https://www.google.com/maps/dir/?api=1&destination=${destination}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-secondary flex-1 text-xs py-2 flex items-center justify-center gap-1.5 bg-white"
+                                >
+                                  <Navigation className="w-3.5 h-3.5 text-green-700" />
+                                  Navigate
+                                </a>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="btn btn-secondary flex-1 text-xs py-2 opacity-50 cursor-not-allowed bg-white"
+                                  title="No coordinates defined for FBO"
+                                >
+                                  No Location Coords
+                                </button>
+                              )}
+                              <Link
+                                href={`/picker/pickup/${route.fbo_id}?routeId=${route.id}`}
+                                className="btn btn-primary flex-1 text-xs py-2 flex items-center justify-center gap-1.5"
+                              >
+                                <Droplets className="w-3.5 h-3.5" />
+                                Log Pickup
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </Link>
-            );
-          })
+              )}
+            </div>
+
+            {/* ================= SECTION 2: COMPLETED PICKUPS ================= */}
+            <div className="space-y-3">
+              <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 px-1">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                Completed Collection ({completedStops.length})
+              </h2>
+
+              {completedStops.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-gray-200 rounded-2xl bg-white text-xs text-gray-400 italic">
+                  Stops will appear here once you log their pickups.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {completedStops.map((route) => {
+                    const isExpanded = expandedFboId === route.fbo_id;
+                    const phoneHref = route.fbo.phone ? `tel:${route.fbo.phone}` : null;
+                    const pickup = route.pickup!;
+
+                    return (
+                      <div
+                        key={route.id}
+                        className="card overflow-hidden bg-white border border-gray-100 shadow-sm opacity-90"
+                      >
+                        {/* Header bar toggle button */}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedFboId(isExpanded ? null : route.fbo_id)}
+                          className="w-full text-left p-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-green-50 text-green-700 font-black text-xs flex items-center justify-center flex-shrink-0">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-gray-500 text-sm truncate line-through">
+                                {route.fbo.business_name}
+                              </h3>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="badge badge-green text-[10px] py-0.5 px-1.5">
+                                  {pickup.liters} L Collected
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-gray-400 flex-shrink-0">
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </button>
+
+                        {/* Expandable Details (NO maps/navigation, shows Pickup details) */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-2 border-t border-gray-50 bg-gray-50/30 space-y-4">
+                            <div className="space-y-2 text-xs">
+                              {route.fbo.contact_person && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <User className="w-3.5 h-3.5 text-gray-400" />
+                                  <span className="font-medium">Contact:</span> {route.fbo.contact_person}
+                                </div>
+                              )}
+                              {route.fbo.phone && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                  <span className="font-medium">Phone:</span>{" "}
+                                  <a href={phoneHref!} className="text-green-700 font-semibold hover:underline">
+                                    {route.fbo.phone}
+                                  </a>
+                                </div>
+                              )}
+                              <div className="flex items-start gap-2 text-gray-600">
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+                                <div>
+                                  <span className="font-medium">Address:</span>
+                                  <p className="text-gray-500 mt-0.5">{route.fbo.address}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Collection Details Section */}
+                            <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-2.5">
+                              <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-50 pb-1.5 flex items-center gap-1">
+                                <FileText className="w-3.5 h-3.5 text-green-700" />
+                                Collection Summary
+                              </h4>
+                              <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                  <span className="text-gray-400 block">Liters Logged</span>
+                                  <span className="font-bold text-gray-800 text-sm">{pickup.liters} Liters</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400 block">Status</span>
+                                  <span className="font-semibold text-green-700 capitalize">{pickup.status}</span>
+                                </div>
+                              </div>
+                              {pickup.notes && (
+                                <div className="text-xs border-t border-gray-50 pt-2 text-gray-600">
+                                  <span className="text-gray-400 font-medium block">Notes:</span>
+                                  <p className="text-gray-500 italic mt-0.5">{pickup.notes}</p>
+                                </div>
+                              )}
+                              {pickup.photo_url && (
+                                <div className="border-t border-gray-50 pt-2.5">
+                                  <span className="text-gray-400 text-xs block mb-1 font-medium">Pickup Photo</span>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={pickup.photo_url}
+                                    className="w-full h-32 object-cover rounded-xl border border-gray-100"
+                                    alt="Logged pickup"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
