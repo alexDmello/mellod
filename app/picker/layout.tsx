@@ -30,7 +30,7 @@ export default function PickerLayout({ children }: { children: React.ReactNode }
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Top header - Only show on sub-routes, not on the main dashboard */}
       {!isDashboard && (
-        <header className="bg-green-700 px-4 py-3.5 safe-top sticky top-0 z-30 flex items-center justify-between">
+        <header className="bg-green-700 px-4 pb-3.5 sticky top-0 z-30 flex items-center justify-between" style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
               <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />

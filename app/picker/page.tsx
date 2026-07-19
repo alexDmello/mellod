@@ -134,7 +134,7 @@ export default function PickerDashboard() {
   return (
     <div className="animate-fade-in min-h-screen bg-gray-50 pb-12">
       {/* Premium Header */}
-      <div className="bg-green-700 px-4 pt-8 pb-9 relative rounded-b-[2rem] shadow-md safe-top">
+      <div className="bg-green-700 px-4 pb-9 relative rounded-b-[2rem] shadow-md" style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}>
         {/* Merged Header & Logo bar */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
           <div className="flex items-center gap-2.5">
