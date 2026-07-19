@@ -101,17 +101,38 @@ CREATE TABLE public.payment_methods (
   updated_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
+-- 8. ROUTE DEFINITIONS (Templates for grouping FBOs together with a default picker)
+CREATE TABLE public.route_definitions (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name               TEXT NOT NULL UNIQUE,
+  default_picker_id  UUID REFERENCES public.pickers(id) ON DELETE SET NULL,
+  created_at         TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at         TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- 9. ROUTE STOPS (FBOs assigned to a route template with sequence ordering)
+CREATE TABLE public.route_stops (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_definition_id UUID REFERENCES public.route_definitions(id) ON DELETE CASCADE NOT NULL,
+  fbo_id              UUID REFERENCES public.fbos(id) ON DELETE CASCADE NOT NULL,
+  sort_order          INT DEFAULT 0,
+  created_at          TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  UNIQUE (route_definition_id, fbo_id)
+);
+
 -- ============================================================
 -- STEP 2: ENABLE RLS ON ALL TABLES
 -- ============================================================
 
-ALTER TABLE public.profiles        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fbos            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pickers         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_prices    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.routes          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pickups         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fbos              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickers           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_prices      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.routes            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickups           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_methods   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.route_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.route_stops       ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- STEP 3: HELPER FUNCTIONS (SECURITY DEFINER to avoid RLS recursion)
@@ -241,6 +262,28 @@ CREATE POLICY "FBOs manage own payment methods" ON public.payment_methods
     )
   );
 
+-- ── route_definitions ─────────────────────────────────────────
+CREATE POLICY "Admins manage route definitions" ON public.route_definitions
+  FOR ALL USING (
+    public.is_admin()
+  );
+
+CREATE POLICY "Authenticated users read route definitions" ON public.route_definitions
+  FOR SELECT TO authenticated USING (
+    true
+  );
+
+-- ── route_stops ───────────────────────────────────────────────
+CREATE POLICY "Admins manage route stops" ON public.route_stops
+  FOR ALL USING (
+    public.is_admin()
+  );
+
+CREATE POLICY "Authenticated users read route stops" ON public.route_stops
+  FOR SELECT TO authenticated USING (
+    true
+  );
+
 -- ============================================================
 -- STEP 4: VIEWS
 -- ============================================================
@@ -274,6 +317,7 @@ CREATE TRIGGER set_profiles_updated_at        BEFORE UPDATE ON public.profiles  
 CREATE TRIGGER set_fbos_updated_at            BEFORE UPDATE ON public.fbos            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER set_pickers_updated_at         BEFORE UPDATE ON public.pickers         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER set_payment_methods_updated_at BEFORE UPDATE ON public.payment_methods FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_route_definitions_updated_at BEFORE UPDATE ON public.route_definitions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
 -- STEP 6: STORAGE BUCKET

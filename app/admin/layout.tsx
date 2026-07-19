@@ -22,7 +22,7 @@ const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
   { href: "/admin/settings", label: "Market Price", icon: DollarSign },
-  { href: "/admin/routes", label: "Daily Routes", icon: MapPin },
+  { href: "/admin/routes", label: "Routes", icon: MapPin },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
