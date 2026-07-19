@@ -16,7 +16,11 @@ import {
 const fboSchema = z.object({
   business_name: z.string().min(2, "Business name is required"),
   contact_person: z.string().min(2, "Contact person name is required"),
-  address: z.string().optional(),
+  street: z.string().min(2, "Street address / door no is required"),
+  area: z.string().min(2, "Area / Locality is required"),
+  city: z.string().min(2, "City is required"),
+  state: z.string().min(2, "State is required"),
+  pincode: z.string().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits"),
   phone: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -288,6 +292,8 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
     const { count } = await dbClient.from("fbos").select("id", { count: "exact", head: true });
     const creds = generateCredentials("fbo", data.contact_person, count ?? 0);
 
+    const fullAddress = `${data.street.trim()}, ${data.area.trim()}, ${data.city.trim()}, ${data.state.trim()} - ${data.pincode.trim()}`;
+
     try {
       const response = await fetch("/api/admin/create-user", {
         method: "POST",
@@ -300,7 +306,7 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
           fullName: data.contact_person,
           phone: data.phone,
           businessName: data.business_name,
-          address: data.address,
+          address: fullAddress,
           latitude: selectedCoords.lat,
           longitude: selectedCoords.lng,
         }),
@@ -345,8 +351,29 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
           <input className="form-input" type="tel" placeholder="+91 98765 43210" {...register("phone")} />
         </div>
         <div>
-          <label className="form-label">Address</label>
-          <input className="form-input" placeholder="Full address" {...register("address")} />
+          <label className="form-label">Street Address / Door No / Floor *</label>
+          <input className="form-input" placeholder="e.g. No. 42, 2nd Floor, 80 Feet Rd" {...register("street")} />
+          {errors.street && <p className="form-error">{errors.street.message}</p>}
+        </div>
+        <div>
+          <label className="form-label">Area / Locality *</label>
+          <input className="form-input" placeholder="e.g. Koramangala 4th Block" {...register("area")} />
+          {errors.area && <p className="form-error">{errors.area.message}</p>}
+        </div>
+        <div>
+          <label className="form-label">City *</label>
+          <input className="form-input" placeholder="e.g. Bangalore" {...register("city")} />
+          {errors.city && <p className="form-error">{errors.city.message}</p>}
+        </div>
+        <div>
+          <label className="form-label">State *</label>
+          <input className="form-input" placeholder="e.g. Karnataka" {...register("state")} />
+          {errors.state && <p className="form-error">{errors.state.message}</p>}
+        </div>
+        <div>
+          <label className="form-label">Pincode *</label>
+          <input className="form-input font-mono" placeholder="6-digit pin code (e.g. 560034)" {...register("pincode")} />
+          {errors.pincode && <p className="form-error">{errors.pincode.message}</p>}
         </div>
       </div>
 
@@ -538,38 +565,54 @@ export default function OnboardingPage() {
         <p className="text-sm text-gray-500 mt-1">Register new partners and manage active user credentials.</p>
       </div>
 
-      {/* Registration forms */}
-      <div className="space-y-4">
-        {sections.map((section) => {
-          const isOpen = activeSectionId === section.id;
-          return (
-            <div key={section.id} className="card overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setActiveSectionId(isOpen ? (section.id === "fbo" ? "picker" : "fbo") : section.id)}
-                className="w-full flex items-center gap-4 p-5 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                  <section.icon className="w-5 h-5 text-green-700" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-800">{section.title}</div>
-                  <div className="text-xs text-gray-500">{section.subtitle}</div>
-                </div>
-                {isOpen ? (
-                  <ChevronUp className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
-              {isOpen && (
-                <div className="px-5 pb-5 border-t border-gray-100 pt-4">
-                  {section.form}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* Registration Form Card with Separate Tabs at the Top */}
+      <div className="card bg-white border border-gray-100 overflow-hidden">
+        {/* Tabs Bar */}
+        <div className="flex border-b border-gray-100 bg-gray-50/50">
+          <button
+            type="button"
+            onClick={() => setActiveSectionId("fbo")}
+            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold border-b-2 transition-all ${
+              activeSectionId === "fbo"
+                ? "border-green-700 text-green-700 bg-white"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/30"
+            }`}
+          >
+            <Building2 className="w-5 h-5" />
+            Onboard FBO
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSectionId("picker")}
+            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold border-b-2 transition-all ${
+              activeSectionId === "picker"
+                ? "border-green-700 text-green-700 bg-white"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/30"
+            }`}
+          >
+            <Truck className="w-5 h-5" />
+            Onboard Picker
+          </button>
+        </div>
+
+        {/* Tab Panel */}
+        <div className="p-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-gray-900">
+              {activeSectionId === "fbo" ? "Register New FBO" : "Register New Picker"}
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              {activeSectionId === "fbo"
+                ? "Create credentials and detailed profile for a Food & Beverage Operator collection point."
+                : "Create credentials and details for a collection driver or field agent."}
+            </p>
+          </div>
+          {activeSectionId === "fbo" ? (
+            <FBORegistrationForm onSuccess={addAccount} />
+          ) : (
+            <PickerRegistrationForm onSuccess={addAccount} />
+          )}
+        </div>
       </div>
 
       {/* Generated credentials from current session */}
