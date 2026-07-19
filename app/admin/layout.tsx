@@ -11,6 +11,7 @@ import {
   UserPlus,
   DollarSign,
   MapPin,
+  Map,
   LogOut,
   Menu,
   X,
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
   { href: "/admin/settings", label: "Market Price", icon: DollarSign },
   { href: "/admin/routes", label: "Routes", icon: MapPin },
+  { href: "/admin/map", label: "Map", icon: Map },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
