@@ -192,3 +192,53 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+
+// ---------------------------------------------------------------
+// 8. WINDOWS WIDGET BOARD EVENTS (PWA Widgets API)
+// ---------------------------------------------------------------
+self.addEventListener("widgetinstall", (event) => {
+  console.log("[ServiceWorker] Widget installed:", event.widget?.tag);
+  event.waitUntil(renderWidget(event.widget));
+});
+
+self.addEventListener("widgetuninstall", (event) => {
+  console.log("[ServiceWorker] Widget uninstalled:", event.widget?.tag);
+});
+
+self.addEventListener("widgetresume", (event) => {
+  console.log("[ServiceWorker] Widget resumed:", event.widget?.tag);
+  event.waitUntil(renderWidget(event.widget));
+});
+
+self.addEventListener("widgetclick", (event) => {
+  console.log("[ServiceWorker] Widget clicked:", event.action, event.widget?.tag);
+  if (event.action === "open-app" || event.action === "OpenRoute") {
+    event.waitUntil(
+      self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) {
+          if (client.url.includes("/picker") && "focus" in client) {
+            return client.focus();
+          }
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow("/picker");
+        }
+      })
+    );
+  }
+});
+
+async function renderWidget(widget) {
+  if (!widget) return;
+  try {
+    const templateRes = await fetch("/widgets/template.json");
+    const dataRes = await fetch("/widgets/data.json");
+    const template = await templateRes.text();
+    const data = await dataRes.text();
+    if ("widgets" in self && self.widgets && self.widgets.updateByTag) {
+      await self.widgets.updateByTag(widget.tag, { template, data });
+    }
+  } catch (err) {
+    console.error("[ServiceWorker] Render widget error:", err);
+  }
+}

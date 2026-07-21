@@ -90,11 +90,13 @@
       "name": "Mellod Route Summary",
       "short_name": "Route",
       "description": "View today's collection progress",
-      "tag": "route-summary",
+      "tag": "mellod-route-summary",
       "template": "route-template",
       "ms_ac_template": "/widgets/template.json",
       "data": "/widgets/data.json",
       "type": "application/json",
+      "auth": false,
+      "update": 86400,
       "screenshots": [
         {
           "src": "/screenshots/mobile.png",

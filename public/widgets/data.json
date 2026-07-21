@@ -1,5 +1,6 @@
 {
-  "title": "Mellod Today's Route",
+  "title": "Mellod — Today's Route",
   "completedStops": "3 / 5",
-  "totalLiters": "450"
+  "totalLiters": "450 L",
+  "actionUrl": "/picker"
 }

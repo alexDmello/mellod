@@ -6,7 +6,7 @@
       "size": "Medium",
       "weight": "Bolder",
       "text": "${title}",
-      "color": "Attention"
+      "color": "Good"
     },
     {
       "type": "ColumnSet",
@@ -17,7 +17,9 @@
             {
               "type": "TextBlock",
               "text": "Completed Stops",
-              "wrap": true
+              "wrap": true,
+              "size": "Small",
+              "isSubtle": true
             },
             {
               "type": "TextBlock",
@@ -34,20 +36,29 @@
           "items": [
             {
               "type": "TextBlock",
-              "text": "Total Liters",
-              "wrap": true
+              "text": "Total Oil Collected",
+              "wrap": true,
+              "size": "Small",
+              "isSubtle": true
             },
             {
               "type": "TextBlock",
               "size": "ExtraLarge",
               "color": "Accent",
               "weight": "Bolder",
-              "text": "${totalLiters} L"
+              "text": "${totalLiters}"
             }
           ],
           "width": "stretch"
         }
       ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open Route Portal",
+      "url": "${actionUrl}"
     }
   ],
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
