@@ -37,7 +37,14 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes — always accessible
-  if (pathname === "/" || pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname.startsWith("/widgets")) {
+  if (
+    pathname === "/" ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/widgets") ||
+    pathname === "/sw.js" ||
+    pathname === "/offline.html"
+  ) {
     // If logged-in user hits the login page, redirect to their portal
     if (pathname === "/" && user) {
       const { data: profile } = await supabase
@@ -93,6 +100,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons|widgets|manifest.json|sw.js|workbox-.*).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons|widgets|manifest.json|sw.js|offline.html|workbox-.*).*)",
   ],
 };

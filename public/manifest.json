@@ -7,12 +7,21 @@
   "scope": "/",
   "lang": "en",
   "dir": "ltr",
-  "display": "standalone",
+  "display": "tabbed",
   "display_override": [
+    "tabbed",
     "window-controls-overlay",
     "minimal-ui",
     "standalone"
   ],
+  "tab_strip": {
+    "home_tab": {
+      "scope": "/"
+    },
+    "new_tab_button": {
+      "url": "/picker"
+    }
+  },
   "background_color": "#ffffff",
   "theme_color": "#15803d",
   "orientation": "portrait",

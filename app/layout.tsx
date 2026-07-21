@@ -39,6 +39,8 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+
 export default function RootLayout({
   children,
 }: {
@@ -52,6 +54,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="min-h-screen bg-gray-50 antialiased">
+        <ServiceWorkerRegister />
         {children}
         <SpeedInsights />
       </body>

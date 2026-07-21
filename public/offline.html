@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — Mellod UCO Platform</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f9fafb; color: #111827; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; text-align: center; }
+    .card { background: white; border-radius: 1rem; padding: 2rem; max-width: 380px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+    .icon-box { width: 64px; height: 64px; background: #dcfce7; color: #15803d; border-radius: 1rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
+    .icon-box svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 2; }
+    h1 { font-size: 1.25rem; font-weight: 800; color: #166534; margin-bottom: 0.5rem; }
+    p { font-size: 0.875rem; color: #6b7280; line-height: 1.5; margin-bottom: 1.5rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; background: #15803d; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 700; font-size: 0.875rem; cursor: pointer; text-decoration: none; width: 100%; transition: background 0.15s; }
+    .btn:hover { background: #166534; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-box">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+    <h1>You are Offline</h1>
+    <p>Mellod PWA has cached your collection route on-device. Reconnect to the internet to sync new pickup logs.</p>
+    <button class="btn" onclick="window.location.reload()">Retry Connection</button>
+  </div>
+</body>
+</html>
