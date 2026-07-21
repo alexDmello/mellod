@@ -17,7 +17,12 @@ export async function createClient(): Promise<ReturnType<typeof createServerClie
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, {
+              ...options,
+              maxAge: 365 * 24 * 60 * 60, // 1 year cookie persistence
+              path: "/",
+              sameSite: "lax",
+            })
           );
         } catch {
           // Server component context — middleware handles session refresh

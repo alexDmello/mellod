@@ -7,8 +7,7 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-  // If env vars are missing (e.g. before .env.local is configured),
-  // skip auth and let the app render the login page unauthenticated.
+  // If env vars are missing, skip auth and let app render login page unauthenticated
   if (!supabaseUrl || !supabaseKey) {
     return supabaseResponse;
   }
@@ -24,7 +23,12 @@ export async function proxy(request: NextRequest) {
         );
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
+          supabaseResponse.cookies.set(name, value, {
+            ...options,
+            maxAge: 365 * 24 * 60 * 60, // 1 year persistence so closing browser does NOT log out user
+            path: "/",
+            sameSite: "lax",
+          })
         );
       },
     },
