@@ -8,10 +8,11 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Leaf,
   LayoutDashboard,
-  UserPlus,
-  DollarSign,
-  MapPin,
-  Map,
+  BarChart3,
+  Wallet,
+  Building2,
+  Truck,
+  Key,
   LogOut,
   Menu,
   X,
@@ -21,10 +22,11 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
-  { href: "/admin/settings", label: "Market Price", icon: DollarSign },
-  { href: "/admin/routes", label: "Routes", icon: MapPin },
-  { href: "/admin/map", label: "Map", icon: Map },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/financials", label: "Financials", icon: Wallet },
+  { href: "/admin/fbo", label: "FBOs", icon: Building2 },
+  { href: "/admin/pickers", label: "Pickers", icon: Truck },
+  { href: "/admin/credentials", label: "Credentials", icon: Key },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -44,8 +46,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       className={cn(
         "bg-green-700 flex flex-col",
         mobile
-          ? "fixed inset-y-0 left-0 z-50 w-64 shadow-2xl"
-          : "hidden lg:flex w-64 min-h-screen sticky top-0"
+          ? "fixed inset-y-0 left-0 z-50 w-64 shadow-2xl overflow-y-auto"
+          : "hidden lg:flex w-64 h-screen sticky top-0 overflow-y-auto flex-col flex-shrink-0"
       )}
     >
       {/* Brand */}

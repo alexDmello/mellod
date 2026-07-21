@@ -4,11 +4,105 @@
   "short_name": "Mellod",
   "description": "Used Cooking Oil collection and logistics platform",
   "start_url": "/",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "minimal-ui",
+    "standalone"
+  ],
   "background_color": "#ffffff",
   "theme_color": "#15803d",
   "orientation": "portrait",
   "categories": ["logistics", "business"],
+  "iarc_rating_id": "84a0-7ad7-4a23-ad44-9ee03c12a0b8",
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.mellod.logistics",
+      "id": "com.mellod.logistics"
+    }
+  ],
+  "scope_extensions": [
+    {
+      "origin": "https://*.mellod.com"
+    },
+    {
+      "origin": "https://mellod.com"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
+  "file_handlers": [
+    {
+      "action": "/picker",
+      "name": "Mellod Pickup Route File",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      },
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+mellod",
+      "url": "/picker?uri=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/picker/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "note_taking": {
+    "new_note_url": "/picker/notes"
+  },
+  "widgets": [
+    {
+      "name": "Mellod Route Summary",
+      "short_name": "Route",
+      "description": "View today's collection progress",
+      "tag": "route-summary",
+      "template": "route-template",
+      "ms_ac_template": "/widgets/template.json",
+      "data": "/widgets/data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshots/mobile.png",
+          "sizes": "390x844",
+          "type": "image/png",
+          "label": "Mellod Route Summary Screenshot"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

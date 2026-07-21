@@ -7,6 +7,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Leaf, MapPin, History, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Suspense } from "react";
+import PwaLaunchManager from "@/components/PwaLaunchManager";
 
 const navItems = [
   { href: "/picker", label: "Today's Route", icon: MapPin },
@@ -73,6 +75,10 @@ export default function PickerLayout({ children }: { children: React.ReactNode }
           );
         })}
       </nav>
+
+      <Suspense fallback={null}>
+        <PwaLaunchManager />
+      </Suspense>
     </div>
   );
 }

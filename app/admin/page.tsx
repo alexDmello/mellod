@@ -51,28 +51,28 @@ export default async function AdminDashboard() {
       value: stats.activeFBOs,
       icon: Users,
       color: "bg-blue-50 text-blue-700",
-      href: "/admin/onboarding",
+      href: "/admin/fbo?tab=onboarding",
     },
     {
       label: "Active Pickers",
       value: stats.activePickers,
       icon: Users,
       color: "bg-purple-50 text-purple-700",
-      href: "/admin/onboarding",
+      href: "/admin/pickers?tab=onboarding",
     },
     {
       label: "Total Pickups",
       value: stats.totalPickups,
       icon: Droplets,
       color: "bg-green-50 text-green-700",
-      href: "/admin/routes",
+      href: "/admin/pickers?tab=routes",
     },
     {
       label: "Total Volume",
       value: formatLiters(stats.totalLiters),
       icon: TrendingUp,
       color: "bg-amber-50 text-amber-700",
-      href: "/admin/routes",
+      href: "/admin/pickers?tab=routes",
     },
   ];
 
@@ -89,7 +89,7 @@ export default async function AdminDashboard() {
           <span className="text-green-700 font-bold text-sm">
             {stats.currentPrice ? `${formatCurrency(stats.currentPrice)}/L` : "Not set"}
           </span>
-          <Link href="/admin/settings" className="text-green-600 hover:text-green-800 ml-1">
+          <Link href="/admin/fbo?tab=price" className="text-green-600 hover:text-green-800 ml-1">
             <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -128,7 +128,7 @@ export default async function AdminDashboard() {
       <div className="card">
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <h2 className="font-semibold text-gray-800">Recent Pickups</h2>
-          <Link href="/admin/routes" className="text-xs text-green-600 hover:text-green-800 font-medium">
+          <Link href="/admin/pickers?tab=routes" className="text-xs text-green-600 hover:text-green-800 font-medium">
             View all →
           </Link>
         </div>

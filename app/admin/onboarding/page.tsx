@@ -7,9 +7,10 @@ import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/client";
 import { createBrowserClient } from "@supabase/ssr";
 import { generateCredentials } from "@/lib/utils";
+import Link from "next/link";
 import {
   UserPlus, Copy, Check, Eye, EyeOff, Loader2,
-  Building2, Truck, ChevronDown, ChevronUp, Search, Key, MapPin
+  Building2, Truck, Search, Key, Lock, MapPin
 } from "lucide-react";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ const pickerSchema = z.object({
 type FBOForm = z.infer<typeof fboSchema>;
 type PickerForm = z.infer<typeof pickerSchema>;
 
-interface GeneratedAccount {
+export interface GeneratedAccount {
   type: "FBO" | "Picker";
   name: string;
   username: string;
@@ -43,17 +44,16 @@ interface GeneratedAccount {
   email: string;
 }
 
-interface DirectoryUser {
+export interface DirectoryUser {
   id: string;
   full_name: string;
   role: "fbo" | "picker" | "admin";
   username: string;
   phone: string | null;
   generated_password: string | null;
-  business_name?: string; // from joined FBO table
+  business_name?: string;
 }
 
-// Helper to create a client that does NOT persist session, so admin is not logged out
 function createNonPersistingClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,74 +68,63 @@ function createNonPersistingClient() {
   );
 }
 
-// ── Credential Card ───────────────────────────────────────────────────────────
-function CredentialCard({ account }: { account: GeneratedAccount }) {
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+// ── Credential Result Card ───────────────────────────────────────────────────
+export function CredentialCard({ account }: { account: GeneratedAccount }) {
+  const [copiedUser, setCopiedUser] = useState(false);
+  const [copiedPass, setCopiedPass] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  const copy = async (value: string, field: string) => {
-    await navigator.clipboard.writeText(value);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
+  const copy = async (text: string, type: "user" | "pass" | "all") => {
+    await navigator.clipboard.writeText(text);
+    if (type === "user") { setCopiedUser(true); setTimeout(() => setCopiedUser(false), 2000); }
+    if (type === "pass") { setCopiedPass(true); setTimeout(() => setCopiedPass(false), 2000); }
+    if (type === "all") { setCopiedAll(true); setTimeout(() => setCopiedAll(false), 2000); }
   };
 
-  const CopyBtn = ({ value, field }: { value: string; field: string }) => (
-    <button
-      type="button"
-      onClick={() => copy(value, field)}
-      className="p-1.5 text-gray-400 hover:text-green-600 transition-colors"
-      aria-label={`Copy ${field}`}
-    >
-      {copiedField === field ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-    </button>
-  );
+  const allDetails = `Name: ${account.name}\nRole: ${account.type}\nUsername: ${account.username}\nPassword: ${account.password}`;
 
   return (
-    <div className="border-2 border-green-200 bg-green-50 rounded-xl p-5 animate-slide-up">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 bg-green-700 rounded-lg flex items-center justify-center">
-          {account.type === "FBO" ? (
-            <Building2 className="w-4 h-4 text-white" />
-          ) : (
-            <Truck className="w-4 h-4 text-white" />
-          )}
+    <div className="card border border-green-200 bg-green-50/50 p-5 space-y-4 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="badge badge-green text-xs font-semibold">{account.type}</span>
+          <h3 className="font-bold text-gray-900">{account.name}</h3>
         </div>
-        <div>
-          <div className="text-sm font-semibold text-gray-800">{account.name}</div>
-          <div className="text-xs text-gray-500">{account.type} account created</div>
-        </div>
-        <span className="ml-auto badge badge-green">{account.type}</span>
+        <button
+          onClick={() => copy(allDetails, "all")}
+          className="btn btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 bg-white hover:bg-gray-50 border border-gray-200"
+        >
+          {copiedAll ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+          {copiedAll ? "Copied All" : "Copy Credentials"}
+        </button>
       </div>
 
-      <div className="space-y-2.5 bg-white rounded-lg p-4 border border-green-100">
-        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">
-          Login Credentials — Share with {account.type === "FBO" ? "business owner" : "driver"}
-        </p>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 w-20">Username</span>
-          <div className="flex-1 flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-            <span className="font-mono text-sm text-gray-800 font-medium">{account.username}</span>
-            <CopyBtn value={account.username} field="username" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-green-100 font-mono text-sm">
+        <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+          <div>
+            <p className="text-[10px] uppercase font-sans font-bold text-gray-400">Username</p>
+            <p className="text-gray-900 font-semibold">{account.username}</p>
           </div>
+          <button onClick={() => copy(account.username, "user")} className="text-gray-400 hover:text-green-700 p-1">
+            {copiedUser ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+          </button>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500 w-20">Password</span>
-          <div className="flex-1 flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-            <span className="font-mono text-sm text-gray-800 font-medium">
-              {showPass ? account.password : "••••••••••"}
-            </span>
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={() => setShowPass(!showPass)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-              <CopyBtn value={account.password} field="password" />
-            </div>
+        <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+          <div>
+            <p className="text-[10px] uppercase font-sans font-bold text-gray-400">Password</p>
+            <p className="text-gray-900 font-semibold">
+              {showPass ? account.password : "••••••••••••"}
+            </p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-700 p-1">
+              {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+            <button onClick={() => copy(account.password, "pass")} className="text-gray-400 hover:text-green-700 p-1">
+              {copiedPass ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       </div>
@@ -143,22 +132,20 @@ function CredentialCard({ account }: { account: GeneratedAccount }) {
   );
 }
 
-// ── Location Picker (Leaflet CDN based) ──────────────────────────────────────
-interface LocationPickerProps {
-  onLocationSelect: (lat: number, lng: number) => void;
-  initialLat?: number;
-  initialLng?: number;
-}
-
-function LocationPicker({ onLocationSelect, initialLat = 12.9716, initialLng = 77.5946 }: LocationPickerProps) {
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: initialLat, lng: initialLng });
+// ── Interactive Location Picker ──────────────────────────────────────────────
+export function LocationPicker({
+  coords,
+  onChange,
+}: {
+  coords: { lat: number; lng: number };
+  onChange: (c: { lat: number; lng: number }) => void;
+}) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !mapContainerRef.current) return;
 
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -168,83 +155,76 @@ function LocationPicker({ onLocationSelect, initialLat = 12.9716, initialLng = 7
       document.head.appendChild(link);
     }
 
-    if ((window as any).L) {
-      setMapLoaded(true);
-      return;
-    }
+    const initMap = () => {
+      const L = (window as any).L;
+      if (!L || mapInstanceRef.current || !mapContainerRef.current) return;
 
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.async = true;
-    script.onload = () => {
-      setMapLoaded(true);
-    };
-    document.body.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    if (!mapLoaded || !mapContainerRef.current || typeof window === "undefined") return;
-    const L = (window as any).L;
-    if (!L) return;
-
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current).setView([coords.lat, coords.lng], 13);
-      
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap',
-      }).addTo(map);
-
-      // Custom themed pin marker
-      const customIcon = L.divIcon({
-        html: `<div style="background-color: #15803d; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: white;">📍</div>`,
-        className: "",
-        iconSize: [24, 24],
-        iconAnchor: [12, 24],
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
 
-      const marker = L.marker([coords.lat, coords.lng], { draggable: true, icon: customIcon }).addTo(map);
+      const map = L.map(mapContainerRef.current).setView([coords.lat, coords.lng], 13);
+      mapInstanceRef.current = map;
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+
+      const marker = L.marker([coords.lat, coords.lng], { draggable: true }).addTo(map);
+      markerRef.current = marker;
 
       marker.on("dragend", () => {
         const position = marker.getLatLng();
-        setCoords({ lat: position.lat, lng: position.lng });
-        onLocationSelect(position.lat, position.lng);
+        onChange({ lat: position.lat, lng: position.lng });
       });
 
       map.on("click", (e: any) => {
         const { lat, lng } = e.latlng;
         marker.setLatLng([lat, lng]);
-        setCoords({ lat, lng });
-        onLocationSelect(lat, lng);
+        onChange({ lat, lng });
       });
+    };
 
-      mapInstanceRef.current = map;
-      markerRef.current = marker;
+    if ((window as any).L) {
+      initMap();
     } else {
-      const map = mapInstanceRef.current;
-      const marker = markerRef.current;
-      if (marker && map) {
-        const currentMarkerLatLng = marker.getLatLng();
-        if (currentMarkerLatLng.lat !== coords.lat || currentMarkerLatLng.lng !== coords.lng) {
-          marker.setLatLng([coords.lat, coords.lng]);
-          map.setView([coords.lat, coords.lng], map.getZoom());
-        }
-      }
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.async = true;
+      script.onload = initMap;
+      document.body.appendChild(script);
     }
-  }, [mapLoaded, coords.lat, coords.lng]);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
   const handleLocateMe = () => {
-    if (typeof window === "undefined" || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setCoords({ lat, lng });
-        onLocationSelect(lat, lng);
-      },
-      (error) => {
-        console.error("Error getting geolocation:", error);
-      }
-    );
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newCoords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          onChange(newCoords);
+          if (mapInstanceRef.current && markerRef.current) {
+            mapInstanceRef.current.setView([newCoords.lat, newCoords.lng], 15);
+            markerRef.current.setLatLng([newCoords.lat, newCoords.lng]);
+          }
+        },
+        (error) => {
+          alert("Could not get your current location: " + error.message);
+        }
+      );
+    }
   };
 
   return (
@@ -274,7 +254,7 @@ function LocationPicker({ onLocationSelect, initialLat = 12.9716, initialLng = 7
 }
 
 // ── FBO Registration Form ─────────────────────────────────────────────────────
-function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
+export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number }>({ lat: 12.9716, lng: 77.5946 });
@@ -288,10 +268,8 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
     setError(null);
     const dbClient = createClient();
 
-    // Count existing FBOs to generate unique credential
     const { count } = await dbClient.from("fbos").select("id", { count: "exact", head: true });
     const creds = generateCredentials("fbo", data.contact_person, count ?? 0);
-
     const fullAddress = `${data.street.trim()}, ${data.area.trim()}, ${data.city.trim()}, ${data.state.trim()} - ${data.pincode.trim()}`;
 
     try {
@@ -313,10 +291,7 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
       });
 
       const resData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(resData.error || "Failed to create FBO account");
-      }
+      if (!response.ok) throw new Error(resData.error || "Failed to create FBO account");
 
       onSuccess({
         type: "FBO",
@@ -350,35 +325,39 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
           <label className="form-label">Phone Number</label>
           <input className="form-input" type="tel" placeholder="+91 98765 43210" {...register("phone")} />
         </div>
-        <div>
-          <label className="form-label">Street Address / Door No / Floor *</label>
-          <input className="form-input" placeholder="e.g. No. 42, 2nd Floor, 80 Feet Rd" {...register("street")} />
-          {errors.street && <p className="form-error">{errors.street.message}</p>}
-        </div>
-        <div>
-          <label className="form-label">Area / Locality *</label>
-          <input className="form-input" placeholder="e.g. Koramangala 4th Block" {...register("area")} />
-          {errors.area && <p className="form-error">{errors.area.message}</p>}
-        </div>
-        <div>
-          <label className="form-label">City *</label>
-          <input className="form-input" placeholder="e.g. Bangalore" {...register("city")} />
-          {errors.city && <p className="form-error">{errors.city.message}</p>}
-        </div>
-        <div>
-          <label className="form-label">State *</label>
-          <input className="form-input" placeholder="e.g. Karnataka" {...register("state")} />
-          {errors.state && <p className="form-error">{errors.state.message}</p>}
-        </div>
-        <div>
-          <label className="form-label">Pincode *</label>
-          <input className="form-input font-mono" placeholder="6-digit pin code (e.g. 560034)" {...register("pincode")} />
-          {errors.pincode && <p className="form-error">{errors.pincode.message}</p>}
-        </div>
       </div>
 
-      <div className="border border-gray-200 p-4 rounded-xl bg-white space-y-4 shadow-sm">
-        <LocationPicker onLocationSelect={(lat, lng) => setSelectedCoords({ lat, lng })} />
+      <div className="border-t border-gray-100 pt-4 space-y-4">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">Address Details</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="form-label">Street / Building / Door No. *</label>
+            <input className="form-input" placeholder="e.g. #42, 1st Main Road, Indiranagar" {...register("street")} />
+            {errors.street && <p className="form-error">{errors.street.message}</p>}
+          </div>
+          <div>
+            <label className="form-label">Area / Locality *</label>
+            <input className="form-input" placeholder="e.g. Indiranagar 1st Stage" {...register("area")} />
+            {errors.area && <p className="form-error">{errors.area.message}</p>}
+          </div>
+          <div>
+            <label className="form-label">City *</label>
+            <input className="form-input" placeholder="e.g. Bengaluru" {...register("city")} />
+            {errors.city && <p className="form-error">{errors.city.message}</p>}
+          </div>
+          <div>
+            <label className="form-label">State *</label>
+            <input className="form-input" placeholder="e.g. Karnataka" {...register("state")} />
+            {errors.state && <p className="form-error">{errors.state.message}</p>}
+          </div>
+          <div>
+            <label className="form-label">Pincode *</label>
+            <input className="form-input" placeholder="e.g. 560038" maxLength={6} {...register("pincode")} />
+            {errors.pincode && <p className="form-error">{errors.pincode.message}</p>}
+          </div>
+        </div>
+
+        <LocationPicker coords={selectedCoords} onChange={setSelectedCoords} />
       </div>
 
       {error && <p className="form-error bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
@@ -391,7 +370,7 @@ function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount)
 }
 
 // ── Picker Registration Form ──────────────────────────────────────────────────
-function PickerRegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
+export function PickerRegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -423,10 +402,7 @@ function PickerRegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccou
       });
 
       const resData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(resData.error || "Failed to create Picker account");
-      }
+      if (!response.ok) throw new Error(resData.error || "Failed to create Picker account");
 
       onSuccess({
         type: "Picker",
@@ -470,10 +446,8 @@ function PickerRegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccou
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
-export default function OnboardingPage() {
-  const [generatedAccounts, setGeneratedAccounts] = useState<GeneratedAccount[]>([]);
-  const [activeSectionId, setActiveSectionId] = useState<"fbo" | "picker">("fbo");
+// ── Shared Directory Component ────────────────────────────────────────────────
+export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" }) {
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingDirectory, setLoadingDirectory] = useState(true);
@@ -487,7 +461,6 @@ export default function OnboardingPage() {
 
   async function fetchDirectory() {
     setLoadingDirectory(true);
-    // Fetch all profiles along with FBO business names
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select(`
@@ -499,13 +472,11 @@ export default function OnboardingPage() {
         generated_password,
         fbos ( business_name )
       `)
-      .in("role", ["fbo", "picker"])
+      .in("role", roleFilter ? [roleFilter] : ["fbo", "picker"])
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching directory:", error);
-    } else {
-      const formatted = (profiles ?? []).map((p: any) => ({
+    if (!error && profiles) {
+      const formatted = profiles.map((p: any) => ({
         id: p.id,
         full_name: p.full_name,
         role: p.role,
@@ -519,20 +490,15 @@ export default function OnboardingPage() {
     setLoadingDirectory(false);
   }
 
-  const addAccount = (acc: GeneratedAccount) => {
-    setGeneratedAccounts((prev) => [acc, ...prev]);
-    fetchDirectory(); // Refresh directory list
-  };
-
   const togglePasswordVisibility = (id: string) => {
-    setShowPasswordMap(prev => ({ ...prev, [id]: !prev[id] }));
+    setShowPasswordMap((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const copyToClipboard = async (text: string) => {
     await navigator.clipboard.writeText(text);
   };
 
-  const filteredDirectory = directory.filter(user => {
+  const filteredDirectory = directory.filter((user) => {
     const searchLower = searchTerm.toLowerCase();
     return (
       user.full_name.toLowerCase().includes(searchLower) ||
@@ -541,81 +507,120 @@ export default function OnboardingPage() {
     );
   });
 
-  const sections = [
-    {
-      id: "fbo" as const,
-      title: "Register New FBO",
-      subtitle: "Food & Beverage Operator / Collection Point",
-      icon: Building2,
-      form: <FBORegistrationForm onSuccess={addAccount} />,
-    },
-    {
-      id: "picker" as const,
-      title: "Register New Picker",
-      subtitle: "Collection driver or field agent",
-      icon: Truck,
-      form: <PickerRegistrationForm onSuccess={addAccount} />,
-    },
-  ];
+  return (
+    <div className="card p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+            <Key className="w-5 h-5 text-green-700" />
+            {roleFilter === "fbo" ? "FBO Accounts Directory" : roleFilter === "picker" ? "Picker Accounts Directory" : "Credentials Directory"}
+          </h2>
+          <p className="text-xs text-gray-500">
+            View active credentials for {roleFilter === "fbo" ? "registered FBO collection points" : roleFilter === "picker" ? "registered pickers" : "all active users"}.
+          </p>
+        </div>
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search credentials..."
+            className="form-input !pl-9 text-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {loadingDirectory ? (
+        <div className="flex items-center justify-center py-8 text-gray-500">
+          <Loader2 className="w-6 h-6 animate-spin text-green-700 mr-2" />
+          Loading accounts directory...
+        </div>
+      ) : filteredDirectory.length === 0 ? (
+        <div className="text-center py-8 text-gray-400 text-sm">
+          No accounts found.
+        </div>
+      ) : (
+        <div className="overflow-x-auto border border-gray-100 rounded-xl">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 font-semibold">
+                <th className="px-4 py-3">User/Business</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Username</th>
+                <th className="px-4 py-3">Generated Password</th>
+                <th className="px-4 py-3">Contact</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 text-gray-700">
+              {filteredDirectory.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-gray-900">{user.full_name}</p>
+                    {user.business_name && (
+                      <p className="text-xs text-green-700 font-medium">{user.business_name}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`badge ${user.role === "fbo" ? "badge-green" : "bg-blue-50 text-blue-800"}`}>
+                      {user.role.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">{user.username}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs">
+                        {showPasswordMap[user.id] ? user.generated_password : "••••••••"}
+                      </span>
+                      {user.generated_password && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(user.id)}
+                            className="text-gray-400 hover:text-gray-600"
+                            title="Show/Hide"
+                          >
+                            {showPasswordMap[user.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(user.generated_password || "")}
+                            className="text-gray-400 hover:text-green-600"
+                            title="Copy Password"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{user.phone || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Dedicated FBO Onboarding Tab Component ───────────────────────────────────
+export function FBOOnboardingTab() {
+  const [generatedAccounts, setGeneratedAccounts] = useState<GeneratedAccount[]>([]);
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Onboarding & Management</h1>
-        <p className="text-sm text-gray-500 mt-1">Register new partners and manage active user credentials.</p>
+    <div className="space-y-8 animate-fade-in">
+      <div className="card p-6 bg-white border border-gray-100">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Register New FBO</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Create credentials and detailed location profile for a Food & Beverage Operator collection point.
+          </p>
+        </div>
+        <FBORegistrationForm onSuccess={(acc) => setGeneratedAccounts((prev) => [acc, ...prev])} />
       </div>
 
-      {/* Registration Form Card with Separate Tabs at the Top */}
-      <div className="card bg-white border border-gray-100 overflow-hidden">
-        {/* Tabs Bar */}
-        <div className="flex border-b border-gray-100 bg-gray-50/50">
-          <button
-            type="button"
-            onClick={() => setActiveSectionId("fbo")}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold border-b-2 transition-all ${
-              activeSectionId === "fbo"
-                ? "border-green-700 text-green-700 bg-white"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/30"
-            }`}
-          >
-            <Building2 className="w-5 h-5" />
-            Onboard FBO
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSectionId("picker")}
-            className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold border-b-2 transition-all ${
-              activeSectionId === "picker"
-                ? "border-green-700 text-green-700 bg-white"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/30"
-            }`}
-          >
-            <Truck className="w-5 h-5" />
-            Onboard Picker
-          </button>
-        </div>
-
-        {/* Tab Panel */}
-        <div className="p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-900">
-              {activeSectionId === "fbo" ? "Register New FBO" : "Register New Picker"}
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              {activeSectionId === "fbo"
-                ? "Create credentials and detailed profile for a Food & Beverage Operator collection point."
-                : "Create credentials and details for a collection driver or field agent."}
-            </p>
-          </div>
-          {activeSectionId === "fbo" ? (
-            <FBORegistrationForm onSuccess={addAccount} />
-          ) : (
-            <PickerRegistrationForm onSuccess={addAccount} />
-          )}
-        </div>
-      </div>
-
-      {/* Generated credentials from current session */}
       {generatedAccounts.length > 0 && (
         <div className="space-y-4">
           <h2 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -630,99 +635,111 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {/* Active Directory Credentials Section */}
-      <div className="card p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-              <Key className="w-5 h-5 text-green-700" />
-              Credentials Directory
-            </h2>
-            <p className="text-xs text-gray-500">View and retrieve credentials for all active Pickers & FBOs.</p>
-          </div>
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name or username..."
-              className="form-input !pl-9 text-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+      <div className="card p-6 bg-white border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+            <Lock className="w-4 h-4 text-green-700" />
+            Password-Protected Credentials Directory
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            Looking for existing account credentials? All user passwords are strictly secured under the Credentials tab.
+          </p>
         </div>
-
-        {loadingDirectory ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
-            <Loader2 className="w-6 h-6 animate-spin text-green-700 mr-2" />
-            Loading accounts directory...
-          </div>
-        ) : filteredDirectory.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm">
-            No active profiles found.
-          </div>
-        ) : (
-          <div className="overflow-x-auto border border-gray-100 rounded-xl">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 font-semibold">
-                  <th className="px-4 py-3">User/Business</th>
-                  <th className="px-4 py-3">Role</th>
-                  <th className="px-4 py-3">Username</th>
-                  <th className="px-4 py-3">Generated Password</th>
-                  <th className="px-4 py-3">Contact</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 text-gray-700">
-                {filteredDirectory.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{user.full_name}</p>
-                      {user.business_name && (
-                        <p className="text-xs text-green-700 font-medium">{user.business_name}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`badge ${user.role === "fbo" ? "badge-green" : "bg-blue-50 text-blue-800"}`}>
-                        {user.role.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">{user.username}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">
-                          {showPasswordMap[user.id] ? user.generated_password : "••••••••"}
-                        </span>
-                        {user.generated_password && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => togglePasswordVisibility(user.id)}
-                              className="text-gray-400 hover:text-gray-600"
-                              title="Show/Hide"
-                            >
-                              {showPasswordMap[user.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => copyToClipboard(user.generated_password || "")}
-                              className="text-gray-400 hover:text-green-600"
-                              title="Copy Password"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{user.phone || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <Link
+          href="/admin/credentials"
+          className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-4 border border-green-200 text-green-800 hover:bg-green-50"
+        >
+          <Key className="w-3.5 h-3.5" /> View Credentials Directory →
+        </Link>
       </div>
+    </div>
+  );
+}
+
+// ── Dedicated Picker Onboarding Tab Component ────────────────────────────────
+export function PickerOnboardingTab() {
+  const [generatedAccounts, setGeneratedAccounts] = useState<GeneratedAccount[]>([]);
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <div className="card p-6 bg-white border border-gray-100">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Register New Picker</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Create login credentials and details for a collection driver or field agent.
+          </p>
+        </div>
+        <PickerRegistrationForm onSuccess={(acc) => setGeneratedAccounts((prev) => [acc, ...prev])} />
+      </div>
+
+      {generatedAccounts.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+            <span className="inline-flex items-center justify-center w-5 h-5 bg-green-700 text-white rounded-full text-xs">
+              {generatedAccounts.length}
+            </span>
+            Credentials Generated This Session
+          </h2>
+          {generatedAccounts.map((acc, i) => (
+            <CredentialCard key={i} account={acc} />
+          ))}
+        </div>
+      )}
+
+      <div className="card p-6 bg-white border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+            <Lock className="w-4 h-4 text-green-700" />
+            Password-Protected Credentials Directory
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            Looking for existing account credentials? All user passwords are strictly secured under the Credentials tab.
+          </p>
+        </div>
+        <Link
+          href="/admin/credentials"
+          className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-4 border border-green-200 text-green-800 hover:bg-green-50"
+        >
+          <Key className="w-3.5 h-3.5" /> View Credentials Directory →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ── Fallback Full Onboarding Page ────────────────────────────────────────────
+export default function OnboardingPage() {
+  const [activeSectionId, setActiveSectionId] = useState<"fbo" | "picker">("fbo");
+
+  return (
+    <div className="space-y-8 animate-fade-in pb-12">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Onboarding & Management</h1>
+        <p className="text-sm text-gray-500 mt-1">Register new partners and manage active user credentials.</p>
+      </div>
+
+      <div className="flex border-b border-gray-200 bg-white rounded-xl shadow-sm p-1.5 gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveSectionId("fbo")}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all ${
+            activeSectionId === "fbo" ? "bg-green-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <Building2 className="w-4 h-4" /> FBO Onboarding
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSectionId("picker")}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all ${
+            activeSectionId === "picker" ? "bg-green-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
+          }`}
+        >
+          <Truck className="w-4 h-4" /> Picker Onboarding
+        </button>
+      </div>
+
+      {activeSectionId === "fbo" ? <FBOOnboardingTab /> : <PickerOnboardingTab />}
     </div>
   );
 }
