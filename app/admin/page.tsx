@@ -8,10 +8,11 @@ import Link from "next/link";
 async function getDashboardStats() {
   const supabase = await createClient();
 
-  const [fbosRes, pickersRes, pickupsRes, priceRes] = await Promise.all([
+  const [fbosRes, pickersRes, pickupsRes, pendingRes, priceRes] = await Promise.all([
     supabase.from("fbos").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("pickers").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("pickups").select("liters, total_amount").eq("status", "completed"),
+    supabase.from("pickups").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("daily_prices").select("price_per_liter").order("effective_from", { ascending: false }).limit(1).single(),
   ]);
 
@@ -22,6 +23,7 @@ async function getDashboardStats() {
     activeFBOs: fbosRes.count ?? 0,
     activePickers: pickersRes.count ?? 0,
     totalPickups: pickupsRes.data?.length ?? 0,
+    pendingReviewsCount: pendingRes.count ?? 0,
     totalLiters,
     totalEarnings,
     currentPrice: priceRes.data?.price_per_liter ?? 0,
@@ -65,14 +67,14 @@ export default async function AdminDashboard() {
       value: stats.totalPickups,
       icon: Droplets,
       color: "bg-green-50 text-green-700",
-      href: "/admin/pickers?tab=routes",
+      href: "/admin/pickers?tab=reviews",
     },
     {
       label: "Total Volume",
       value: formatLiters(stats.totalLiters),
       icon: TrendingUp,
       color: "bg-amber-50 text-amber-700",
-      href: "/admin/pickers?tab=routes",
+      href: "/admin/pickers?tab=reviews",
     },
   ];
 
@@ -94,6 +96,27 @@ export default async function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Pending Reviews Alert Banner */}
+      {stats.pendingReviewsCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center font-bold">
+              {stats.pendingReviewsCount}
+            </div>
+            <div>
+              <p className="font-bold text-amber-900 text-sm">Pickups Pending Review</p>
+              <p className="text-xs text-amber-700">Pickers have submitted collection logs awaiting admin verification.</p>
+            </div>
+          </div>
+          <Link
+            href="/admin/pickers?tab=reviews"
+            className="btn text-xs font-semibold px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl"
+          >
+            Review Now →
+          </Link>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -82,6 +82,7 @@ export interface FBO {
   is_active: boolean;
   latitude: number | null;
   longitude: number | null;
+  fssai_license?: string | null;
   created_at: string;
   updated_at: string;
 }

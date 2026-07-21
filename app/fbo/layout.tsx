@@ -6,12 +6,13 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Leaf, BarChart3, CreditCard, LogOut } from "lucide-react";
+import { Leaf, BarChart3, Clock, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/fbo", label: "Dashboard", icon: BarChart3 },
-  { href: "/fbo/payment", label: "Payment", icon: CreditCard },
+  { href: "/fbo/pickups", label: "Pickups", icon: Clock },
+  { href: "/fbo/profile", label: "Profile", icon: User },
 ];
 
 export default function FBOLayout({ children }: { children: React.ReactNode }) {

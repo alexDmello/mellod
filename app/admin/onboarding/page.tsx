@@ -23,6 +23,7 @@ const fboSchema = z.object({
   state: z.string().min(2, "State is required"),
   pincode: z.string().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits"),
   phone: z.string().optional(),
+  fssai_license: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
@@ -287,6 +288,7 @@ export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedA
           address: fullAddress,
           latitude: selectedCoords.lat,
           longitude: selectedCoords.lng,
+          fssaiLicense: data.fssai_license?.trim() || null,
         }),
       });
 
@@ -324,6 +326,10 @@ export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedA
         <div>
           <label className="form-label">Phone Number</label>
           <input className="form-input" type="tel" placeholder="+91 98765 43210" {...register("phone")} />
+        </div>
+        <div>
+          <label className="form-label">FSSAI License No. <span className="text-gray-400 font-normal">(Optional)</span></label>
+          <input className="form-input font-mono text-xs uppercase" placeholder="e.g. 12224999000123" {...register("fssai_license")} />
         </div>
       </div>
 

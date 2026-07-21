@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Building2, Map, DollarSign, UserPlus } from "lucide-react";
+import { Building2, Map, IndianRupee, UserPlus } from "lucide-react";
 import AdminMapPage from "@/app/admin/map/page";
 import SettingsPage from "@/app/admin/settings/page";
 import { FBOOnboardingTab } from "@/app/admin/onboarding/page";
@@ -68,7 +68,7 @@ function FBOHubContent() {
               : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
           }`}
         >
-          <DollarSign className="w-4 h-4" />
+          <IndianRupee className="w-4 h-4" />
           Market Price
         </button>
       </div>

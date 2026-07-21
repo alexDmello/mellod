@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils";
-import { DollarSign, TrendingUp, History, Loader2, CheckCircle2 } from "lucide-react";
+import { IndianRupee, TrendingUp, History, Loader2, CheckCircle2 } from "lucide-react";
 
 interface PriceRecord {
   id: string;
@@ -99,12 +99,12 @@ export default function SettingsPage() {
               <p className="text-green-300 text-xs mt-1.5">per liter of UCO</p>
             </div>
             <div className="w-16 h-16 bg-white/15 rounded-2xl flex items-center justify-center">
-              <DollarSign className="w-8 h-8 text-white" />
+              <IndianRupee className="w-8 h-8 text-white" />
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <DollarSign className="w-6 h-6 text-green-300" />
+            <IndianRupee className="w-6 h-6 text-green-300" />
             <div>
               <p className="text-green-200 font-medium">No price set yet</p>
               <p className="text-green-300 text-xs">Set the first market price below</p>

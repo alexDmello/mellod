@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // 2. Parse request parameters
     const body = await request.json();
-    const { type, email, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude } = body;
+    const { type, email, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense } = body;
 
     if (!email || !password || !username || !fullName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -74,6 +74,7 @@ export async function POST(request: Request) {
         phone: phone || null,
         latitude: latitude || null,
         longitude: longitude || null,
+        fssai_license: fssaiLicense || null,
       });
 
       if (fboError) {

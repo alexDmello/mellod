@@ -6,7 +6,7 @@ import { formatCurrency, formatLiters } from "@/lib/utils";
 import {
   TrendingUp,
   Droplets,
-  DollarSign,
+  IndianRupee,
   Leaf,
   Users,
   Truck,
@@ -333,7 +333,7 @@ export default function AnalyticsPage() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-blue-800">Total Disbursed</span>
             <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center text-blue-700">
-              <DollarSign className="w-4 h-4" />
+              <IndianRupee className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-gray-900 mt-3">

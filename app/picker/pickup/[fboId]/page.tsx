@@ -104,47 +104,36 @@ export default function PickupPage({ params }: Props) {
 
     if (!picker) { setError("Picker account not found."); setSubmitting(false); return; }
 
-    // Upload photo to Supabase Storage
-    let photoUrl: string | null = null;
-    if (photo) {
-      const fileName = `pickup_${picker.id}_${Date.now()}.jpg`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("pickup-photos")
-        .upload(fileName, photo, { contentType: "image/jpeg", upsert: false });
+    // Submit via backend API route (bypasses Storage RLS & sets status to pending for Admin review)
+    const formData = new FormData();
+    formData.append("picker_id", picker.id);
+    formData.append("fbo_id", fboId);
+    if (routeId) formData.append("route_id", routeId);
+    formData.append("liters", litersNum.toString());
+    formData.append("price_per_liter", currentPrice.toString());
+    if (notes.trim()) formData.append("notes", notes.trim());
+    if (photo) formData.append("photo", photo);
 
-      if (uploadError) {
-        setError("Photo upload failed: " + uploadError.message);
+    try {
+      const res = await fetch("/api/pickup/log", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || "Failed to log pickup.");
         setSubmitting(false);
         return;
       }
 
-      const { data: urlData } = supabase.storage
-        .from("pickup-photos")
-        .getPublicUrl(uploadData.path);
-      photoUrl = urlData.publicUrl;
-    }
-
-    // Insert pickup record
-    const { error: insertError } = await supabase.from("pickups").insert({
-      picker_id: picker.id,
-      fbo_id: fboId,
-      route_id: routeId ?? null,
-      liters: litersNum,
-      price_per_liter: currentPrice,
-      photo_url: photoUrl,
-      notes: notes.trim() || null,
-      status: "completed",
-      picked_up_at: new Date().toISOString(),
-    });
-
-    if (insertError) {
-      setError(insertError.message);
+      setSuccess(true);
+      setTimeout(() => router.push("/picker"), 2500);
+    } catch (err: any) {
+      setError(err.message || "Network error submitting pickup.");
       setSubmitting(false);
-      return;
     }
-
-    setSuccess(true);
-    setTimeout(() => router.push("/picker"), 2500);
   }
 
   if (success) {

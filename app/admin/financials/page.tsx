@@ -2,249 +2,320 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency, formatLiters } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import {
   Wallet,
-  DollarSign,
+  Flame,
   TrendingUp,
   TrendingDown,
   Plus,
-  Trash2,
-  Save,
-  Fuel,
-  Building,
-  Zap,
-  Users,
-  Wrench,
-  Package,
-  Calculator,
-  PieChart,
+  Search,
   Download,
+  FileText,
+  Eye,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  Sparkles,
-  ArrowRight,
+  UploadCloud,
+  Loader2,
+  X,
+  ShieldCheck,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
-interface ExpenseItem {
+// Types
+type TransactionType = "Income" | "Expense" | "Asset" | "Transfer";
+
+interface Transaction {
   id: string;
-  category: "fuel" | "rent" | "electricity" | "salaries" | "maintenance" | "other";
-  title: string;
+  date: string;
+  type: TransactionType;
+  category: string;
   amount: number;
-  dateAdded: string;
+  reference: string;
+  proofName: string | null;
+  proofUrl: string | null;
+  notes?: string;
 }
 
-const EXPENSE_CATEGORIES = [
-  { id: "fuel", label: "Fuel & Transport", icon: Fuel, color: "text-amber-600 bg-amber-50" },
-  { id: "rent", label: "Warehouse / Rent", icon: Building, color: "text-blue-600 bg-blue-50" },
-  { id: "electricity", label: "Electricity & Utilities", icon: Zap, color: "text-yellow-600 bg-yellow-50" },
-  { id: "salaries", label: "Driver & Staff Salaries", icon: Users, color: "text-purple-600 bg-purple-50" },
-  { id: "maintenance", label: "Vehicle Maintenance", icon: Wrench, color: "text-rose-600 bg-rose-50" },
-  { id: "other", label: "Miscellaneous Overhead", icon: Package, color: "text-gray-600 bg-gray-50" },
-];
+// Preset Category options per Transaction Type
+const CATEGORIES_BY_TYPE: Record<TransactionType, string[]> = {
+  Income: ["Revenue / Oil Sale", "Grant / Subsidy", "Investment", "Other Income"],
+  Expense: ["FBO Restaurant Payout", "Logistics & Fleet", "Payroll", "Infrastructure", "Marketing", "Utilities", "Procurement"],
+  Asset: ["Equipment & Vehicles", "Depot Real Estate", "IT Hardware", "Storage Tanks"],
+  Transfer: ["Bank Reserve", "Inter-Account Transfer", "Petty Cash"],
+};
 
 export default function FinancialsPage() {
   const [loading, setLoading] = useState(true);
-  const [fboBuyingPrice, setFboBuyingPrice] = useState<number>(0);
-  const [monthlyVolume, setMonthlyVolume] = useState<number>(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [selectedProof, setSelectedProof] = useState<Transaction | null>(null);
 
-  // UCO Refinery Selling Price (what Admin gets per kg/liter)
-  const [sellingPriceInput, setSellingPriceInput] = useState<string>("75");
-  const [sellingPrice, setSellingPrice] = useState<number>(75);
-  const [priceSaved, setPriceSaved] = useState(false);
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("All");
+  const [dateFilter, setDateFilter] = useState<string>("All");
 
-  // Operating Expenses state
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [newExpCategory, setNewExpCategory] = useState<ExpenseItem["category"]>("fuel");
-  const [newExpTitle, setNewExpTitle] = useState("");
-  const [newExpAmount, setNewExpAmount] = useState("");
+  // Form State
+  const [formType, setFormType] = useState<TransactionType>("Expense");
+  const [formCategory, setFormCategory] = useState<string>(CATEGORIES_BY_TYPE["Expense"][0]);
+  const [formAmount, setFormAmount] = useState<string>("");
+  const [formDate, setFormDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [formReference, setFormReference] = useState<string>("");
+  const [formNotes, setFormNotes] = useState<string>("");
+  const [formFile, setFormFile] = useState<File | null>(null);
 
-  // Projections simulator state
-  const [simulatedVolume, setSimulatedVolume] = useState<number>(10000);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
-    // Load saved selling price and expenses from localStorage
-    const savedSellingPrice = localStorage.getItem("mellod_uco_selling_price");
-    if (savedSellingPrice) {
-      const price = parseFloat(savedSellingPrice);
-      if (!isNaN(price) && price > 0) {
-        setSellingPrice(price);
-        setSellingPriceInput(savedSellingPrice);
-      }
-    }
-
-    const savedExpenses = localStorage.getItem("mellod_operating_expenses");
-    if (savedExpenses) {
-      try {
-        setExpenses(JSON.parse(savedExpenses));
-      } catch (e) {
-        console.error("Failed to parse saved expenses:", e);
-      }
-    }
-
-    fetchDatabaseFinancials();
+    fetchManualFinancials();
   }, []);
 
-  async function fetchDatabaseFinancials() {
+  async function fetchManualFinancials() {
     setLoading(true);
     try {
-      // 1. Fetch current FBO buying price
-      const { data: priceData } = await supabase
-        .from("daily_prices")
-        .select("price_per_liter")
-        .order("effective_from", { ascending: false })
-        .limit(1)
-        .single();
+      // Query ONLY manually entered transactions from financial_transactions table
+      let customTransactions: Transaction[] = [];
+      try {
+        const { data: dbCustom, error } = await supabase
+          .from("financial_transactions")
+          .select("*")
+          .order("transaction_date", { ascending: false });
 
-      if (priceData) {
-        setFboBuyingPrice(Number(priceData.price_per_liter) || 0);
-      }
-
-      // 2. Fetch total volume collected in current month
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const { data: pickupData } = await supabase
-        .from("pickups")
-        .select("liters")
-        .eq("status", "completed")
-        .gte("picked_up_at", startOfMonth.toISOString());
-
-      if (pickupData) {
-        const total = pickupData.reduce((sum, p) => sum + Number(p.liters || 0), 0);
-        setMonthlyVolume(total);
-        if (total > 0) {
-          setSimulatedVolume(total);
+        if (!error && dbCustom && dbCustom.length > 0) {
+          customTransactions = dbCustom.map((c: any) => ({
+            id: c.id,
+            date: c.transaction_date,
+            type: c.type as TransactionType,
+            category: c.category,
+            amount: Number(c.amount),
+            reference: c.reference_id,
+            proofName: c.proof_name,
+            proofUrl: c.proof_url,
+            notes: c.notes,
+          }));
+        } else {
+          // Fallback to local storage manually saved transactions
+          const localSaved = localStorage.getItem("mellod_custom_financial_txs");
+          if (localSaved) {
+            try {
+              customTransactions = JSON.parse(localSaved);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      } catch (err) {
+        const localSaved = localStorage.getItem("mellod_custom_financial_txs");
+        if (localSaved) {
+          try {
+            customTransactions = JSON.parse(localSaved);
+          } catch (e) {
+            console.error(e);
+          }
         }
       }
+
+      setTransactions(customTransactions);
     } catch (err) {
-      console.error("Error fetching financial data:", err);
+      console.error("Error fetching manual financial data:", err);
     } finally {
       setLoading(false);
     }
   }
 
-  // Save Refinery Selling Price
-  const handleSaveSellingPrice = (e: React.FormEvent) => {
+  // Handle category update when type changes in form
+  const handleTypeChange = (type: TransactionType) => {
+    setFormType(type);
+    setFormCategory(CATEGORIES_BY_TYPE[type][0]);
+  };
+
+  // Save New Manual Transaction
+  const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    const val = parseFloat(sellingPriceInput);
-    if (!isNaN(val) && val > 0) {
-      setSellingPrice(val);
-      localStorage.setItem("mellod_uco_selling_price", val.toString());
-      setPriceSaved(true);
-      setTimeout(() => setPriceSaved(false), 3000);
+    setFormError(null);
+    setFormSuccess(null);
+
+    const amountNum = parseFloat(formAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setFormError("Please enter a valid numeric transaction amount greater than 0.");
+      return;
+    }
+
+    if (!formReference.trim()) {
+      setFormError("Reference / Invoice ID is required.");
+      return;
+    }
+
+    setFormSubmitting(true);
+
+    let photoUrl: string | null = null;
+    if (formFile) {
+      try {
+        const fileName = `receipt_${Date.now()}_${formFile.name.replace(/[^a-zA-Z0-9._-]/g, "")}`;
+        const { data: uploadData } = await supabase.storage
+          .from("pickup-photos")
+          .upload(fileName, formFile);
+        if (uploadData) {
+          const { data: urlData } = supabase.storage
+            .from("pickup-photos")
+            .getPublicUrl(uploadData.path);
+          photoUrl = urlData.publicUrl;
+        }
+      } catch (e) {
+        console.error("Storage upload warning:", e);
+      }
+    }
+
+    const newTx: Transaction = {
+      id: `tx-${Date.now()}`,
+      date: formDate,
+      type: formType,
+      category: formCategory,
+      amount: amountNum,
+      reference: formReference.trim().toUpperCase(),
+      proofName: formFile ? formFile.name : null,
+      proofUrl: photoUrl,
+      notes: formNotes.trim() || undefined,
+    };
+
+    // Save to Supabase financial_transactions table & local storage fallback
+    try {
+      const { error: dbErr } = await supabase.from("financial_transactions").insert({
+        type: formType,
+        category: formCategory,
+        amount: amountNum,
+        transaction_date: formDate,
+        reference_id: formReference.trim().toUpperCase(),
+        notes: formNotes.trim() || null,
+        proof_url: photoUrl,
+        proof_name: formFile ? formFile.name : null,
+      });
+
+      if (dbErr) {
+        const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
+        const updatedLocal = [newTx, ...existingLocal];
+        localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+      }
+    } catch (err) {
+      const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
+      const updatedLocal = [newTx, ...existingLocal];
+      localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+    }
+
+    setFormSubmitting(false);
+    setFormSuccess("Transaction saved successfully.");
+
+    // Refresh live manual list
+    await fetchManualFinancials();
+
+    // Reset inputs
+    setFormAmount("");
+    setFormReference("");
+    setFormNotes("");
+    setFormFile(null);
+
+    setTimeout(() => {
+      setFormSuccess(null);
+      setShowFormModal(false);
+    }, 1200);
+  };
+
+  // Delete Custom Transaction
+  const handleDeleteTransaction = async (tx: Transaction) => {
+    if (confirm("Are you sure you want to delete this transaction record?")) {
+      try {
+        await supabase.from("financial_transactions").delete().eq("id", tx.id);
+      } catch (e) {
+        console.error(e);
+      }
+
+      const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
+      const updatedLocal = existingLocal.filter((item: any) => item.id !== tx.id);
+      localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+
+      await fetchManualFinancials();
     }
   };
 
-  // Add Expense Item
-  const handleAddExpense = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amt = parseFloat(newExpAmount);
-    if (!newExpTitle.trim() || isNaN(amt) || amt <= 0) return;
+  // ── KPI Dashboard Calculations (Derived ONLY from manual entries) ─────────
+  const kpiData = useMemo(() => {
+    const totalIncome = transactions
+      .filter((t) => t.type === "Income")
+      .reduce((sum, t) => sum + t.amount, 0);
 
-    const newItem: ExpenseItem = {
-      id: Date.now().toString(),
-      category: newExpCategory,
-      title: newExpTitle.trim(),
-      amount: amt,
-      dateAdded: new Date().toISOString(),
+    const totalExpense = transactions
+      .filter((t) => t.type === "Expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalAsset = transactions
+      .filter((t) => t.type === "Asset")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const currentCashBalance = totalIncome - totalExpense - totalAsset;
+    const monthlyBurnRate = totalExpense;
+    const netCashFlow = totalIncome - totalExpense;
+
+    return {
+      currentCashBalance,
+      monthlyBurnRate,
+      netCashFlow,
     };
+  }, [transactions]);
 
-    const updated = [newItem, ...expenses];
-    setExpenses(updated);
-    localStorage.setItem("mellod_operating_expenses", JSON.stringify(updated));
+  // ── Filtered Ledger Data ──────────────────────────────────────────────────
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      if (typeFilter !== "All" && t.type !== typeFilter) return false;
 
-    setNewExpTitle("");
-    setNewExpAmount("");
-  };
+      if (dateFilter !== "All") {
+        const txDate = new Date(t.date);
+        const now = new Date();
+        if (dateFilter === "This Month") {
+          if (txDate.getMonth() !== now.getMonth() || txDate.getFullYear() !== now.getFullYear()) {
+            return false;
+          }
+        } else if (dateFilter === "This Year") {
+          if (txDate.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
 
-  // Delete Expense Item
-  const handleDeleteExpense = (id: string) => {
-    const updated = expenses.filter((e) => e.id !== id);
-    setExpenses(updated);
-    localStorage.setItem("mellod_operating_expenses", JSON.stringify(updated));
-  };
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchRef = t.reference.toLowerCase().includes(q);
+        const matchCat = t.category.toLowerCase().includes(q);
+        const matchNotes = t.notes?.toLowerCase().includes(q) || false;
+        if (!matchRef && !matchCat && !matchNotes) return false;
+      }
 
-  // ── Financial Calculations ────────────────────────────────────────────────
-  const totalOpEx = useMemo(() => {
-    return expenses.reduce((sum, item) => sum + item.amount, 0);
-  }, [expenses]);
+      return true;
+    });
+  }, [transactions, typeFilter, dateFilter, searchQuery]);
 
-  const unitGrossMargin = useMemo(() => {
-    return Math.max(sellingPrice - fboBuyingPrice, 0);
-  }, [sellingPrice, fboBuyingPrice]);
+  // Export Ledger CSV
+  const handleExportCSV = () => {
+    const headers = ["ID", "Date", "Type", "Category", "Amount", "Reference", "Notes", "Proof File"];
+    const rows = filteredTransactions.map((t) => [
+      t.id,
+      t.date,
+      t.type,
+      `"${t.category}"`,
+      t.amount,
+      `"${t.reference}"`,
+      `"${t.notes || ""}"`,
+      `"${t.proofName || "None"}"`,
+    ]);
 
-  // Actual Monthly P&L
-  const actualRevenue = useMemo(() => monthlyVolume * sellingPrice, [monthlyVolume, sellingPrice]);
-  const actualCogs = useMemo(() => monthlyVolume * fboBuyingPrice, [monthlyVolume, fboBuyingPrice]);
-  const actualGrossProfit = useMemo(() => actualRevenue - actualCogs, [actualRevenue, actualCogs]);
-  const actualNetEarnings = useMemo(() => actualGrossProfit - totalOpEx, [actualGrossProfit, totalOpEx]);
-  const actualProfitMargin = useMemo(() => (actualRevenue > 0 ? (actualNetEarnings / actualRevenue) * 100 : 0), [actualNetEarnings, actualRevenue]);
-
-  // Simulated Projections
-  const simRevenue = useMemo(() => simulatedVolume * sellingPrice, [simulatedVolume, sellingPrice]);
-  const simCogs = useMemo(() => simulatedVolume * fboBuyingPrice, [simulatedVolume, fboBuyingPrice]);
-  const simGrossProfit = useMemo(() => simRevenue - simCogs, [simRevenue, simCogs]);
-  const simNetEarnings = useMemo(() => simGrossProfit - totalOpEx, [simGrossProfit, totalOpEx]);
-
-  // Break-even volume calculation (Liters needed to cover total OpEx)
-  const breakEvenVolume = useMemo(() => {
-    if (unitGrossMargin <= 0) return 0;
-    return Math.ceil(totalOpEx / unitGrossMargin);
-  }, [totalOpEx, unitGrossMargin]);
-
-  // Per Liter Metrics
-  const opexPerLiter = useMemo(() => {
-    return monthlyVolume > 0 ? totalOpEx / monthlyVolume : (simulatedVolume > 0 ? totalOpEx / simulatedVolume : 0);
-  }, [totalOpEx, monthlyVolume, simulatedVolume]);
-
-  const netProfitPerLiter = useMemo(() => {
-    return monthlyVolume > 0 ? actualNetEarnings / monthlyVolume : (simulatedVolume > 0 ? simNetEarnings / simulatedVolume : unitGrossMargin);
-  }, [monthlyVolume, actualNetEarnings, simulatedVolume, simNetEarnings, unitGrossMargin]);
-
-  const simOpexPerLiter = useMemo(() => {
-    return simulatedVolume > 0 ? totalOpEx / simulatedVolume : 0;
-  }, [totalOpEx, simulatedVolume]);
-
-  const simNetProfitPerLiter = useMemo(() => {
-    return simulatedVolume > 0 ? simNetEarnings / simulatedVolume : 0;
-  }, [simNetEarnings, simulatedVolume]);
-
-  // CSV Export
-  const handleExportStatement = () => {
-    const lines = [
-      ["MELLOD UCO LOGISTICS - FINANCIAL STATEMENT"],
-      [`Generated Date: ${new Date().toLocaleDateString()}`],
-      [""],
-      ["UNIT PRICING SUMMARY"],
-      [`FBO Buying Price (COGS/Kg)`, `INR ${fboBuyingPrice}`],
-      [`Refinery Selling Price (Revenue/Kg)`, `INR ${sellingPrice}`],
-      [`Gross Margin per Kg`, `INR ${unitGrossMargin}`],
-      [""],
-      ["MONTHLY P&L SUMMARY"],
-      [`Total Monthly Volume Collected (Kg)`, monthlyVolume],
-      [`Gross Revenue`, `INR ${actualRevenue}`],
-      [`FBO Payouts (COGS)`, `INR ${actualCogs}`],
-      [`Gross Profit`, `INR ${actualGrossProfit}`],
-      [`Total Operating Expenses (OpEx)`, `INR ${totalOpEx}`],
-      [`Net Potential Monthly Earnings`, `INR ${actualNetEarnings}`],
-      [`Net Profit Margin`, `${actualProfitMargin.toFixed(2)}%`],
-      [""],
-      ["LOGGED OPERATING EXPENSES"],
-      ["Category", "Description", "Amount (INR)"],
-      ...expenses.map((e) => [e.category, `"${e.title}"`, e.amount]),
-    ];
-
-    const csvContent = "data:text/csv;charset=utf-8," + lines.map((l) => l.join(",")).join("\n");
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `mellod_financial_statement_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `financial_ledger_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -252,373 +323,597 @@ export default function FinancialsPage() {
 
   return (
     <div className="space-y-8 animate-fade-in pb-16">
-      {/* ── Top Header Controls ──────────────────────────────────────────── */}
+      {/* ── Header Bar ───────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
             <Wallet className="w-6 h-6 text-green-700" />
-            Financials & Profitability
+            Financial Management Ledger
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Configure refinery selling price, track monthly OpEx (rent, fuel, salaries), and calculate potential net earnings.
+            Manual entry ledger. Values appear only when entered by admin.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
-            onClick={fetchDatabaseFinancials}
-            className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200"
+            onClick={() => fetchManualFinancials()}
+            className="btn btn-secondary text-xs flex items-center gap-1.5 py-2.5 px-3 bg-white hover:bg-gray-50 border border-gray-200"
+            title="Refresh entries"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-green-600" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-green-700" : ""}`} />
             Refresh
           </button>
 
-          <button onClick={handleExportStatement} className="btn btn-primary text-xs flex items-center gap-1.5 py-2 px-4 shadow-sm">
-            <Download className="w-3.5 h-3.5" />
-            Export Statement
+          <button
+            onClick={handleExportCSV}
+            className="btn btn-secondary text-xs flex items-center gap-1.5 py-2.5 px-4 bg-white hover:bg-gray-50 border border-gray-200"
+          >
+            <Download className="w-4 h-4 text-gray-600" />
+            Export CSV
+          </button>
+
+          <button
+            onClick={() => setShowFormModal(true)}
+            className="btn btn-primary text-xs flex items-center gap-1.5 py-2.5 px-4 shadow-sm font-semibold"
+          >
+            <Plus className="w-4 h-4" />
+            Log New Transaction
           </button>
         </div>
       </div>
 
-      {/* ── 1. Unit Pricing & Margin Analysis ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Set Selling Price Card */}
-        <div className="card p-6 bg-white border border-gray-100 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center font-bold">
-              ₹
-            </div>
-            <div>
-              <h2 className="font-bold text-gray-900 text-base">Refinery Selling Price</h2>
-              <p className="text-xs text-gray-500">Price you receive per kg/liter from buyers</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSaveSellingPrice} className="space-y-4">
-            <div>
-              <label className="form-label text-xs font-semibold text-gray-700">
-                Sale Price per Kg/Liter (₹)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-gray-400">₹</span>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="1"
-                  className="form-input !pl-8 font-bold text-lg"
-                  placeholder="75.00"
-                  value={sellingPriceInput}
-                  onChange={(e) => setSellingPriceInput(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {priceSaved && (
-              <div className="p-2.5 bg-green-50 border border-green-200 rounded-lg text-green-800 text-xs flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                Refinery selling price saved successfully!
-              </div>
-            )}
-
-            <button type="submit" className="btn btn-primary w-full text-xs py-2.5 flex items-center justify-center gap-2">
-              <Save className="w-3.5 h-3.5" /> Save Selling Rate
-            </button>
-          </form>
-        </div>
-
-        {/* Pricing Breakdown & Unit Margin */}
-        <div className="lg:col-span-2 card p-6 bg-gradient-to-br from-green-900 via-emerald-800 to-teal-900 text-white flex flex-col justify-between space-y-6 shadow-xl">
+      {/* ── SECTION 1: KPI Dashboard (Derived ONLY from manual entries) ────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1: Current Cash Balance */}
+        <div className="card p-6 bg-gradient-to-br from-emerald-800 via-green-800 to-teal-900 text-white shadow-xl relative overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-green-200">
+              Current Cash Balance
+            </span>
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
+              <Wallet className="w-5 h-5 text-white" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="text-3xl lg:text-4xl font-black tracking-tight text-white">
+              {formatCurrency(kpiData.currentCashBalance)}
+            </div>
+            <p className="text-xs text-green-200 font-medium mt-1">
+              Net balance from manual ledger entries
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-green-100">
+            <span className="flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-green-300" /> Manual Ledger Active
+            </span>
+            <span className="font-semibold">{transactions.length} Total Entries</span>
+          </div>
+        </div>
+
+        {/* Card 2: Monthly Burn Rate */}
+        <div className="card p-6 bg-white border border-gray-100 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Monthly Burn Rate
+            </span>
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Flame className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="text-3xl font-black text-gray-900">
+              {formatCurrency(kpiData.monthlyBurnRate)}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Total logged expenses outlays
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>Logged Expenses</span>
+            <span className="font-bold text-rose-600">
+              {transactions.filter((t) => t.type === "Expense").length} items
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Net Cash Flow */}
+        <div
+          className={`card p-6 border shadow-sm flex flex-col justify-between transition-colors ${
+            kpiData.netCashFlow >= 0
+              ? "bg-emerald-50/60 border-emerald-200 text-emerald-950"
+              : "bg-rose-50/60 border-rose-200 text-rose-950"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span
+              className={`text-xs font-bold uppercase tracking-wider ${
+                kpiData.netCashFlow >= 0 ? "text-emerald-800" : "text-rose-800"
+              }`}
+            >
+              Net Cash Flow
+            </span>
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                kpiData.netCashFlow >= 0
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-rose-100 text-rose-700"
+              }`}
+            >
+              {kpiData.netCashFlow >= 0 ? (
+                <TrendingUp className="w-5 h-5" />
+              ) : (
+                <TrendingDown className="w-5 h-5" />
+              )}
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div
+              className={`text-3xl font-black ${
+                kpiData.netCashFlow >= 0 ? "text-emerald-700" : "text-rose-700"
+              }`}
+            >
+              {kpiData.netCashFlow >= 0 ? "+" : ""}
+              {formatCurrency(kpiData.netCashFlow)}
+            </div>
+            <p
+              className={`text-xs mt-1 font-medium ${
+                kpiData.netCashFlow >= 0 ? "text-emerald-700" : "text-rose-700"
+              }`}
+            >
+              {kpiData.netCashFlow >= 0
+                ? "Net positive income flow"
+                : "Operating deficit outlay"}
+            </p>
+          </div>
+
+          <div
+            className={`pt-3 border-t flex items-center justify-between text-xs ${
+              kpiData.netCashFlow >= 0
+                ? "border-emerald-200 text-emerald-800"
+                : "border-rose-200 text-rose-800"
+            }`}
+          >
+            <span>Period Margin Status</span>
+            <span className="font-bold">
+              {kpiData.netCashFlow >= 0 ? "★ Surplus" : "⚠️ Deficit"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── SECTION 2 & 3 Grid: Side Entry Form + Main Transaction Ledger ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Persistent Desktop Form Panel (4 cols) */}
+        <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-green-300" />
-              <span className="text-xs font-bold uppercase tracking-wider text-green-200">Margin Breakdown</span>
+              <ShieldCheck className="w-5 h-5 text-green-700" />
+              <h2 className="font-bold text-gray-900 text-base">Log New Transaction</h2>
             </div>
-            <span className="badge bg-white/20 text-white text-xs font-semibold px-3 py-1">Per Kg / Liter</span>
+            <span className="badge bg-green-50 text-green-800 text-[10px] uppercase font-bold">
+              Manual Form
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-y border-white/10 py-4">
+          <form onSubmit={handleSaveTransaction} className="space-y-4">
+            {/* Field 1: Transaction Type Toggle Buttons */}
             <div>
-              <p className="text-xs text-green-200">FBO Buy Rate (Cost)</p>
-              <p className="text-2xl font-black mt-1 text-white">{formatCurrency(fboBuyingPrice)}</p>
-              <p className="text-[10px] text-green-300">Paid to restaurants</p>
+              <label className="text-xs font-semibold text-gray-700 block mb-1.5">
+                Transaction Type *
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-semibold">
+                {(["Income", "Expense", "Asset", "Transfer"] as TransactionType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => handleTypeChange(t)}
+                    className={`py-2 px-2 rounded-lg text-center transition-all ${
+                      formType === t
+                        ? t === "Income"
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : t === "Expense"
+                          ? "bg-rose-600 text-white shadow-sm"
+                          : t === "Asset"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-purple-600 text-white shadow-sm"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/60"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="border-l border-white/10 pl-4">
-              <p className="text-xs text-green-200">Refinery Sell Rate</p>
-              <p className="text-2xl font-black mt-1 text-emerald-300">{formatCurrency(sellingPrice)}</p>
-              <p className="text-[10px] text-green-300">Revenue per kg</p>
-            </div>
-
-            <div className="border-l border-white/10 pl-4">
-              <p className="text-xs text-green-200">Gross Margin / Kg</p>
-              <p className="text-2xl font-black mt-1 text-yellow-300">+{formatCurrency(unitGrossMargin)}</p>
-              <p className="text-[10px] text-green-300">Gross spread per kg</p>
-            </div>
-
-            <div className="border-l border-white/10 pl-4">
-              <p className="text-xs text-green-200">Net Profit / Liter</p>
-              <p className="text-2xl font-black mt-1 text-lime-300">+{formatCurrency(netProfitPerLiter)}</p>
-              <p className="text-[10px] text-green-200 font-semibold">Net profit after OpEx</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-green-100">
-            <span>Current Month Volume Collected: <strong>{formatLiters(monthlyVolume)}</strong></span>
-            <span>Break-Even Volume: <strong>{formatLiters(breakEvenVolume)}</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. Executive P&L & Potential Net Earnings Summary ───────────────────── */}
-      <div className="card p-6 bg-white border border-gray-100 space-y-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-          <div>
-            <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-green-700" />
-              Monthly Profit & Loss Statement (P&L)
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Summary of actual gross revenue, FBO payouts, OpEx, and potential net earnings.</p>
-          </div>
-          <div className="text-right">
-            <span className="text-xs font-semibold text-gray-500">Net Profit Margin</span>
-            <div className={`text-xl font-black ${actualNetEarnings >= 0 ? "text-green-700" : "text-red-600"}`}>
-              {actualProfitMargin.toFixed(1)}%
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Gross Revenue */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Revenue</p>
-            <p className="text-2xl font-black text-gray-900 mt-1">{formatCurrency(actualRevenue)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">{formatLiters(monthlyVolume)} × {formatCurrency(sellingPrice)}</p>
-          </div>
-
-          {/* FBO Payouts */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">FBO Payouts (COGS)</p>
-            <p className="text-2xl font-black text-gray-900 mt-1">{formatCurrency(actualCogs)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">{formatLiters(monthlyVolume)} × {formatCurrency(fboBuyingPrice)}</p>
-          </div>
-
-          {/* Total OpEx */}
-          <div className="p-4 bg-rose-50/50 rounded-xl border border-rose-100">
-            <p className="text-xs font-bold text-rose-800 uppercase tracking-wider">Total OpEx</p>
-            <p className="text-2xl font-black text-rose-900 mt-1">-{formatCurrency(totalOpEx)}</p>
-            <p className="text-[11px] text-rose-600 mt-1">{expenses.length} expense categories</p>
-          </div>
-
-          {/* Net Profit per Liter */}
-          <div className="p-4 bg-emerald-50/70 rounded-xl border border-emerald-200">
-            <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Net Profit / Liter</p>
-            <p className="text-2xl font-black text-emerald-900 mt-1">+{formatCurrency(netProfitPerLiter)}</p>
-            <p className="text-[11px] text-emerald-700 font-semibold mt-1">
-              ₹{sellingPrice} - ₹{fboBuyingPrice} - ₹{opexPerLiter.toFixed(1)} OpEx
-            </p>
-          </div>
-
-          {/* Net Potential Earnings */}
-          <div className={`p-4 rounded-xl border ${actualNetEarnings >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-            <p className={`text-xs font-bold uppercase tracking-wider ${actualNetEarnings >= 0 ? "text-green-800" : "text-red-800"}`}>
-              Net Potential Earnings
-            </p>
-            <p className={`text-2xl font-black mt-1 ${actualNetEarnings >= 0 ? "text-green-900" : "text-red-900"}`}>
-              {formatCurrency(actualNetEarnings)}
-            </p>
-            <p className={`text-[11px] font-semibold mt-1 ${actualNetEarnings >= 0 ? "text-green-700" : "text-red-600"}`}>
-              {actualNetEarnings >= 0 ? "★ Net Monthly Profit" : "⚠️ Operating Loss"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 3. Operating Expenses Manager (OpEx Log) ─────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Add Expense Form (1 Col) */}
-        <div className="card p-6 bg-white border border-gray-100 space-y-4">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-            <Plus className="w-5 h-5 text-green-700" />
-            <h2 className="font-bold text-gray-900 text-base">Log Operating Expense</h2>
-          </div>
-
-          <form onSubmit={handleAddExpense} className="space-y-4">
+            {/* Field 2: Locked Dropdown Category */}
             <div>
-              <label className="form-label text-xs">Expense Category</label>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">
+                Category *
+              </label>
               <select
-                className="form-input text-sm"
-                value={newExpCategory}
-                onChange={(e) => setNewExpCategory(e.target.value as any)}
+                className="form-input text-sm font-semibold bg-white"
+                value={formCategory}
+                onChange={(e) => setFormCategory(e.target.value)}
               >
-                {EXPENSE_CATEGORIES.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.label}
+                {CATEGORIES_BY_TYPE[formType].map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Field 3: Amount Formatted for Currency */}
             <div>
-              <label className="form-label text-xs">Title / Description *</label>
-              <input
-                type="text"
-                placeholder="e.g. Fuel for Tempo, Depot Rent"
-                className="form-input text-sm"
-                value={newExpTitle}
-                onChange={(e) => setNewExpTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="form-label text-xs">Monthly Amount (₹) *</label>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">
+                Amount (₹) *
+              </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">₹</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-gray-400 text-sm">
+                  ₹
+                </span>
                 <input
                   type="number"
                   step="any"
                   min="0"
-                  placeholder="2000"
-                  className="form-input !pl-8 text-sm font-semibold"
-                  value={newExpAmount}
-                  onChange={(e) => setNewExpAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="form-input !pl-8 font-bold text-base text-gray-900"
+                  value={formAmount}
+                  onChange={(e) => setFormAmount(e.target.value)}
                   required
                 />
               </div>
             </div>
 
-            <button type="submit" className="btn btn-primary w-full text-xs py-2.5 flex items-center justify-center gap-1.5">
-              <Plus className="w-4 h-4" /> Add Expense Line
+            {/* Field 4: Date Picker & Field 5: Reference ID */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  className="form-input text-xs font-semibold"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Reference ID *
+                </label>
+                <input
+                  type="text"
+                  placeholder="INV-2026-001"
+                  className="form-input text-xs font-bold uppercase tracking-wider"
+                  value={formReference}
+                  onChange={(e) => setFormReference(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Field 6: Notes / Description */}
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">
+                Description / Notes
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., FBO payout for Royal Diner, Fuel bill..."
+                className="form-input text-xs"
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+              />
+            </div>
+
+            {/* Field 7: Receipt / Proof Upload File Input Zone */}
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">
+                Attach Receipt / Proof
+              </label>
+              <div className="relative border-2 border-dashed border-gray-200 hover:border-green-600 rounded-xl p-3 bg-gray-50 text-center transition-colors">
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex items-center justify-center gap-2 text-gray-500 text-xs">
+                  <UploadCloud className="w-4 h-4 text-green-700" />
+                  {formFile ? (
+                    <span className="font-semibold text-green-800 truncate max-w-[200px]">
+                      {formFile.name}
+                    </span>
+                  ) : (
+                    <span>Click or drag receipt file</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Feedback messages */}
+            {formError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {formError}
+              </div>
+            )}
+
+            {formSuccess && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
+                {formSuccess}
+              </div>
+            )}
+
+            {/* Save Transaction Button with Loading State */}
+            <button
+              type="submit"
+              disabled={formSubmitting}
+              className="btn btn-primary w-full py-3 text-xs flex items-center justify-center gap-2 font-bold shadow-md"
+            >
+              {formSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving Transaction...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  Save Transaction
+                </>
+              )}
             </button>
           </form>
         </div>
 
-        {/* Expenses List (2 Cols) */}
-        <div className="lg:col-span-2 card p-6 bg-white border border-gray-100 space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        {/* ── SECTION 3: Transaction Ledger Table (8 cols) ────────────────── */}
+        <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
             <div>
-              <h2 className="font-bold text-gray-900 text-base">Monthly Operating Expenses Log</h2>
-              <p className="text-xs text-gray-500">Fixed & variable operational overhead items</p>
+              <h2 className="font-bold text-gray-900 text-base">Transaction Ledger</h2>
+              <p className="text-xs text-gray-500">
+                Displaying {filteredTransactions.length} of {transactions.length} total entries
+              </p>
             </div>
-            <div className="text-right">
-              <span className="text-xs text-gray-400">Total Monthly OpEx</span>
-              <p className="text-lg font-black text-rose-600">{formatCurrency(totalOpEx)}</p>
+
+            {/* Search & Filter Bar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[180px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search ref ID or category..."
+                  className="form-input !pl-8 !py-1.5 text-xs bg-gray-50 border-gray-200"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <select
+                className="form-input !py-1.5 !px-3 text-xs bg-gray-50 border-gray-200 font-medium"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="All">All Types</option>
+                <option value="Income">Income</option>
+                <option value="Expense">Expense</option>
+                <option value="Asset">Asset</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+
+              <select
+                className="form-input !py-1.5 !px-3 text-xs bg-gray-50 border-gray-200 font-medium"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              >
+                <option value="All">All Time</option>
+                <option value="This Month">This Month</option>
+                <option value="This Year">This Year</option>
+              </select>
             </div>
           </div>
 
-          {expenses.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 text-sm">
-              No operating expenses logged yet. Add items on the left to track fuel, rent, utilities, and salaries.
+          {/* Table View */}
+          {loading ? (
+            <div className="py-16 text-center text-gray-400 flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 animate-spin text-green-700" />
+              <span>Loading financial ledger...</span>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="py-16 text-center text-gray-400 space-y-2">
+              <FileText className="w-10 h-10 mx-auto text-gray-300" />
+              <p className="font-semibold text-gray-600 text-sm">No transactions logged yet.</p>
+              <p className="text-xs text-gray-400">Use the form on the left to manually record income, expenses (such as FBO restaurant payouts), assets, or transfers.</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50 max-h-[340px] overflow-y-auto pr-1">
-              {expenses.map((exp) => {
-                const catMeta = EXPENSE_CATEGORIES.find((c) => c.id === exp.category) || EXPENSE_CATEGORIES[5];
-                const IconComp = catMeta.icon;
+            <div className="overflow-x-auto rounded-xl border border-gray-100">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4 text-right">Amount</th>
+                    <th className="py-3 px-4">Reference</th>
+                    <th className="py-3 px-4 text-center">Proof</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs">
+                  {filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-gray-50/80 transition-colors group">
+                      <td className="py-3.5 px-4 font-medium text-gray-700 whitespace-nowrap">
+                        {tx.date}
+                      </td>
 
-                return (
-                  <div key={exp.id} className="flex items-center justify-between py-3 hover:bg-gray-50/50 px-2 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${catMeta.color}`}>
-                        <IconComp className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{exp.title}</p>
-                        <p className="text-xs text-gray-400">{catMeta.label}</p>
-                      </div>
-                    </div>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span
+                          className={`badge font-bold text-[10px] px-2.5 py-1 ${
+                            tx.type === "Income"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : tx.type === "Expense"
+                              ? "bg-rose-100 text-rose-800"
+                              : tx.type === "Asset"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-purple-100 text-purple-800"
+                          }`}
+                        >
+                          {tx.type}
+                        </span>
+                      </td>
 
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-bold text-rose-600">-{formatCurrency(exp.amount)}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteExpense(exp.id)}
-                        className="text-gray-300 hover:text-red-600 transition-colors p-1"
-                        title="Delete expense"
+                      <td className="py-3.5 px-4 font-semibold text-gray-900">
+                        {tx.category}
+                        {tx.notes && (
+                          <p className="text-[10px] text-gray-400 font-normal truncate max-w-[180px]">
+                            {tx.notes}
+                          </p>
+                        )}
+                      </td>
+
+                      <td
+                        className={`py-3.5 px-4 text-right font-bold whitespace-nowrap text-sm ${
+                          tx.type === "Income"
+                            ? "text-emerald-700"
+                            : tx.type === "Expense"
+                            ? "text-rose-600"
+                            : tx.type === "Asset"
+                            ? "text-blue-700"
+                            : "text-purple-700"
+                        }`}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                        {tx.type === "Income" ? "+" : tx.type === "Expense" ? "-" : ""}
+                        {formatCurrency(tx.amount)}
+                      </td>
+
+                      <td className="py-3.5 px-4 font-mono font-semibold text-gray-600 text-[11px] whitespace-nowrap">
+                        {tx.reference}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {tx.proofUrl || tx.proofName ? (
+                          <button
+                            onClick={() => setSelectedProof(tx)}
+                            className="p-1.5 bg-gray-100 hover:bg-green-100 text-gray-600 hover:text-green-800 rounded-lg transition-colors inline-flex items-center gap-1 text-[11px] font-semibold"
+                            title="View Attached Proof"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            View
+                          </button>
+                        ) : (
+                          <span className="text-gray-300 text-[11px]">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteTransaction(tx)}
+                          className="p-1 text-gray-300 hover:text-rose-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete entry"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── 4. Earnings Simulator & Volume Projections ───────────────────────── */}
-      <div className="card p-6 bg-white border border-gray-100 space-y-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-          <div>
-            <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-700" />
-              Potential Volume & Profitability Simulator
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Drag the slider to project earnings at different collection scale targets.</p>
-          </div>
-          <div className="text-right">
-            <span className="text-xs text-gray-400">Target Monthly Volume</span>
-            <div className="text-lg font-black text-gray-900">{formatLiters(simulatedVolume)}</div>
+      {/* Proof Document Preview Modal */}
+      {selectedProof && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl space-y-4">
+            <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-green-400" />
+                <span className="font-bold text-sm">Receipt & Proof Verification</span>
+              </div>
+              <button
+                onClick={() => setSelectedProof(null)}
+                className="text-gray-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div>
+                  <span className="text-gray-400">Reference:</span>
+                  <p className="font-bold text-gray-900 font-mono text-sm">{selectedProof.reference}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Date:</span>
+                  <p className="font-semibold text-gray-800">{selectedProof.date}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Type & Category:</span>
+                  <p className="font-semibold text-gray-800">{selectedProof.type} — {selectedProof.category}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Amount:</span>
+                  <p className="font-bold text-emerald-700 text-sm">{formatCurrency(selectedProof.amount)}</p>
+                </div>
+              </div>
+
+              {selectedProof.proofUrl && (
+                <div className="border rounded-xl overflow-hidden max-h-[300px] bg-gray-100 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedProof.proofUrl}
+                    alt="Receipt preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {selectedProof.proofName && (
+                <p className="text-xs text-gray-500 text-center font-mono">
+                  Attached file: <strong>{selectedProof.proofName}</strong>
+                </p>
+              )}
+            </div>
+
+            <div className="px-5 py-3 bg-gray-50 text-right border-t border-gray-100">
+              <button
+                onClick={() => setSelectedProof(null)}
+                className="btn btn-secondary text-xs px-4 py-2"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Volume Slider */}
-        <div className="space-y-3 bg-gray-50 p-5 rounded-2xl border border-gray-100">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
-            <span>1,000 Kg / Month</span>
-            <span>25,000 Kg / Month</span>
-            <span>50,000 Kg / Month</span>
-          </div>
-          <input
-            type="range"
-            min="1000"
-            max="50000"
-            step="500"
-            value={simulatedVolume}
-            onChange={(e) => setSimulatedVolume(Number(e.target.value))}
-            className="w-full h-2.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-700"
-          />
-        </div>
-
-        {/* Projected P&L Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="p-4 bg-white rounded-xl border border-gray-200">
-            <p className="text-xs font-bold text-gray-400 uppercase">Projected Revenue</p>
-            <p className="text-xl font-black text-gray-900 mt-1">{formatCurrency(simRevenue)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">{formatLiters(simulatedVolume)} × {formatCurrency(sellingPrice)}</p>
-          </div>
-
-          <div className="p-4 bg-white rounded-xl border border-gray-200">
-            <p className="text-xs font-bold text-gray-400 uppercase">Projected COGS (FBO)</p>
-            <p className="text-xl font-black text-gray-900 mt-1">{formatCurrency(simCogs)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">{formatLiters(simulatedVolume)} × {formatCurrency(fboBuyingPrice)}</p>
-          </div>
-
-          <div className="p-4 bg-white rounded-xl border border-gray-200">
-            <p className="text-xs font-bold text-rose-800 uppercase">Simulated OpEx / Liter</p>
-            <p className="text-xl font-black text-rose-600 mt-1">-{formatCurrency(simOpexPerLiter)}</p>
-            <p className="text-[11px] text-gray-400 mt-1">-{formatCurrency(totalOpEx)} total OpEx</p>
-          </div>
-
-          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-            <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Simulated Profit / Liter</p>
-            <p className="text-2xl font-black text-emerald-900 mt-1">
-              {simNetProfitPerLiter >= 0 ? "+" : ""}{formatCurrency(simNetProfitPerLiter)}
-            </p>
-            <p className="text-[11px] text-emerald-700 font-semibold mt-1">
-              ₹{unitGrossMargin} - ₹{simOpexPerLiter.toFixed(1)} OpEx
-            </p>
-          </div>
-
-          <div className="p-4 bg-green-700 text-white rounded-xl shadow-md">
-            <p className="text-xs font-bold uppercase text-green-200">Projected Net Profit</p>
-            <p className="text-2xl font-black mt-1">{formatCurrency(simNetEarnings)}</p>
-            <p className="text-[11px] text-green-200 mt-1">At {formatLiters(simulatedVolume)}/mo</p>
+      {/* Modal Form Trigger for Mobile / Floating Access */}
+      {showFormModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 lg:hidden">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="font-bold text-gray-900 text-base">Log New Transaction</h2>
+              <button onClick={() => setShowFormModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">Enter details to record financial transaction into ledger.</p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
