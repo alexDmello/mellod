@@ -17,7 +17,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -33,6 +33,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Lock background body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -114,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {sidebarOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden touch-none"
             onClick={() => setSidebarOpen(false)}
           />
           <Sidebar mobile />

@@ -7,12 +7,12 @@
   "scope": "/",
   "lang": "en",
   "dir": "ltr",
-  "display": "tabbed",
+  "display": "standalone",
   "display_override": [
-    "tabbed",
+    "standalone",
     "window-controls-overlay",
-    "minimal-ui",
-    "standalone"
+    "tabbed",
+    "minimal-ui"
   ],
   "tab_strip": {
     "home_tab": {
