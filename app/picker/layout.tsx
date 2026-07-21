@@ -34,8 +34,8 @@ export default function PickerLayout({ children }: { children: React.ReactNode }
       {!isDashboard && (
         <header className="bg-green-700 px-4 pb-3.5 sticky top-0 z-30 flex items-center justify-between" style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img src="/icons/logo.png" alt="Mellod Logo" className="w-7 h-7 object-contain" />
             </div>
             <div>
               <div className="text-white font-bold text-sm leading-none">Mellod</div>

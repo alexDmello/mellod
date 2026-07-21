@@ -52,8 +52,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     >
       {/* Brand */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-green-600">
-        <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-          <Leaf className="w-5 h-5 text-white" strokeWidth={2.5} />
+        <div className="w-9 h-9 flex items-center justify-center">
+          <img src="/icons/logo.png" alt="Mellod Logo" className="w-8 h-8 object-contain" />
         </div>
         <div>
           <div className="text-white font-bold text-base leading-none">Mellod</div>
@@ -133,7 +133,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <Leaf className="w-5 h-5 text-white" />
+            <img src="/icons/logo.png" alt="Mellod Logo" className="w-6 h-6 object-contain" />
             <span className="text-white font-bold">Mellod Admin</span>
           </div>
         </header>

@@ -138,8 +138,8 @@ export default function PickerDashboard() {
         {/* Merged Header & Logo bar */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-              <Leaf className="w-4 h-4 text-white" strokeWidth={2.5} />
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img src="/icons/logo.png" alt="Mellod Logo" className="w-7 h-7 object-contain" />
             </div>
             <div>
               <div className="text-white font-bold text-sm leading-none">Mellod</div>
