@@ -49,6 +49,35 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Inline script to restore cookies from localStorage in Android APK WebViews on app launch */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  if (typeof window !== 'undefined' && window.localStorage) {
+                    var token = window.localStorage.getItem('sb-auth-token') || window.localStorage.getItem('mellod-auth-session');
+                    if (!token) {
+                      for (var i = 0; i < localStorage.length; i++) {
+                        var k = localStorage.key(i);
+                        if (k && (k.includes('auth-token') || k.startsWith('sb-'))) {
+                          var val = localStorage.getItem(k);
+                          if (val && val.includes('access_token')) {
+                            token = val;
+                            break;
+                          }
+                        }
+                      }
+                    }
+                    if (token && !document.cookie.includes('sb-auth-token=')) {
+                      document.cookie = 'sb-auth-token=' + encodeURIComponent(token) + '; path=/; max-age=31536000; SameSite=Lax';
+                    }
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-gray-50 antialiased">
         <ServiceWorkerRegister />
