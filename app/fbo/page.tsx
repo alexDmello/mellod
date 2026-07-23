@@ -8,23 +8,17 @@ async function getFBOData() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Step 1: Fetch FBO record and current market price concurrently in 1 round trip
-  const [fboRes, priceRes] = await Promise.all([
+  const [fboRes, statsRes, priceRes, pickupsRes] = await Promise.all([
     supabase.from("fbos").select("*").eq("profile_id", user.id).single(),
-    supabase.from("daily_prices").select("price_per_liter, effective_from").order("effective_from", { ascending: false }).limit(1).single(),
-  ]);
-
-  const fbo = fboRes.data;
-  if (!fbo) return null;
-
-  // Step 2: Concurrently fetch stats & recent pickups using resolved FBO ID
-  const [statsRes, pickupsRes] = await Promise.all([
     supabase.from("fbo_stats").select("*").eq("profile_id", user.id).single(),
-    supabase.from("pickups").select("*").eq("fbo_id", fbo.id).order("picked_up_at", { ascending: false }).limit(5),
+    supabase.from("daily_prices").select("price_per_liter, effective_from").order("effective_from", { ascending: false }).limit(1).single(),
+    supabase.from("pickups").select("*, fbo:fbos(business_name)").eq("fbo_id",
+      (await supabase.from("fbos").select("id").eq("profile_id", user.id).single()).data?.id ?? ""
+    ).order("picked_up_at", { ascending: false }).limit(5),
   ]);
 
   return {
-    fbo,
+    fbo: fboRes.data,
     stats: statsRes.data,
     currentPrice: priceRes.data,
     recentPickups: pickupsRes.data ?? [],

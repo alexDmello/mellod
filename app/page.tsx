@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Leaf, Eye, EyeOff, Loader2 } from "lucide-react";
@@ -11,42 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Auto-restore session for Android APKs & cold app boots
-  useEffect(() => {
-    async function checkExistingSession() {
-      try {
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", session.user.id)
-            .single();
-
-          if (profile) {
-            const destination =
-              profile.role === "admin"
-                ? "/admin"
-                : profile.role === "picker"
-                ? "/picker"
-                : "/fbo";
-            router.replace(destination);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Session check error:", err);
-      } finally {
-        setCheckingSession(false);
-      }
-    }
-    checkExistingSession();
-  }, [router]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -98,20 +63,6 @@ export default function LoginPage() {
 
     router.push(destination);
     router.refresh();
-  }
-
-  if (checkingSession) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50 px-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-16 h-16 flex items-center justify-center drop-shadow-md mb-2">
-            <img src="/icons/logo.png" alt="Mellod Logo" className="w-16 h-16 object-contain animate-pulse" />
-          </div>
-          <Loader2 className="w-6 h-6 animate-spin text-green-700" />
-          <p className="text-xs font-semibold text-gray-500">Restoring session...</p>
-        </div>
-      </div>
-    );
   }
 
   return (
