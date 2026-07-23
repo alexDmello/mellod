@@ -7,7 +7,6 @@ const CACHE_NAME = "mellod-pwa-v1";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
-  "/",
   OFFLINE_URL,
   "/manifest.json",
   "/favicon.ico",
@@ -61,10 +60,30 @@ self.addEventListener("fetch", (event) => {
   // Ignore chrome extensions or third party non-http(s) schemas
   if (!url.protocol.startsWith("http")) return;
 
+  const isHtmlNavigation =
+    event.request.mode === "navigate" ||
+    event.request.headers.get("accept")?.includes("text/html");
+
+  // A. Network-First Strategy for HTML pages & navigations (preserves session cookies & auth redirects in PWA)
+  if (isHtmlNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          return networkResponse;
+        })
+        .catch(async () => {
+          // If offline, attempt to serve cached matching route or offline fallback
+          const cached = await caches.match(event.request);
+          return cached || (await caches.match(OFFLINE_URL));
+        })
+    );
+    return;
+  }
+
+  // B. Stale-While-Revalidate / Cache-First for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch fresh copy in background to keep cache updated (Stale-While-Revalidate)
         fetch(event.request)
           .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
@@ -75,10 +94,8 @@ self.addEventListener("fetch", (event) => {
         return cachedResponse;
       }
 
-      // If not in cache, fetch from network
       return fetch(event.request)
         .then((networkResponse) => {
-          // Cache successful responses for static assets
           if (
             networkResponse &&
             networkResponse.status === 200 &&
@@ -93,10 +110,7 @@ self.addEventListener("fetch", (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // If HTML request fails (user is offline), return offline fallback page
-          if (event.request.headers.get("accept")?.includes("text/html")) {
-            return caches.match(OFFLINE_URL);
-          }
+          return caches.match(OFFLINE_URL);
         });
     })
   );

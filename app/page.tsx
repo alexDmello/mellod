@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Leaf, Eye, EyeOff, Loader2 } from "lucide-react";
@@ -11,7 +11,37 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkExistingSession() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+
+          if (profile) {
+            const dest =
+              profile.role === "admin" ? "/admin" :
+              profile.role === "picker" ? "/picker" : "/fbo";
+            router.replace(dest);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+      } finally {
+        setCheckingSession(false);
+      }
+    }
+    checkExistingSession();
+  }, [router]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +93,22 @@ export default function LoginPage() {
 
     router.push(destination);
     router.refresh();
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50 px-4">
+        <div className="flex flex-col items-center space-y-3 animate-fade-in">
+          <div className="w-16 h-16 flex items-center justify-center drop-shadow-md">
+            <img src="/icons/logo.png" alt="Mellod Logo" className="w-16 h-16 object-contain" />
+          </div>
+          <div className="flex items-center gap-2 text-green-800 text-sm font-semibold mt-2">
+            <Loader2 className="w-4 h-4 animate-spin text-green-700" />
+            Opening Mellod...
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
