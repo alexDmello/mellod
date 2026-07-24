@@ -365,7 +365,7 @@ DECLARE
   v_user_id UUID := gen_random_uuid();
   v_email TEXT := LOWER(TRIM(p_username)) || '@mellod.internal';
 BEGIN
-  -- Insert into auth.users using pgcrypto for password hashing
+  -- 1. Insert into auth.users using pgcrypto for password hashing
   INSERT INTO auth.users (
     id,
     instance_id,
@@ -392,7 +392,28 @@ BEGIN
     NOW()
   );
 
-  -- Insert into public.profiles
+  -- 2. Insert into auth.identities (REQUIRED by Supabase GoTrue for password authentication)
+  INSERT INTO auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    provider_id,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  ) VALUES (
+    gen_random_uuid(),
+    v_user_id,
+    jsonb_build_object('sub', v_user_id::text, 'email', v_email, 'email_verified', true),
+    'email',
+    v_email,
+    NOW(),
+    NOW(),
+    NOW()
+  );
+
+  -- 3. Insert into public.profiles
   INSERT INTO public.profiles (
     id,
     full_name,
