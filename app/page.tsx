@@ -168,7 +168,7 @@ export default function LoginPage() {
                 autoComplete="username"
                 autoCapitalize="none"
                 className="form-input"
-                placeholder="e.g. alex_admin, picker_john_01"
+                placeholder="e.g. picker_john_01"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
