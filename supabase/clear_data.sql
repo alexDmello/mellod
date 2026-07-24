@@ -13,6 +13,7 @@ TRUNCATE TABLE
   public.fbos,
   public.pickers,
   public.daily_prices,
+  public.sub_admin_permissions,
   public.profiles
   RESTART IDENTITY CASCADE;
 
