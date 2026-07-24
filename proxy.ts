@@ -55,12 +55,22 @@ export async function proxy(request: NextRequest) {
 
       if (profile) {
         const p = profile as { role: string };
-        const destination =
-          p.role === "admin" || p.role === "sub_admin"
-            ? "/admin"
-            : p.role === "picker"
-            ? "/picker"
-            : "/fbo";
+        let destination = "/admin";
+        if (p.role === "sub_admin") {
+          const { data: perm } = await supabase
+            .from("sub_admin_permissions")
+            .select("allowed_routes")
+            .eq("profile_id", user.id)
+            .maybeSingle();
+
+          if (perm?.allowed_routes && perm.allowed_routes.length > 0) {
+            destination = perm.allowed_routes[0];
+          }
+        } else if (p.role === "picker") {
+          destination = "/picker";
+        } else if (p.role === "fbo") {
+          destination = "/fbo";
+        }
         return NextResponse.redirect(new URL(destination, request.url));
       }
     }

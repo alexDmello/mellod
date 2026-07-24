@@ -27,9 +27,22 @@ export default function LoginPage() {
             .single();
 
           if (profile) {
-            const dest =
-              profile.role === "admin" || profile.role === "sub_admin" ? "/admin" :
-              profile.role === "picker" ? "/picker" : "/fbo";
+            let dest = "/admin";
+            if (profile.role === "sub_admin") {
+              const { data: perm } = await supabase
+                .from("sub_admin_permissions")
+                .select("allowed_routes")
+                .eq("profile_id", user.id)
+                .maybeSingle();
+
+              if (perm?.allowed_routes && perm.allowed_routes.length > 0) {
+                dest = perm.allowed_routes[0];
+              }
+            } else if (profile.role === "picker") {
+              dest = "/picker";
+            } else if (profile.role === "fbo") {
+              dest = "/fbo";
+            }
             router.replace(dest);
             return;
           }
@@ -86,10 +99,22 @@ export default function LoginPage() {
       return;
     }
 
-    const destination =
-      profile.role === "admin" || profile.role === "sub_admin" ? "/admin" :
-      profile.role === "picker" ? "/picker" : "/fbo";
+    let destination = "/admin";
+    if (profile.role === "sub_admin") {
+      const { data: perm } = await supabase
+        .from("sub_admin_permissions")
+        .select("allowed_routes")
+        .eq("profile_id", data.user.id)
+        .maybeSingle();
 
+      if (perm?.allowed_routes && perm.allowed_routes.length > 0) {
+        destination = perm.allowed_routes[0];
+      }
+    } else if (profile.role === "picker") {
+      destination = "/picker";
+    } else if (profile.role === "fbo") {
+      destination = "/fbo";
+    }
 
     router.push(destination);
     router.refresh();
