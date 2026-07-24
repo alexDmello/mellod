@@ -5,13 +5,13 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Leaf, MapPin, History, LogOut } from "lucide-react";
+import { Leaf, Home, History, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 import PwaLaunchManager from "@/components/PwaLaunchManager";
 
 const navItems = [
-  { href: "/picker", label: "Today's Route", icon: MapPin },
+  { href: "/picker", label: "Home", icon: Home },
   { href: "/picker/history", label: "History", icon: History },
 ];
 

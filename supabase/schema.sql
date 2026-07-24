@@ -15,7 +15,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE public.profiles (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name   TEXT NOT NULL,
-  role        TEXT NOT NULL CHECK (role IN ('admin', 'picker', 'fbo')),
+  role        TEXT NOT NULL CHECK (role IN ('admin', 'sub_admin', 'picker', 'fbo')),
   username    TEXT UNIQUE NOT NULL,
   phone       TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -120,25 +120,44 @@ CREATE TABLE public.route_stops (
   UNIQUE (route_definition_id, fbo_id)
 );
 
+-- 10. SUB-ADMIN PERMISSIONS (Granular route access for sub-admins)
+CREATE TABLE public.sub_admin_permissions (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id     UUID UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  allowed_routes TEXT[] NOT NULL DEFAULT '{}',
+  created_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
 -- ============================================================
 -- STEP 2: ENABLE RLS ON ALL TABLES
 -- ============================================================
 
-ALTER TABLE public.profiles          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fbos              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pickers           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_prices      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.routes            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pickups           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_methods   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.route_definitions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.route_stops       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fbos                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickers                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_prices           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.routes                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickups                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_methods        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.route_definitions      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.route_stops            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sub_admin_permissions  ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- STEP 3: HELPER FUNCTIONS (SECURITY DEFINER to avoid RLS recursion)
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'sub_admin')
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   RETURN EXISTS (
@@ -284,6 +303,17 @@ CREATE POLICY "Authenticated users read route stops" ON public.route_stops
     true
   );
 
+-- ── sub_admin_permissions ──────────────────────────────────────
+CREATE POLICY "Admins manage sub_admin_permissions" ON public.sub_admin_permissions
+  FOR ALL USING (
+    public.is_admin()
+  );
+
+CREATE POLICY "Sub admins read own permissions" ON public.sub_admin_permissions
+  FOR SELECT USING (
+    profile_id = auth.uid()
+  );
+
 -- ============================================================
 -- STEP 4: VIEWS
 -- ============================================================
@@ -313,11 +343,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_profiles_updated_at        BEFORE UPDATE ON public.profiles        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER set_fbos_updated_at            BEFORE UPDATE ON public.fbos            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER set_pickers_updated_at         BEFORE UPDATE ON public.pickers         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER set_payment_methods_updated_at BEFORE UPDATE ON public.payment_methods FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER set_route_definitions_updated_at BEFORE UPDATE ON public.route_definitions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_profiles_updated_at              BEFORE UPDATE ON public.profiles              FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_fbos_updated_at                  BEFORE UPDATE ON public.fbos                  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_pickers_updated_at               BEFORE UPDATE ON public.pickers               FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_payment_methods_updated_at       BEFORE UPDATE ON public.payment_methods       FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_route_definitions_updated_at     BEFORE UPDATE ON public.route_definitions     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_sub_admin_permissions_updated_at BEFORE UPDATE ON public.sub_admin_permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
 -- STEP 6: STORAGE BUCKET

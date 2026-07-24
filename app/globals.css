@@ -278,3 +278,62 @@ body {
 .btn-full { width: 100%; }
 .btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
 .btn-lg { padding: 0.875rem 1.75rem; font-size: 1.0625rem; }
+
+/* ============================================================
+   PRINT STYLES FOR FORMAL RECEIPTS & DOCUMENTS
+   ============================================================ */
+@media print {
+  /* Hide all app navigation, sticky headers, bottom navs, modal overlays, and action buttons */
+  header,
+  nav,
+  .bottom-nav,
+  .no-print,
+  button,
+  .modal-overlay-bg {
+    display: none !important;
+  }
+
+  /* Reset document for clean printing */
+  html, body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide background content behind the print modal */
+  .no-print-content {
+    display: none !important;
+  }
+
+  /* Reset print container to occupy full page */
+  .printable-receipt-modal {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .printable-receipt-card {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0.5rem !important;
+    padding: 1.5rem !important;
+  }
+}
+

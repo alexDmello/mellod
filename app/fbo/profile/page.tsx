@@ -197,7 +197,7 @@ export default function FBOProfilePage() {
   return (
     <div className="animate-fade-in space-y-4 pb-8">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-br from-green-800 to-green-900 px-4 pt-6 pb-10 text-white rounded-b-3xl shadow-md">
+      <div className="bg-green-700 px-4 pt-6 pb-10 text-white rounded-b-3xl shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-xl font-bold border border-white/20">
             {fbo?.business_name?.charAt(0) || "F"}
@@ -306,7 +306,7 @@ export default function FBOProfilePage() {
                         </span>
                       </div>
                       <p className="text-[10px] text-gray-400 italic">
-                        FSSAI license is locked. Contact your administrator to request updates.
+                        Contact your administrator to request updates.
                       </p>
                     </div>
                   ) : (
@@ -352,9 +352,8 @@ export default function FBOProfilePage() {
                 <div key={method.id} className="p-3.5 border border-gray-100 rounded-xl bg-gray-50/50">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        method.is_primary ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"
-                      }`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${method.is_primary ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"
+                        }`}
                     >
                       {methodIcons[method.method_type]}
                     </div>
@@ -427,9 +426,8 @@ export default function FBOProfilePage() {
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                      activeTab === tab ? "bg-white text-green-800 shadow-sm" : "text-gray-600"
-                    }`}
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === tab ? "bg-white text-green-800 shadow-sm" : "text-gray-600"
+                      }`}
                   >
                     {tab === "upi" ? "UPI ID" : "Bank Account"}
                   </button>
@@ -482,11 +480,11 @@ export default function FBOProfilePage() {
           )}
         </div>
 
-        {/* ── SECTION 3: Account Support & Actions ───────────────────────── */}
+        {/* ── SECTION 3: Support Desk ───────────────────────── */}
         <div className="card p-5 space-y-3 bg-white border border-gray-100 shadow-sm text-xs">
           <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
             <HelpCircle className="w-4 h-4 text-green-700" />
-            Support & Account Actions
+            Support & Assistance
           </h2>
 
           <a
@@ -495,14 +493,22 @@ export default function FBOProfilePage() {
           >
             <span className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-green-700" />
-              Logistics Dispatch Support Line
+              Mellod Biofuels Support Line
             </span>
             <ExternalLink className="w-4 h-4 text-green-700" />
           </a>
+        </div>
+
+        {/* ── SECTION 4: Account Session & Sign Out ───────────────────────── */}
+        <div className="card p-5 space-y-3 bg-white border border-gray-100 shadow-sm text-xs">
+          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
+            <LogOut className="w-4 h-4 text-rose-600" />
+            Account Session
+          </h2>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 transition-colors mt-2"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sign Out of Partner Account

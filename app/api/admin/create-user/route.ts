@@ -26,11 +26,13 @@ export async function POST(request: Request) {
 
     // 2. Parse request parameters
     const body = await request.json();
-    const { type, email, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense } = body;
+    const { type, email, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense, allowedRoutes } = body;
 
     if (!email || !password || !username || !fullName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const normalizedRole = type === "Sub-Admin" || type === "sub_admin" ? "sub_admin" : type.toLowerCase();
 
     // 3. Initialize admin client to perform auth actions
     const adminClient = createAdminClient();
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     const { error: profileError } = await adminClient.from("profiles").insert({
       id: userId,
       full_name: fullName,
-      role: type.toLowerCase(),
+      role: normalizedRole,
       username,
       phone: phone || null,
       generated_password: password,
@@ -90,6 +92,16 @@ export async function POST(request: Request) {
       if (pickerError) {
         await adminClient.auth.admin.deleteUser(userId);
         return NextResponse.json({ error: "Failed to create Picker record: " + pickerError.message }, { status: 500 });
+      }
+    } else if (normalizedRole === "sub_admin") {
+      const { error: permError } = await adminClient.from("sub_admin_permissions").insert({
+        profile_id: userId,
+        allowed_routes: Array.isArray(allowedRoutes) ? allowedRoutes : ["/admin"],
+      });
+
+      if (permError) {
+        await adminClient.auth.admin.deleteUser(userId);
+        return NextResponse.json({ error: "Failed to create Sub-Admin permissions: " + permError.message }, { status: 500 });
       }
     }
 

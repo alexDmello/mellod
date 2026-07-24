@@ -6,11 +6,11 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Leaf, BarChart3, Clock, User, LogOut } from "lucide-react";
+import { Leaf, Home, Clock, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/fbo", label: "Dashboard", icon: BarChart3 },
+  { href: "/fbo", label: "Home", icon: Home },
   { href: "/fbo/pickups", label: "Pickups", icon: Clock },
   { href: "/fbo/profile", label: "Profile", icon: User },
 ];
@@ -38,14 +38,6 @@ export default function FBOLayout({ children }: { children: React.ReactNode }) {
             <div className="text-green-200 text-xs">Partner Portal</div>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 text-green-200 hover:text-white transition-colors text-xs font-medium"
-          aria-label="Sign out"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
       </header>
 
       <main className="flex-1 pb-24 overflow-y-auto">{children}</main>
