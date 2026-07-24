@@ -640,24 +640,6 @@ export function FBOOnboardingTab() {
           ))}
         </div>
       )}
-
-      <div className="card p-6 bg-white border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-            <Lock className="w-4 h-4 text-green-700" />
-            Password-Protected Credentials Directory
-          </h3>
-          <p className="text-xs text-gray-500 mt-1">
-            Looking for existing account credentials? All user passwords are strictly secured under the Credentials tab.
-          </p>
-        </div>
-        <Link
-          href="/admin/credentials"
-          className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-4 border border-green-200 text-green-800 hover:bg-green-50"
-        >
-          <Key className="w-3.5 h-3.5" /> View Credentials Directory →
-        </Link>
-      </div>
     </div>
   );
 }
@@ -691,24 +673,6 @@ export function PickerOnboardingTab() {
           ))}
         </div>
       )}
-
-      <div className="card p-6 bg-white border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-            <Lock className="w-4 h-4 text-green-700" />
-            Password-Protected Credentials Directory
-          </h3>
-          <p className="text-xs text-gray-500 mt-1">
-            Looking for existing account credentials? All user passwords are strictly secured under the Credentials tab.
-          </p>
-        </div>
-        <Link
-          href="/admin/credentials"
-          className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-4 border border-green-200 text-green-800 hover:bg-green-50"
-        >
-          <Key className="w-3.5 h-3.5" /> View Credentials Directory →
-        </Link>
-      </div>
     </div>
   );
 }
