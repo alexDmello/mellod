@@ -56,7 +56,7 @@ export async function proxy(request: NextRequest) {
       if (profile) {
         const p = profile as { role: string };
         const destination =
-          p.role === "admin"
+          p.role === "admin" || p.role === "sub_admin"
             ? "/admin"
             : p.role === "picker"
             ? "/picker"
@@ -85,8 +85,8 @@ export async function proxy(request: NextRequest) {
 
   const role = (profile as { role: string }).role;
 
-  if (pathname.startsWith("/admin") && role !== "admin") {
-    return NextResponse.redirect(new URL(`/${role}`, request.url));
+  if (pathname.startsWith("/admin") && role !== "admin" && role !== "sub_admin") {
+    return NextResponse.redirect(new URL(role === "picker" ? "/picker" : "/fbo", request.url));
   }
   if (pathname.startsWith("/picker") && role !== "picker") {
     return NextResponse.redirect(new URL(`/${role}`, request.url));

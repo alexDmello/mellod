@@ -28,7 +28,7 @@ export default function LoginPage() {
 
           if (profile) {
             const dest =
-              profile.role === "admin" ? "/admin" :
+              profile.role === "admin" || profile.role === "sub_admin" ? "/admin" :
               profile.role === "picker" ? "/picker" : "/fbo";
             router.replace(dest);
             return;
@@ -87,7 +87,7 @@ export default function LoginPage() {
     }
 
     const destination =
-      profile.role === "admin" ? "/admin" :
+      profile.role === "admin" || profile.role === "sub_admin" ? "/admin" :
       profile.role === "picker" ? "/picker" : "/fbo";
 
 
