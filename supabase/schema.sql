@@ -351,18 +351,71 @@ CREATE TRIGGER set_route_definitions_updated_at     BEFORE UPDATE ON public.rout
 CREATE TRIGGER set_sub_admin_permissions_updated_at BEFORE UPDATE ON public.sub_admin_permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
--- STEP 6: STORAGE BUCKET
--- Create this manually in Supabase Dashboard:
---   Storage → New Bucket → Name: "pickup-photos" → Private
---
--- Then add these RLS policies in the Storage section:
---   Policy 1 (INSERT): bucket_id = 'pickup-photos' AND auth.uid() IS NOT NULL
---   Policy 2 (SELECT): bucket_id = 'pickup-photos' AND auth.uid() IS NOT NULL
+-- STEP 6: ADMIN CREATION HELPER FUNCTION
+-- Run this function anytime to create a Super Admin with ANY custom username & password:
+-- Example: SELECT public.create_admin_user('my_custom_username', 'MySecurePassword123!', 'Admin Name');
 -- ============================================================
+
+CREATE OR REPLACE FUNCTION public.create_admin_user(
+  p_username TEXT,
+  p_password TEXT,
+  p_full_name TEXT DEFAULT 'Super Admin'
+) RETURNS UUID AS $$
+DECLARE
+  v_user_id UUID := gen_random_uuid();
+  v_email TEXT := LOWER(TRIM(p_username)) || '@mellod.internal';
+BEGIN
+  -- Insert into auth.users using pgcrypto for password hashing
+  INSERT INTO auth.users (
+    id,
+    instance_id,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    aud,
+    role,
+    created_at,
+    updated_at
+  ) VALUES (
+    v_user_id,
+    '00000000-0000-0000-0000-000000000000',
+    v_email,
+    crypt(p_password, gen_salt('bf')),
+    NOW(),
+    '{"provider":"email","providers":["email"]}',
+    jsonb_build_object('full_name', p_full_name),
+    'authenticated',
+    'authenticated',
+    NOW(),
+    NOW()
+  );
+
+  -- Insert into public.profiles
+  INSERT INTO public.profiles (
+    id,
+    full_name,
+    role,
+    username,
+    phone,
+    generated_password
+  ) VALUES (
+    v_user_id,
+    p_full_name,
+    'admin',
+    LOWER(TRIM(p_username)),
+    NULL,
+    p_password
+  );
+
+  RETURN v_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================
 -- DONE. Next steps:
 -- 1. Create "pickup-photos" Storage bucket (private) in dashboard
--- 2. Copy .env.local.example → .env.local and add your keys
--- 3. Create your admin user (see README.md)
+-- 2. Create your initial admin account by running:
+--    SELECT public.create_admin_user('your_custom_username', 'your_custom_password', 'Admin Name');
 -- ============================================================
