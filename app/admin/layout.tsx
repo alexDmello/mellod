@@ -85,6 +85,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           const routes = perm?.allowed_routes || ["/admin"];
           setAllowedRoutes(routes);
+
+          // Check if current route is authorized for this sub-admin
+          const isCurrentAllowed = routes.some((route: string) =>
+            route === "/admin" ? pathname === "/admin" : pathname.startsWith(route)
+          );
+
+          // If current route is unauthorized, directly land on the first allowed route
+          if (!isCurrentAllowed && routes.length > 0) {
+            router.replace(routes[0]);
+            return;
+          }
         }
       } catch (err) {
         console.error("Failed to load user permissions:", err);

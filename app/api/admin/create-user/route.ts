@@ -26,12 +26,14 @@ export async function POST(request: Request) {
 
     // 2. Parse request parameters
     const body = await request.json();
-    const { type, email, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense, allowedRoutes } = body;
+    const { type, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense, allowedRoutes } = body;
 
-    if (!email || !password || !username || !fullName) {
+    if (!password || !username || !fullName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const cleanUsername = username.trim().toLowerCase();
+    const authEmail = `${cleanUsername}@mellod.internal`;
     const normalizedRole = type === "Sub-Admin" || type === "sub_admin" ? "sub_admin" : type.toLowerCase();
 
     // 3. Initialize admin client to perform auth actions
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
 
     // 4. Create auth user with pre-confirmed email (bypasses SMTP rate limits)
     const { data: authData, error: createError } = await adminClient.auth.admin.createUser({
-      email,
+      email: authEmail,
       password,
       email_confirm: true,
     });

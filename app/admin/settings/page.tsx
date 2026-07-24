@@ -174,7 +174,7 @@ export default function SettingsPage() {
 
   async function handleCreateSubAdmin(e: React.FormEvent) {
     e.preventDefault();
-    if (!fullName || !username || !email || !password) {
+    if (!fullName || !username || !password) {
       setSubAdminError("Please fill in all required fields.");
       return;
     }
@@ -187,6 +187,8 @@ export default function SettingsPage() {
     setCreatingSubAdmin(true);
     setSubAdminError(null);
 
+    const cleanUsername = username.trim().toLowerCase();
+
     try {
       const res = await fetch("/api/admin/create-user", {
         method: "POST",
@@ -194,8 +196,8 @@ export default function SettingsPage() {
         body: JSON.stringify({
           type: "Sub-Admin",
           fullName,
-          username,
-          email,
+          username: cleanUsername,
+          email: `${cleanUsername}@mellod.internal`,
           phone,
           password,
           allowedRoutes: selectedRoutes,
@@ -207,7 +209,7 @@ export default function SettingsPage() {
         throw new Error(data.error || "Failed to create sub-admin account.");
       }
 
-      setSubAdminSuccess(`Sub-Admin account '${username}' created successfully!`);
+      setSubAdminSuccess(`Sub-Admin account '${cleanUsername}' created successfully!`);
       setShowCreateModal(false);
       
       // Reset form
@@ -216,7 +218,7 @@ export default function SettingsPage() {
       setEmail("");
       setPhone("");
       setPassword("");
-      setSelectedRoutes(["/admin", "/admin/fbo", "/admin/pickers", "/admin/routes"]);
+      setSelectedRoutes(["/admin", "/admin/routes", "/admin/onboarding"]);
       
       await fetchSubAdmins();
       setTimeout(() => setSubAdminSuccess(null), 5000);
@@ -594,17 +596,6 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label text-xs">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    className="form-input text-xs"
-                    placeholder="subadmin@mellod.in"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div>
                   <label className="form-label text-xs">Phone Number</label>
                   <input
                     type="tel"
@@ -614,26 +605,25 @@ export default function SettingsPage() {
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="form-label text-xs">Login Password *</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    className="form-input text-xs pr-10"
-                    placeholder="Set secure password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                <div>
+                  <label className="form-label text-xs">Login Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      className="form-input text-xs pr-10"
+                      placeholder="Set secure password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -27,6 +27,22 @@ export async function GET() {
       return NextResponse.json({ error: subAdminError.message }, { status: 500 });
     }
 
+    // Ensure all sub-admin auth emails and passwords are synced to internal auth format
+    for (const sa of subAdmins) {
+      if (sa.username && sa.generated_password) {
+        const internalEmail = `${sa.username.trim().toLowerCase()}@mellod.internal`;
+        try {
+          await adminClient.auth.admin.updateUserById(sa.id, {
+            email: internalEmail,
+            password: sa.generated_password,
+            email_confirm: true,
+          });
+        } catch (e) {
+          console.error(`Failed to sync auth for ${sa.username}:`, e);
+        }
+      }
+    }
+
     // Fetch permissions
     const { data: permissions, error: permError } = await adminClient
       .from("sub_admin_permissions")
