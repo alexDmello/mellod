@@ -22,10 +22,17 @@ import {
   RefreshCw,
   Trash2,
   FilterX,
+  ChevronDown,
+  Landmark,
+  CreditCard,
+  Lock,
+  BarChart3,
 } from "lucide-react";
 
 // Types
-type TransactionType = "Income" | "Expense" | "Asset" | "Transfer";
+type TransactionType = "Income" | "Expense" | "Asset" | "Transfer" | "Liability";
+type CostType = "COGS" | "OPEX";
+type PaymentMode = "Cash" | "UPI" | "Bank Transfer" | "Cheque";
 
 interface Transaction {
   id: string;
@@ -37,14 +44,70 @@ interface Transaction {
   proofName: string | null;
   proofUrl: string | null;
   notes?: string;
+  costType?: CostType | null;
+  paymentMode?: PaymentMode | null;
+  taxableAmount?: number | null;
+  gstRate?: number | null;
+  cgst?: number | null;
+  sgst?: number | null;
+  igst?: number | null;
+  isOpeningBalance?: boolean;
 }
 
 // Preset Category options per Transaction Type
 const CATEGORIES_BY_TYPE: Record<TransactionType, string[]> = {
   Income: ["Revenue / Oil Sale", "Grant / Subsidy", "Investment", "Other Income"],
-  Expense: ["FBO Restaurant Payout", "Logistics & Fleet", "Payroll", "Infrastructure", "Marketing", "Utilities", "Procurement"],
+  Expense: [
+    "FBO Restaurant Payout", "Logistics & Fleet", "Payroll", "Infrastructure",
+    "Marketing", "Utilities", "Procurement", "Insurance",
+    "Licenses & Compliance", "Taxes & Government Fees", "Professional Fees (CA/Legal)",
+  ],
   Asset: ["Equipment & Vehicles", "Depot Real Estate", "IT Hardware", "Storage Tanks"],
   Transfer: ["Bank Reserve", "Inter-Account Transfer", "Petty Cash"],
+  Liability: ["Loan Received", "Loan Repayment (Principal)", "Interest Paid"],
+};
+
+// COGS vs OPEX classification for Expense categories
+const COST_TYPE_MAP: Record<string, CostType> = {
+  "FBO Restaurant Payout": "COGS",
+  "Logistics & Fleet": "COGS",
+  "Procurement": "COGS",
+  "Payroll": "OPEX",
+  "Infrastructure": "OPEX",
+  "Marketing": "OPEX",
+  "Utilities": "OPEX",
+  "Insurance": "OPEX",
+  "Licenses & Compliance": "OPEX",
+  "Taxes & Government Fees": "OPEX",
+  "Professional Fees (CA/Legal)": "OPEX",
+};
+
+const GST_RATES = [0, 5, 12, 18, 28];
+const PAYMENT_MODES: PaymentMode[] = ["Cash", "UPI", "Bank Transfer", "Cheque"];
+
+// Color map for transaction type badges
+const TYPE_BADGE_COLORS: Record<TransactionType, string> = {
+  Income: "bg-emerald-100 text-emerald-800",
+  Expense: "bg-rose-100 text-rose-800",
+  Asset: "bg-blue-100 text-blue-800",
+  Transfer: "bg-purple-100 text-purple-800",
+  Liability: "bg-amber-100 text-amber-800",
+};
+
+const TYPE_AMOUNT_COLORS: Record<TransactionType, string> = {
+  Income: "text-emerald-700",
+  Expense: "text-rose-600",
+  Asset: "text-blue-700",
+  Transfer: "text-purple-700",
+  Liability: "text-amber-700",
+};
+
+const TYPE_BTN_ACTIVE: Record<TransactionType, string> = {
+  Income: "bg-emerald-600 text-white shadow-sm",
+  Expense: "bg-rose-600 text-white shadow-sm",
+  Asset: "bg-blue-600 text-white shadow-sm",
+  Transfer: "bg-purple-600 text-white shadow-sm",
+  Liability: "bg-amber-600 text-white shadow-sm",
 };
 
 export default function FinancialsPage() {
@@ -66,6 +129,15 @@ export default function FinancialsPage() {
   const [formReference, setFormReference] = useState<string>("");
   const [formNotes, setFormNotes] = useState<string>("");
   const [formFile, setFormFile] = useState<File | null>(null);
+  const [formPaymentMode, setFormPaymentMode] = useState<PaymentMode | "">("UPI");
+  const [formGstRate, setFormGstRate] = useState<number>(0);
+  const [showGstFields, setShowGstFields] = useState(false);
+
+  // Opening Balance
+  const [showOpeningBalanceModal, setShowOpeningBalanceModal] = useState(false);
+  const [openingBalanceAmount, setOpeningBalanceAmount] = useState<string>("");
+  const [openingBalanceDate, setOpeningBalanceDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [openingBalanceSaving, setOpeningBalanceSaving] = useState(false);
 
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -89,17 +161,27 @@ export default function FinancialsPage() {
           .order("transaction_date", { ascending: false });
 
         if (!error && dbCustom && dbCustom.length > 0) {
-          customTransactions = dbCustom.map((c: any) => ({
-            id: c.id,
-            date: c.transaction_date,
-            type: c.type as TransactionType,
-            category: c.category,
-            amount: Number(c.amount),
-            reference: c.reference_id,
-            proofName: c.proof_name,
-            proofUrl: c.proof_url,
-            notes: c.notes,
-          }));
+          customTransactions = dbCustom
+            .filter((c: any) => !c.is_voided)
+            .map((c: any) => ({
+              id: c.id,
+              date: c.transaction_date,
+              type: c.type as TransactionType,
+              category: c.category,
+              amount: Number(c.amount),
+              reference: c.reference_id,
+              proofName: c.proof_name,
+              proofUrl: c.proof_url,
+              notes: c.notes,
+              costType: c.cost_type || null,
+              paymentMode: c.payment_mode || null,
+              taxableAmount: c.taxable_amount ? Number(c.taxable_amount) : null,
+              gstRate: c.gst_rate ? Number(c.gst_rate) : null,
+              cgst: c.cgst ? Number(c.cgst) : null,
+              sgst: c.sgst ? Number(c.sgst) : null,
+              igst: c.igst ? Number(c.igst) : null,
+              isOpeningBalance: c.is_opening_balance || false,
+            }));
         } else {
           // Fallback to local storage manually saved transactions
           const localSaved = localStorage.getItem("mellod_custom_financial_txs");
@@ -173,6 +255,13 @@ export default function FinancialsPage() {
       }
     }
 
+    // Compute GST splits
+    const computedCostType = formType === "Expense" ? (COST_TYPE_MAP[formCategory] || null) : null;
+    const computedTaxableAmount = formGstRate > 0 ? amountNum / (1 + formGstRate / 100) : null;
+    const computedGstAmount = computedTaxableAmount ? amountNum - computedTaxableAmount : null;
+    const computedCgst = computedGstAmount ? computedGstAmount / 2 : null;
+    const computedSgst = computedGstAmount ? computedGstAmount / 2 : null;
+
     const newTx: Transaction = {
       id: `tx-${Date.now()}`,
       date: formDate,
@@ -183,6 +272,13 @@ export default function FinancialsPage() {
       proofName: formFile ? formFile.name : null,
       proofUrl: photoUrl,
       notes: formNotes.trim() || undefined,
+      costType: computedCostType,
+      paymentMode: formPaymentMode || null,
+      taxableAmount: computedTaxableAmount,
+      gstRate: formGstRate > 0 ? formGstRate : null,
+      cgst: computedCgst,
+      sgst: computedSgst,
+      igst: null,
     };
 
     // Save to Supabase financial_transactions table & local storage fallback
@@ -196,6 +292,13 @@ export default function FinancialsPage() {
         notes: formNotes.trim() || null,
         proof_url: photoUrl,
         proof_name: formFile ? formFile.name : null,
+        cost_type: computedCostType,
+        payment_mode: formPaymentMode || null,
+        taxable_amount: computedTaxableAmount,
+        gst_rate: formGstRate > 0 ? formGstRate : null,
+        cgst: computedCgst,
+        sgst: computedSgst,
+        igst: null,
       });
 
       if (dbErr) {
@@ -220,6 +323,9 @@ export default function FinancialsPage() {
     setFormReference("");
     setFormNotes("");
     setFormFile(null);
+    setFormPaymentMode("UPI");
+    setFormGstRate(0);
+    setShowGstFields(false);
 
     setTimeout(() => {
       setFormSuccess(null);
@@ -244,26 +350,70 @@ export default function FinancialsPage() {
     }
   };
 
+  // Save Opening Balance
+  const handleSaveOpeningBalance = async () => {
+    const amt = parseFloat(openingBalanceAmount);
+    if (isNaN(amt)) return;
+    setOpeningBalanceSaving(true);
+    try {
+      await supabase.from("financial_transactions").insert({
+        type: "Income",
+        category: "Opening Balance",
+        amount: amt,
+        transaction_date: openingBalanceDate,
+        reference_id: "OB-OPENING",
+        notes: "Opening cash balance — system entry",
+        is_opening_balance: true,
+        cost_type: null,
+        payment_mode: null,
+      });
+      await fetchManualFinancials();
+      setShowOpeningBalanceModal(false);
+    } catch (e) {
+      console.error("Failed to save opening balance:", e);
+    } finally {
+      setOpeningBalanceSaving(false);
+    }
+  };
+
+  const hasOpeningBalance = transactions.some((t) => t.isOpeningBalance);
+
   // ── KPI Dashboard Calculations (All-time, derived ONLY from manual entries) ─
   const kpiData = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const totalIncome = transactions
+    // Exclude opening balance from standard type sums — it's added separately
+    const nonOBTransactions = transactions.filter((t) => !t.isOpeningBalance);
+
+    const totalIncome = nonOBTransactions
       .filter((t) => t.type === "Income")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalExpense = transactions
+    const totalExpense = nonOBTransactions
       .filter((t) => t.type === "Expense")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalAsset = transactions
+    const totalAsset = nonOBTransactions
       .filter((t) => t.type === "Asset")
       .reduce((sum, t) => sum + t.amount, 0);
 
+    // Liability: Loan Received adds cash; Loan Repayment/Interest reduces it
+    const loanReceived = nonOBTransactions
+      .filter((t) => t.type === "Liability" && t.category === "Loan Received")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const loanOutflow = nonOBTransactions
+      .filter((t) => t.type === "Liability" && t.category !== "Loan Received")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Opening balance
+    const openingBalance = transactions
+      .filter((t) => t.isOpeningBalance)
+      .reduce((sum, t) => sum + t.amount, 0);
+
     // Monthly burn rate: only expenses in the current calendar month
-    const currentMonthExpenses = transactions.filter((t) => {
+    const currentMonthExpenses = nonOBTransactions.filter((t) => {
       if (t.type !== "Expense") return false;
       const txDate = new Date(t.date);
       return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
@@ -271,8 +421,19 @@ export default function FinancialsPage() {
     const monthlyBurnRate = currentMonthExpenses.reduce((sum, t) => sum + t.amount, 0);
     const monthlyExpenseCount = currentMonthExpenses.length;
 
-    const currentCashBalance = totalIncome - totalExpense - totalAsset;
+    // Cash balance: OB + income + loans received − expenses − assets − loan outflows
+    const currentCashBalance = openingBalance + totalIncome + loanReceived - totalExpense - totalAsset - loanOutflow;
     const netCashFlow = totalIncome - totalExpense;
+
+    // Gross Margin: Revenue / Oil Sale income − COGS expenses
+    const revenueIncome = nonOBTransactions
+      .filter((t) => t.type === "Income" && t.category === "Revenue / Oil Sale")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const cogsExpense = nonOBTransactions
+      .filter((t) => t.type === "Expense" && t.costType === "COGS")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const grossMargin = revenueIncome - cogsExpense;
+    const grossMarginPct = revenueIncome > 0 ? (grossMargin / revenueIncome) * 100 : 0;
 
     // Format current month label (e.g., "Jul 2026")
     const monthLabel = now.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
@@ -283,6 +444,9 @@ export default function FinancialsPage() {
       monthlyExpenseCount,
       monthLabel,
       netCashFlow,
+      grossMargin,
+      grossMarginPct,
+      openingBalance,
     };
   }, [transactions]);
 
@@ -381,8 +545,29 @@ export default function FinancialsPage() {
         </div>
       </div>
 
+      {/* Opening Balance Banner */}
+      {!hasOpeningBalance && !loading && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Landmark className="w-4 h-4 text-amber-700" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-900">Set Opening Balance</p>
+              <p className="text-xs text-amber-700">Cash balance starts at \u20b90 without an opening balance entry.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowOpeningBalanceModal(true)}
+            className="btn btn-sm text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-sm"
+          >
+            Set Opening Balance
+          </button>
+        </div>
+      )}
+
       {/* ── SECTION 1: KPI Dashboard (Derived ONLY from manual entries) ────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Card 1: Current Cash Balance */}
         <div className="card p-6 bg-gradient-to-br from-emerald-800 via-green-800 to-teal-900 text-white shadow-xl relative overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -405,9 +590,10 @@ export default function FinancialsPage() {
 
           <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-green-100">
             <span className="flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-green-300" /> Manual Ledger Active
+              <ShieldCheck className="w-3.5 h-3.5 text-green-300" />
+              {kpiData.openingBalance > 0 ? `OB: ${formatCurrency(kpiData.openingBalance)}` : "Manual Ledger"}
             </span>
-            <span className="font-semibold">{transactions.length} Total Entries</span>
+            <span className="font-semibold">{transactions.length} Entries</span>
           </div>
         </div>
 
@@ -503,6 +689,63 @@ export default function FinancialsPage() {
             </span>
           </div>
         </div>
+
+        {/* Card 4: Gross Margin */}
+        <div
+          className={`card p-6 border shadow-sm flex flex-col justify-between transition-colors ${
+            kpiData.grossMargin >= 0
+              ? "bg-sky-50/60 border-sky-200 text-sky-950"
+              : "bg-rose-50/60 border-rose-200 text-rose-950"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span
+              className={`text-xs font-bold uppercase tracking-wider ${
+                kpiData.grossMargin >= 0 ? "text-sky-800" : "text-rose-800"
+              }`}
+            >
+              Gross Margin
+            </span>
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold ${
+                kpiData.grossMargin >= 0
+                  ? "bg-sky-100 text-sky-700"
+                  : "bg-rose-100 text-rose-700"
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div
+              className={`text-3xl font-black ${
+                kpiData.grossMargin >= 0 ? "text-sky-700" : "text-rose-700"
+              }`}
+            >
+              {kpiData.grossMargin >= 0 ? "+" : ""}
+              {formatCurrency(kpiData.grossMargin)}
+            </div>
+            <p
+              className={`text-xs mt-1 font-medium ${
+                kpiData.grossMargin >= 0 ? "text-sky-700" : "text-rose-700"
+              }`}
+            >
+              Revenue − COGS (unit economics)
+            </p>
+          </div>
+
+          <div
+            className={`pt-3 border-t flex items-center justify-between text-xs ${
+              kpiData.grossMargin >= 0
+                ? "border-sky-200 text-sky-800"
+                : "border-rose-200 text-rose-800"
+            }`}
+          >
+            <span>Margin %</span>
+            <span className="font-bold">{kpiData.grossMarginPct.toFixed(1)}%</span>
+          </div>
+        </div>
       </div>
 
       {/* ── SECTION 2 & 3 Grid: Side Entry Form + Main Transaction Ledger ── */}
@@ -525,21 +768,15 @@ export default function FinancialsPage() {
               <label className="text-xs font-semibold text-gray-700 block mb-1.5">
                 Transaction Type *
               </label>
-              <div className="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-semibold">
-                {(["Income", "Expense", "Asset", "Transfer"] as TransactionType[]).map((t) => (
+              <div className="grid grid-cols-3 gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-semibold">
+                {(["Income", "Expense", "Asset", "Transfer", "Liability"] as TransactionType[]).map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => handleTypeChange(t)}
-                    className={`py-2 px-2 rounded-lg text-center transition-all ${
+                    className={`py-2 px-1.5 rounded-lg text-center transition-all ${
                       formType === t
-                        ? t === "Income"
-                          ? "bg-emerald-600 text-white shadow-sm"
-                          : t === "Expense"
-                          ? "bg-rose-600 text-white shadow-sm"
-                          : t === "Asset"
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-purple-600 text-white shadow-sm"
+                        ? TYPE_BTN_ACTIVE[t]
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/60"
                     }`}
                   >
@@ -631,6 +868,61 @@ export default function FinancialsPage() {
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
               />
+            </div>
+
+            {/* Field 6b: Payment Mode */}
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">
+                Payment Mode
+              </label>
+              <div className="relative">
+                <CreditCard className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <select
+                  className="form-input !pl-8 text-xs font-semibold bg-white"
+                  value={formPaymentMode}
+                  onChange={(e) => setFormPaymentMode(e.target.value as PaymentMode | "")}
+                >
+                  <option value="">— Not specified —</option>
+                  {PAYMENT_MODES.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Field 6c: GST (collapsible) */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowGstFields(!showGstFields)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showGstFields ? "rotate-180" : ""}`} />
+                {showGstFields ? "Hide GST Details" : "Add GST Details"}
+              </button>
+              {showGstFields && (
+                <div className="mt-2 space-y-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 block mb-0.5">GST Rate %</label>
+                    <select
+                      className="form-input text-xs font-semibold bg-white !py-1.5"
+                      value={formGstRate}
+                      onChange={(e) => setFormGstRate(Number(e.target.value))}
+                    >
+                      {GST_RATES.map((r) => (
+                        <option key={r} value={r}>{r === 0 ? "No GST (0%)" : `${r}%`}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {formGstRate > 0 && formAmount && (
+                    <div className="text-[10px] text-gray-500 space-y-0.5 pt-1 border-t border-gray-200">
+                      <p>Taxable: <span className="font-bold text-gray-700">{formatCurrency(parseFloat(formAmount) / (1 + formGstRate / 100))}</span></p>
+                      <p>CGST ({formGstRate / 2}%): <span className="font-bold text-gray-700">{formatCurrency((parseFloat(formAmount) - parseFloat(formAmount) / (1 + formGstRate / 100)) / 2)}</span></p>
+                      <p>SGST ({formGstRate / 2}%): <span className="font-bold text-gray-700">{formatCurrency((parseFloat(formAmount) - parseFloat(formAmount) / (1 + formGstRate / 100)) / 2)}</span></p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Field 7: Receipt / Proof Upload File Input Zone */}
@@ -727,6 +1019,7 @@ export default function FinancialsPage() {
                 <option value="Expense">Expense</option>
                 <option value="Asset">Asset</option>
                 <option value="Transfer">Transfer</option>
+                <option value="Liability">Liability</option>
               </select>
 
               <select
@@ -793,41 +1086,40 @@ export default function FinancialsPage() {
 
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <span
-                          className={`badge font-bold text-[10px] px-2.5 py-1 ${
-                            tx.type === "Income"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : tx.type === "Expense"
-                              ? "bg-rose-100 text-rose-800"
-                              : tx.type === "Asset"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-purple-100 text-purple-800"
-                          }`}
+                          className={`badge font-bold text-[10px] px-2.5 py-1 ${TYPE_BADGE_COLORS[tx.type]}`}
                         >
                           {tx.type}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-4 font-semibold text-gray-900">
-                        {tx.category}
+                        <div className="flex items-center gap-1.5">
+                          {tx.isOpeningBalance && <Lock className="w-3 h-3 text-amber-600 flex-shrink-0" />}
+                          {tx.category}
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {tx.costType && (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${tx.costType === "COGS" ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-600"}`}>
+                              {tx.costType}
+                            </span>
+                          )}
+                          {tx.paymentMode && (
+                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                              {tx.paymentMode}
+                            </span>
+                          )}
+                        </div>
                         {tx.notes && (
-                          <p className="text-[10px] text-gray-400 font-normal truncate max-w-[180px]">
+                          <p className="text-[10px] text-gray-400 font-normal truncate max-w-[180px] mt-0.5">
                             {tx.notes}
                           </p>
                         )}
                       </td>
 
                       <td
-                        className={`py-3.5 px-4 text-right font-bold whitespace-nowrap text-sm ${
-                          tx.type === "Income"
-                            ? "text-emerald-700"
-                            : tx.type === "Expense"
-                            ? "text-rose-600"
-                            : tx.type === "Asset"
-                            ? "text-blue-700"
-                            : "text-purple-700"
-                        }`}
+                        className={`py-3.5 px-4 text-right font-bold whitespace-nowrap text-sm ${TYPE_AMOUNT_COLORS[tx.type]}`}
                       >
-                        {tx.type === "Income" ? "+" : tx.type === "Expense" ? "-" : ""}
+                        {tx.type === "Income" ? "+" : tx.type === "Expense" || tx.type === "Liability" ? "-" : ""}
                         {formatCurrency(tx.amount)}
                       </td>
 
@@ -851,13 +1143,19 @@ export default function FinancialsPage() {
                       </td>
 
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => handleDeleteTransaction(tx)}
-                          className="p-1 text-gray-300 hover:text-rose-600 rounded transition-colors opacity-0 group-hover:opacity-100"
-                          title="Delete entry"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {tx.isOpeningBalance ? (
+                          <span className="text-amber-400 text-[10px] font-semibold" title="Opening balance cannot be deleted">
+                            <Lock className="w-3.5 h-3.5 inline" />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteTransaction(tx)}
+                            className="p-1 text-gray-300 hover:text-rose-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+                            title="Delete entry"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -946,6 +1244,92 @@ export default function FinancialsPage() {
               </button>
             </div>
             <p className="text-xs text-gray-500">Enter details to record financial transaction into ledger.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Opening Balance Setup Modal */}
+      {showOpeningBalanceModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-gray-900 text-base">Set Opening Cash Balance</h3>
+              </div>
+              <button
+                onClick={() => setShowOpeningBalanceModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Establish the baseline starting cash balance for Mellod. This creates a special protected entry in your ledger.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Opening Balance Amount (₹) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-gray-400 text-sm">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="e.g. 50000"
+                    className="form-input !pl-8 font-bold text-base text-gray-900"
+                    value={openingBalanceAmount}
+                    onChange={(e) => setOpeningBalanceAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  As of Date *
+                </label>
+                <input
+                  type="date"
+                  className="form-input text-xs font-semibold"
+                  value={openingBalanceDate}
+                  onChange={(e) => setOpeningBalanceDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowOpeningBalanceModal(false)}
+                className="btn btn-secondary text-xs px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={openingBalanceSaving || !openingBalanceAmount}
+                onClick={handleSaveOpeningBalance}
+                className="btn btn-primary text-xs px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold flex items-center gap-1.5"
+              >
+                {openingBalanceSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Landmark className="w-3.5 h-3.5" />
+                    Save Opening Balance
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
