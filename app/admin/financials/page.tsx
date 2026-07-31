@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Trash2,
+  FilterX,
 } from "lucide-react";
 
 // Types
@@ -243,8 +244,12 @@ export default function FinancialsPage() {
     }
   };
 
-  // ── KPI Dashboard Calculations (Derived ONLY from manual entries) ─────────
+  // ── KPI Dashboard Calculations (All-time, derived ONLY from manual entries) ─
   const kpiData = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
     const totalIncome = transactions
       .filter((t) => t.type === "Income")
       .reduce((sum, t) => sum + t.amount, 0);
@@ -257,13 +262,26 @@ export default function FinancialsPage() {
       .filter((t) => t.type === "Asset")
       .reduce((sum, t) => sum + t.amount, 0);
 
+    // Monthly burn rate: only expenses in the current calendar month
+    const currentMonthExpenses = transactions.filter((t) => {
+      if (t.type !== "Expense") return false;
+      const txDate = new Date(t.date);
+      return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+    });
+    const monthlyBurnRate = currentMonthExpenses.reduce((sum, t) => sum + t.amount, 0);
+    const monthlyExpenseCount = currentMonthExpenses.length;
+
     const currentCashBalance = totalIncome - totalExpense - totalAsset;
-    const monthlyBurnRate = totalExpense;
     const netCashFlow = totalIncome - totalExpense;
+
+    // Format current month label (e.g., "Jul 2026")
+    const monthLabel = now.toLocaleDateString("en-IN", { month: "short", year: "numeric" });
 
     return {
       currentCashBalance,
       monthlyBurnRate,
+      monthlyExpenseCount,
+      monthLabel,
       netCashFlow,
     };
   }, [transactions]);
@@ -381,7 +399,7 @@ export default function FinancialsPage() {
               {formatCurrency(kpiData.currentCashBalance)}
             </div>
             <p className="text-xs text-green-200 font-medium mt-1">
-              Net balance from manual ledger entries
+              All-time net balance from ledger entries
             </p>
           </div>
 
@@ -409,14 +427,14 @@ export default function FinancialsPage() {
               {formatCurrency(kpiData.monthlyBurnRate)}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Total logged expenses outlays
+              Expenses logged in {kpiData.monthLabel}
             </p>
           </div>
 
           <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-            <span>Logged Expenses</span>
+            <span>This Month</span>
             <span className="font-bold text-rose-600">
-              {transactions.filter((t) => t.type === "Expense").length} items
+              {kpiData.monthlyExpenseCount} items
             </span>
           </div>
         </div>
@@ -467,8 +485,8 @@ export default function FinancialsPage() {
               }`}
             >
               {kpiData.netCashFlow >= 0
-                ? "Net positive income flow"
-                : "Operating deficit outlay"}
+                ? "All-time net positive income flow"
+                : "All-time operating deficit outlay"}
             </p>
           </div>
 
@@ -479,7 +497,7 @@ export default function FinancialsPage() {
                 : "border-rose-200 text-rose-800"
             }`}
           >
-            <span>Period Margin Status</span>
+            <span>All-Time Margin Status</span>
             <span className="font-bold">
               {kpiData.netCashFlow >= 0 ? "★ Surplus" : "⚠️ Deficit"}
             </span>
@@ -729,11 +747,28 @@ export default function FinancialsPage() {
               <Loader2 className="w-8 h-8 animate-spin text-green-700" />
               <span>Loading financial ledger...</span>
             </div>
-          ) : filteredTransactions.length === 0 ? (
+          ) : transactions.length === 0 ? (
             <div className="py-16 text-center text-gray-400 space-y-2">
               <FileText className="w-10 h-10 mx-auto text-gray-300" />
               <p className="font-semibold text-gray-600 text-sm">No transactions logged yet.</p>
               <p className="text-xs text-gray-400">Use the form on the left to manually record income, expenses (such as FBO restaurant payouts), assets, or transfers.</p>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="py-16 text-center text-gray-400 space-y-3">
+              <FilterX className="w-10 h-10 mx-auto text-gray-300" />
+              <p className="font-semibold text-gray-600 text-sm">No transactions match your current filters.</p>
+              <p className="text-xs text-gray-400">Try adjusting the search query, type, or date range filters above.</p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setTypeFilter("All");
+                  setDateFilter("All");
+                }}
+                className="btn btn-secondary text-xs py-2 px-4 font-semibold inline-flex items-center gap-1.5 mt-1"
+              >
+                <FilterX className="w-3.5 h-3.5" />
+                Clear All Filters
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-100">
