@@ -27,6 +27,10 @@ import {
   CreditCard,
   Lock,
   BarChart3,
+  Pencil,
+  Ban,
+  CloudOff,
+  CloudCheck,
 } from "lucide-react";
 
 // Types
@@ -52,6 +56,9 @@ interface Transaction {
   sgst?: number | null;
   igst?: number | null;
   isOpeningBalance?: boolean;
+  isVoided?: boolean;
+  voidedReason?: string | null;
+  voidedAt?: string | null;
 }
 
 // Preset Category options per Transaction Type
@@ -120,8 +127,10 @@ export default function FinancialsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
   const [dateFilter, setDateFilter] = useState<string>("All");
+  const [showVoided, setShowVoided] = useState(false);
 
-  // Form State
+  // Form State & Edit State
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [formType, setFormType] = useState<TransactionType>("Expense");
   const [formCategory, setFormCategory] = useState<string>(CATEGORIES_BY_TYPE["Expense"][0]);
   const [formAmount, setFormAmount] = useState<string>("");
@@ -133,7 +142,17 @@ export default function FinancialsPage() {
   const [formGstRate, setFormGstRate] = useState<number>(0);
   const [showGstFields, setShowGstFields] = useState(false);
 
-  // Opening Balance
+  // Void Modal State
+  const [voidModalTx, setVoidModalTx] = useState<Transaction | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+
+  // Sync State
+  const [isLocalFallback, setIsLocalFallback] = useState(false);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
+  const [syncingLocal, setSyncingLocal] = useState(false);
+
+  // Opening Balance Modal State
   const [showOpeningBalanceModal, setShowOpeningBalanceModal] = useState(false);
   const [openingBalanceAmount, setOpeningBalanceAmount] = useState<string>("");
   const [openingBalanceDate, setOpeningBalanceDate] = useState<string>(new Date().toISOString().split("T")[0]);
@@ -152,61 +171,61 @@ export default function FinancialsPage() {
   async function fetchManualFinancials() {
     setLoading(true);
     try {
-      // Query ONLY manually entered transactions from financial_transactions table
-      let customTransactions: Transaction[] = [];
-      try {
-        const { data: dbCustom, error } = await supabase
-          .from("financial_transactions")
-          .select("*")
-          .order("transaction_date", { ascending: false });
-
-        if (!error && dbCustom && dbCustom.length > 0) {
-          customTransactions = dbCustom
-            .filter((c: any) => !c.is_voided)
-            .map((c: any) => ({
-              id: c.id,
-              date: c.transaction_date,
-              type: c.type as TransactionType,
-              category: c.category,
-              amount: Number(c.amount),
-              reference: c.reference_id,
-              proofName: c.proof_name,
-              proofUrl: c.proof_url,
-              notes: c.notes,
-              costType: c.cost_type || null,
-              paymentMode: c.payment_mode || null,
-              taxableAmount: c.taxable_amount ? Number(c.taxable_amount) : null,
-              gstRate: c.gst_rate ? Number(c.gst_rate) : null,
-              cgst: c.cgst ? Number(c.cgst) : null,
-              sgst: c.sgst ? Number(c.sgst) : null,
-              igst: c.igst ? Number(c.igst) : null,
-              isOpeningBalance: c.is_opening_balance || false,
-            }));
-        } else {
-          // Fallback to local storage manually saved transactions
-          const localSaved = localStorage.getItem("mellod_custom_financial_txs");
-          if (localSaved) {
-            try {
-              customTransactions = JSON.parse(localSaved);
-            } catch (e) {
-              console.error(e);
-            }
-          }
+      // Check local storage items count
+      const localSavedStr = localStorage.getItem("mellod_custom_financial_txs");
+      let localItems: Transaction[] = [];
+      if (localSavedStr) {
+        try {
+          localItems = JSON.parse(localSavedStr);
+          setUnsyncedCount(localItems.length);
+        } catch (e) {
+          console.error(e);
         }
-      } catch (err) {
-        const localSaved = localStorage.getItem("mellod_custom_financial_txs");
-        if (localSaved) {
-          try {
-            customTransactions = JSON.parse(localSaved);
-          } catch (e) {
-            console.error(e);
-          }
+      } else {
+        setUnsyncedCount(0);
+      }
+
+      let customTransactions: Transaction[] = [];
+      const { data: dbCustom, error } = await supabase
+        .from("financial_transactions")
+        .select("*")
+        .order("transaction_date", { ascending: false });
+
+      if (!error && dbCustom) {
+        setIsLocalFallback(false);
+        customTransactions = dbCustom.map((c: any) => ({
+          id: c.id,
+          date: c.transaction_date,
+          type: c.type as TransactionType,
+          category: c.category,
+          amount: Number(c.amount),
+          reference: c.reference_id,
+          proofName: c.proof_name,
+          proofUrl: c.proof_url,
+          notes: c.notes,
+          costType: c.cost_type || null,
+          paymentMode: c.payment_mode || null,
+          taxableAmount: c.taxable_amount ? Number(c.taxable_amount) : null,
+          gstRate: c.gst_rate ? Number(c.gst_rate) : null,
+          cgst: c.cgst ? Number(c.cgst) : null,
+          sgst: c.sgst ? Number(c.sgst) : null,
+          igst: c.igst ? Number(c.igst) : null,
+          isOpeningBalance: c.is_opening_balance || false,
+          isVoided: c.is_voided || false,
+          voidedReason: c.voided_reason || null,
+          voidedAt: c.voided_at || null,
+        }));
+      } else {
+        setIsLocalFallback(true);
+        if (localItems.length > 0) {
+          customTransactions = localItems;
         }
       }
 
       setTransactions(customTransactions);
     } catch (err) {
       console.error("Error fetching manual financial data:", err);
+      setIsLocalFallback(true);
     } finally {
       setLoading(false);
     }
@@ -218,7 +237,123 @@ export default function FinancialsPage() {
     setFormCategory(CATEGORIES_BY_TYPE[type][0]);
   };
 
-  // Save New Manual Transaction
+  // Edit existing transaction
+  const handleEditTransaction = (tx: Transaction) => {
+    setEditingTx(tx);
+    setFormType(tx.type);
+    setFormCategory(tx.category);
+    setFormAmount(tx.amount.toString());
+    setFormDate(tx.date);
+    setFormReference(tx.reference);
+    setFormNotes(tx.notes || "");
+    setFormPaymentMode(tx.paymentMode || "");
+    setFormGstRate(tx.gstRate || 0);
+    setShowGstFields(Boolean(tx.gstRate && tx.gstRate > 0));
+    setShowFormModal(true);
+    window.scrollTo({ top: 300, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTx(null);
+    setFormAmount("");
+    setFormReference("");
+    setFormNotes("");
+    setFormFile(null);
+    setFormPaymentMode("UPI");
+    setFormGstRate(0);
+    setShowGstFields(false);
+    setFormError(null);
+  };
+
+  // Void / Soft-Delete Transaction
+  const handleConfirmVoid = async () => {
+    if (!voidModalTx) return;
+    if (!voidReason.trim()) {
+      alert("Please provide a reason for voiding this transaction.");
+      return;
+    }
+    setVoidSubmitting(true);
+    try {
+      await supabase
+        .from("financial_transactions")
+        .update({
+          is_voided: true,
+          voided_reason: voidReason.trim(),
+          voided_at: new Date().toISOString(),
+        })
+        .eq("id", voidModalTx.id);
+
+      const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
+      const updatedLocal = existingLocal.map((item: any) =>
+        item.id === voidModalTx.id
+          ? { ...item, isVoided: true, voidedReason: voidReason.trim(), voidedAt: new Date().toISOString() }
+          : item
+      );
+      localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+
+      await fetchManualFinancials();
+      setVoidModalTx(null);
+      setVoidReason("");
+    } catch (e) {
+      console.error("Failed to void transaction:", e);
+    } finally {
+      setVoidSubmitting(false);
+    }
+  };
+
+  // Force Sync Unsynced Local Transactions
+  const handleForceSync = async () => {
+    const localSavedStr = localStorage.getItem("mellod_custom_financial_txs");
+    if (!localSavedStr) return;
+    let localItems: Transaction[] = [];
+    try {
+      localItems = JSON.parse(localSavedStr);
+    } catch (e) {
+      return;
+    }
+    if (localItems.length === 0) return;
+
+    setSyncingLocal(true);
+    try {
+      const inserts = localItems.map((item) => ({
+        type: item.type,
+        category: item.category,
+        amount: item.amount,
+        transaction_date: item.date,
+        reference_id: item.reference,
+        notes: item.notes || null,
+        proof_url: item.proofUrl || null,
+        proof_name: item.proofName || null,
+        cost_type: item.costType || null,
+        payment_mode: item.paymentMode || null,
+        taxable_amount: item.taxableAmount || null,
+        gst_rate: item.gstRate || null,
+        cgst: item.cgst || null,
+        sgst: item.sgst || null,
+        igst: item.igst || null,
+        is_opening_balance: item.isOpeningBalance || false,
+        is_voided: item.isVoided || false,
+        voided_reason: item.voidedReason || null,
+        voided_at: item.voidedAt || null,
+      }));
+
+      const { error } = await supabase.from("financial_transactions").insert(inserts);
+      if (!error) {
+        localStorage.removeItem("mellod_custom_financial_txs");
+        setUnsyncedCount(0);
+        await fetchManualFinancials();
+      } else {
+        alert(`Sync failed: ${error.message}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to connect to Supabase database.");
+    } finally {
+      setSyncingLocal(false);
+    }
+  };
+
+  // Save / Update Manual Transaction
   const handleSaveTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -235,9 +370,23 @@ export default function FinancialsPage() {
       return;
     }
 
+    const uppercaseRef = formReference.trim().toUpperCase();
+
+    // Check for duplicate Reference ID
+    const duplicate = transactions.find(
+      (t) =>
+        t.reference.toUpperCase() === uppercaseRef &&
+        (!editingTx || t.id !== editingTx.id) &&
+        !t.isVoided
+    );
+    if (duplicate) {
+      setFormError(`Reference ID '${uppercaseRef}' is already used by an active transaction.`);
+      return;
+    }
+
     setFormSubmitting(true);
 
-    let photoUrl: string | null = null;
+    let photoUrl: string | null = editingTx ? (editingTx.proofUrl || null) : null;
     if (formFile) {
       try {
         const fileName = `receipt_${Date.now()}_${formFile.name.replace(/[^a-zA-Z0-9._-]/g, "")}`;
@@ -263,13 +412,13 @@ export default function FinancialsPage() {
     const computedSgst = computedGstAmount ? computedGstAmount / 2 : null;
 
     const newTx: Transaction = {
-      id: `tx-${Date.now()}`,
+      id: editingTx ? editingTx.id : `tx-${Date.now()}`,
       date: formDate,
       type: formType,
       category: formCategory,
       amount: amountNum,
-      reference: formReference.trim().toUpperCase(),
-      proofName: formFile ? formFile.name : null,
+      reference: uppercaseRef,
+      proofName: formFile ? formFile.name : editingTx ? editingTx.proofName : null,
       proofUrl: photoUrl,
       notes: formNotes.trim() || undefined,
       costType: computedCostType,
@@ -281,30 +430,46 @@ export default function FinancialsPage() {
       igst: null,
     };
 
-    // Save to Supabase financial_transactions table & local storage fallback
-    try {
-      const { error: dbErr } = await supabase.from("financial_transactions").insert({
-        type: formType,
-        category: formCategory,
-        amount: amountNum,
-        transaction_date: formDate,
-        reference_id: formReference.trim().toUpperCase(),
-        notes: formNotes.trim() || null,
-        proof_url: photoUrl,
-        proof_name: formFile ? formFile.name : null,
-        cost_type: computedCostType,
-        payment_mode: formPaymentMode || null,
-        taxable_amount: computedTaxableAmount,
-        gst_rate: formGstRate > 0 ? formGstRate : null,
-        cgst: computedCgst,
-        sgst: computedSgst,
-        igst: null,
-      });
+    const payload = {
+      type: formType,
+      category: formCategory,
+      amount: amountNum,
+      transaction_date: formDate,
+      reference_id: uppercaseRef,
+      notes: formNotes.trim() || null,
+      proof_url: photoUrl,
+      proof_name: formFile ? formFile.name : editingTx ? editingTx.proofName : null,
+      cost_type: computedCostType,
+      payment_mode: formPaymentMode || null,
+      taxable_amount: computedTaxableAmount,
+      gst_rate: formGstRate > 0 ? formGstRate : null,
+      cgst: computedCgst,
+      sgst: computedSgst,
+      igst: null,
+    };
 
-      if (dbErr) {
-        const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
-        const updatedLocal = [newTx, ...existingLocal];
-        localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+    try {
+      if (editingTx) {
+        const { error: dbErr } = await supabase
+          .from("financial_transactions")
+          .update(payload)
+          .eq("id", editingTx.id);
+
+        if (dbErr) {
+          const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
+          const updatedLocal = existingLocal.map((item: any) =>
+            item.id === editingTx.id ? { ...item, ...newTx } : item
+          );
+          localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+        }
+      } else {
+        const { error: dbErr } = await supabase.from("financial_transactions").insert(payload);
+
+        if (dbErr) {
+          const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
+          const updatedLocal = [newTx, ...existingLocal];
+          localStorage.setItem("mellod_custom_financial_txs", JSON.stringify(updatedLocal));
+        }
       }
     } catch (err) {
       const existingLocal = JSON.parse(localStorage.getItem("mellod_custom_financial_txs") || "[]");
@@ -313,7 +478,8 @@ export default function FinancialsPage() {
     }
 
     setFormSubmitting(false);
-    setFormSuccess("Transaction saved successfully.");
+    setFormSuccess(editingTx ? "Transaction updated successfully." : "Transaction saved successfully.");
+    setEditingTx(null);
 
     // Refresh live manual list
     await fetchManualFinancials();
@@ -384,36 +550,36 @@ export default function FinancialsPage() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // Exclude opening balance from standard type sums — it's added separately
-    const nonOBTransactions = transactions.filter((t) => !t.isOpeningBalance);
+    // Exclude opening balance and voided entries from standard type sums
+    const activeTransactions = transactions.filter((t) => !t.isOpeningBalance && !t.isVoided);
 
-    const totalIncome = nonOBTransactions
+    const totalIncome = activeTransactions
       .filter((t) => t.type === "Income")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalExpense = nonOBTransactions
+    const totalExpense = activeTransactions
       .filter((t) => t.type === "Expense")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalAsset = nonOBTransactions
+    const totalAsset = activeTransactions
       .filter((t) => t.type === "Asset")
       .reduce((sum, t) => sum + t.amount, 0);
 
     // Liability: Loan Received adds cash; Loan Repayment/Interest reduces it
-    const loanReceived = nonOBTransactions
+    const loanReceived = activeTransactions
       .filter((t) => t.type === "Liability" && t.category === "Loan Received")
       .reduce((sum, t) => sum + t.amount, 0);
-    const loanOutflow = nonOBTransactions
+    const loanOutflow = activeTransactions
       .filter((t) => t.type === "Liability" && t.category !== "Loan Received")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Opening balance
+    // Opening balance (excluding voided)
     const openingBalance = transactions
-      .filter((t) => t.isOpeningBalance)
+      .filter((t) => t.isOpeningBalance && !t.isVoided)
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Monthly burn rate: only expenses in the current calendar month
-    const currentMonthExpenses = nonOBTransactions.filter((t) => {
+    // Monthly burn rate: only active expenses in the current calendar month
+    const currentMonthExpenses = activeTransactions.filter((t) => {
       if (t.type !== "Expense") return false;
       const txDate = new Date(t.date);
       return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
@@ -426,10 +592,10 @@ export default function FinancialsPage() {
     const netCashFlow = totalIncome - totalExpense;
 
     // Gross Margin: Revenue / Oil Sale income − COGS expenses
-    const revenueIncome = nonOBTransactions
+    const revenueIncome = activeTransactions
       .filter((t) => t.type === "Income" && t.category === "Revenue / Oil Sale")
       .reduce((sum, t) => sum + t.amount, 0);
-    const cogsExpense = nonOBTransactions
+    const cogsExpense = activeTransactions
       .filter((t) => t.type === "Expense" && t.costType === "COGS")
       .reduce((sum, t) => sum + t.amount, 0);
     const grossMargin = revenueIncome - cogsExpense;
@@ -453,6 +619,8 @@ export default function FinancialsPage() {
   // ── Filtered Ledger Data ──────────────────────────────────────────────────
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
+      if (!showVoided && t.isVoided) return false;
+
       if (typeFilter !== "All" && t.type !== typeFilter) return false;
 
       if (dateFilter !== "All") {
@@ -477,7 +645,7 @@ export default function FinancialsPage() {
 
       return true;
     });
-  }, [transactions, typeFilter, dateFilter, searchQuery]);
+  }, [transactions, typeFilter, dateFilter, searchQuery, showVoided]);
 
   // Export Ledger CSV
   const handleExportCSV = () => {
@@ -518,6 +686,40 @@ export default function FinancialsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Sync Status Badge */}
+          {isLocalFallback ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold">
+              <CloudOff className="w-4 h-4 text-amber-600" />
+              <span>Offline ({unsyncedCount} local)</span>
+              {unsyncedCount > 0 && (
+                <button
+                  onClick={handleForceSync}
+                  disabled={syncingLocal}
+                  className="ml-1 text-[11px] underline font-bold hover:text-amber-900"
+                >
+                  {syncingLocal ? "Syncing..." : "Sync Now"}
+                </button>
+              )}
+            </div>
+          ) : unsyncedCount > 0 ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs font-semibold">
+              <CloudOff className="w-4 h-4 text-blue-600" />
+              <span>{unsyncedCount} Unsynced Local</span>
+              <button
+                onClick={handleForceSync}
+                disabled={syncingLocal}
+                className="ml-1 text-[11px] underline font-bold hover:text-blue-900"
+              >
+                {syncingLocal ? "Syncing..." : "Sync Now"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold" title="All transactions synced with database">
+              <CloudCheck className="w-4 h-4 text-emerald-600" />
+              <span>Synced</span>
+            </div>
+          )}
+
           <button
             onClick={() => fetchManualFinancials()}
             className="btn btn-secondary text-xs flex items-center gap-1.5 py-2.5 px-3 bg-white hover:bg-gray-50 border border-gray-200"
@@ -536,7 +738,10 @@ export default function FinancialsPage() {
           </button>
 
           <button
-            onClick={() => setShowFormModal(true)}
+            onClick={() => {
+              handleCancelEdit();
+              setShowFormModal(true);
+            }}
             className="btn btn-primary text-xs flex items-center gap-1.5 py-2.5 px-4 shadow-sm font-semibold"
           >
             <Plus className="w-4 h-4" />
@@ -754,12 +959,24 @@ export default function FinancialsPage() {
         <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-green-700" />
-              <h2 className="font-bold text-gray-900 text-base">Log New Transaction</h2>
+              {editingTx ? <Pencil className="w-5 h-5 text-amber-600" /> : <ShieldCheck className="w-5 h-5 text-green-700" />}
+              <h2 className="font-bold text-gray-900 text-base">
+                {editingTx ? "Edit Transaction" : "Log New Transaction"}
+              </h2>
             </div>
-            <span className="badge bg-green-50 text-green-800 text-[10px] uppercase font-bold">
-              Manual Form
-            </span>
+            {editingTx ? (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-800 underline"
+              >
+                Cancel Edit
+              </button>
+            ) : (
+              <span className="badge bg-green-50 text-green-800 text-[10px] uppercase font-bold">
+                Manual Form
+              </span>
+            )}
           </div>
 
           <form onSubmit={handleSaveTransaction} className="space-y-4">
@@ -965,21 +1182,23 @@ export default function FinancialsPage() {
               </div>
             )}
 
-            {/* Save Transaction Button with Loading State */}
+            {/* Save / Update Transaction Button with Loading State */}
             <button
               type="submit"
               disabled={formSubmitting}
-              className="btn btn-primary w-full py-3 text-xs flex items-center justify-center gap-2 font-bold shadow-md"
+              className={`btn text-xs font-bold w-full py-3 shadow-md flex items-center justify-center gap-2 ${
+                editingTx ? "bg-amber-600 hover:bg-amber-700 text-white" : "btn-primary"
+              }`}
             >
               {formSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving Transaction...
+                  {editingTx ? "Updating..." : "Saving Transaction..."}
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="w-4 h-4" />
-                  Save Transaction
+                  {editingTx ? <Pencil className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                  {editingTx ? "Update Transaction" : "Save Transaction"}
                 </>
               )}
             </button>
@@ -1031,6 +1250,18 @@ export default function FinancialsPage() {
                 <option value="This Month">This Month</option>
                 <option value="This Year">This Year</option>
               </select>
+
+              <button
+                type="button"
+                onClick={() => setShowVoided(!showVoided)}
+                className={`py-1.5 px-2.5 text-xs rounded-lg font-semibold border transition-colors ${
+                  showVoided
+                    ? "bg-rose-50 border-rose-200 text-rose-700"
+                    : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {showVoided ? "Hide Voided" : "Show Voided"}
+              </button>
             </div>
           </div>
 
@@ -1079,7 +1310,14 @@ export default function FinancialsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-xs">
                   {filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-gray-50/80 transition-colors group">
+                    <tr
+                      key={tx.id}
+                      className={`transition-colors group ${
+                        tx.isVoided
+                          ? "bg-rose-50/30 opacity-60 hover:bg-rose-50/50"
+                          : "hover:bg-gray-50/80"
+                      }`}
+                    >
                       <td className="py-3.5 px-4 font-medium text-gray-700 whitespace-nowrap">
                         {tx.date}
                       </td>
@@ -1095,7 +1333,17 @@ export default function FinancialsPage() {
                       <td className="py-3.5 px-4 font-semibold text-gray-900">
                         <div className="flex items-center gap-1.5">
                           {tx.isOpeningBalance && <Lock className="w-3 h-3 text-amber-600 flex-shrink-0" />}
-                          {tx.category}
+                          <span className={tx.isVoided ? "line-through text-gray-400" : ""}>
+                            {tx.category}
+                          </span>
+                          {tx.isVoided && (
+                            <span
+                              className="badge bg-rose-100 text-rose-800 text-[9px] uppercase font-bold"
+                              title={tx.voidedReason ? `Reason: ${tx.voidedReason}` : "Voided"}
+                            >
+                              VOIDED
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 mt-0.5">
                           {tx.costType && (
@@ -1114,10 +1362,17 @@ export default function FinancialsPage() {
                             {tx.notes}
                           </p>
                         )}
+                        {tx.isVoided && tx.voidedReason && (
+                          <p className="text-[10px] text-rose-600 font-semibold truncate max-w-[180px] mt-0.5">
+                            Reason: {tx.voidedReason}
+                          </p>
+                        )}
                       </td>
 
                       <td
-                        className={`py-3.5 px-4 text-right font-bold whitespace-nowrap text-sm ${TYPE_AMOUNT_COLORS[tx.type]}`}
+                        className={`py-3.5 px-4 text-right font-bold whitespace-nowrap text-sm ${
+                          tx.isVoided ? "line-through text-gray-400" : TYPE_AMOUNT_COLORS[tx.type]
+                        }`}
                       >
                         {tx.type === "Income" ? "+" : tx.type === "Expense" || tx.type === "Liability" ? "-" : ""}
                         {formatCurrency(tx.amount)}
@@ -1144,17 +1399,31 @@ export default function FinancialsPage() {
 
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         {tx.isOpeningBalance ? (
-                          <span className="text-amber-400 text-[10px] font-semibold" title="Opening balance cannot be deleted">
+                          <span className="text-amber-400 text-[10px] font-semibold" title="Opening balance cannot be modified">
                             <Lock className="w-3.5 h-3.5 inline" />
                           </span>
+                        ) : tx.isVoided ? (
+                          <span className="text-gray-400 text-[10px] italic">Voided</span>
                         ) : (
-                          <button
-                            onClick={() => handleDeleteTransaction(tx)}
-                            className="p-1 text-gray-300 hover:text-rose-600 rounded transition-colors opacity-0 group-hover:opacity-100"
-                            title="Delete entry"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleEditTransaction(tx)}
+                              className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                              title="Edit transaction"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setVoidModalTx(tx);
+                                setVoidReason("");
+                              }}
+                              className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                              title="Void entry"
+                            >
+                              <Ban className="w-4 h-4" />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -1326,6 +1595,78 @@ export default function FinancialsPage() {
                   <>
                     <Landmark className="w-3.5 h-3.5" />
                     Save Opening Balance
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Void Reason Confirmation Modal */}
+      {voidModalTx && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Ban className="w-5 h-5 text-rose-600" />
+                <h3 className="font-bold text-gray-900 text-base">Void Transaction Entry</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setVoidModalTx(null);
+                  setVoidReason("");
+                }}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Voiding transaction <span className="font-mono font-bold text-gray-800">{voidModalTx.reference}</span> ({formatCurrency(voidModalTx.amount)}). It will be marked inactive and excluded from all cash calculations while retaining an audit trail.
+            </p>
+
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">
+                Reason for Voiding *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Duplicate entry, incorrect FBO payout..."
+                className="form-input text-xs font-medium"
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setVoidModalTx(null);
+                  setVoidReason("");
+                }}
+                className="btn btn-secondary text-xs px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={voidSubmitting || !voidReason.trim()}
+                onClick={handleConfirmVoid}
+                className="btn text-xs px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold flex items-center gap-1.5"
+              >
+                {voidSubmitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Voiding...
+                  </>
+                ) : (
+                  <>
+                    <Ban className="w-3.5 h-3.5" />
+                    Confirm Void
                   </>
                 )}
               </button>
