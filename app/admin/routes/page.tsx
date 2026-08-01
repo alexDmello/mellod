@@ -48,7 +48,7 @@ interface DailyRouteAssignment {
   sort_order: number;
 }
 
-export default function RoutesManagementPage() {
+export function RoutesManagementTab() {
   const [activeTab, setActiveTab] = useState<"dispatch" | "templates">("dispatch");
 
   // Global State
@@ -872,4 +872,8 @@ export default function RoutesManagementPage() {
       )}
     </div>
   );
+}
+
+export default function AdminRoutesPage() {
+  return <RoutesManagementTab />;
 }

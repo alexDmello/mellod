@@ -26,7 +26,7 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, "&#039;");
 }
 
-export default function AdminMapPage() {
+export function FBOMapView() {
   const [fbos, setFbos] = useState<FBO[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -392,4 +392,8 @@ export default function AdminMapPage() {
       )}
     </div>
   );
+}
+
+export default function AdminMapPage() {
+  return <FBOMapView />;
 }

@@ -3,8 +3,8 @@
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Building2, Map, IndianRupee, UserPlus } from "lucide-react";
-import AdminMapPage from "@/app/admin/map/page";
-import SettingsPage from "@/app/admin/settings/page";
+import { FBOMapView } from "@/app/admin/map/page";
+import { MarketPriceTab } from "@/app/admin/settings/page";
 import { FBOOnboardingTab } from "@/app/admin/onboarding/page";
 
 function FBOHubContent() {
@@ -78,8 +78,8 @@ function FBOHubContent() {
       {/* Active Tab View */}
       <div className="pt-2">
         {activeTab === "onboarding" && <FBOOnboardingTab />}
-        {activeTab === "map" && <AdminMapPage />}
-        {activeTab === "price" && <SettingsPage />}
+        {activeTab === "map" && <FBOMapView />}
+        {activeTab === "price" && <MarketPriceTab />}
       </div>
     </div>
   );

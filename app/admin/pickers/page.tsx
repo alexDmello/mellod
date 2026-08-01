@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Truck, MapPin, UserPlus, CheckCircle2 } from "lucide-react";
-import AdminRoutesPage from "@/app/admin/routes/page";
+import { RoutesManagementTab } from "@/app/admin/routes/page";
 import { PickerOnboardingTab } from "@/app/admin/onboarding/page";
 import AdminPickupReview from "@/components/AdminPickupReview";
 
@@ -79,7 +79,7 @@ function PickerHubContent() {
       <div className="pt-2">
         {activeTab === "reviews" && <AdminPickupReview />}
         {activeTab === "onboarding" && <PickerOnboardingTab />}
-        {activeTab === "routes" && <AdminRoutesPage />}
+        {activeTab === "routes" && <RoutesManagementTab />}
       </div>
     </div>
   );
