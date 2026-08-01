@@ -10,7 +10,9 @@ import AdminPickupReview from "@/components/AdminPickupReview";
 function PickerHubContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const activeTab = searchParams.get("tab") || "reviews";
+  const rawTab = searchParams.get("tab");
+  const validTabs = ["reviews", "onboarding", "routes"];
+  const activeTab = validTabs.includes(rawTab || "") ? rawTab! : "reviews";
 
   function setTab(tab: string) {
     router.push(`/admin/pickers?tab=${tab}`);

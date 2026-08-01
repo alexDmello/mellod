@@ -16,6 +16,16 @@ import {
 } from "lucide-react";
 import type { FBO } from "@/lib/types";
 
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export default function AdminMapPage() {
   const [fbos, setFbos] = useState<FBO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +51,8 @@ export default function AdminMapPage() {
         if (fboError) throw fboError;
         setFbos(data || []);
       } catch (err: any) {
-        setError(err.message || "Failed to fetch FBOs");
+        console.error("Error fetching FBOs for map view:", err);
+        setError("Unable to load restaurant map data. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -135,13 +146,18 @@ export default function AdminMapPage() {
 
       const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
 
+      const safeBusinessName = escapeHtml(fbo.business_name);
+      const safeAddress = escapeHtml(fbo.address || "No address");
+      const safeContactPerson = escapeHtml(fbo.contact_person || "N/A");
+      const safePhone = escapeHtml(fbo.phone || "N/A");
+
       const popupContent = `
         <div style="font-family: sans-serif; padding: 4px; color: #1f2937;">
-          <h3 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #111827;">${fbo.business_name}</h3>
-          <p style="margin: 0 0 6px 0; font-size: 11px; color: #6b7280; line-height: 1.4;">${fbo.address || "No address"}</p>
+          <h3 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: #111827;">${safeBusinessName}</h3>
+          <p style="margin: 0 0 6px 0; font-size: 11px; color: #6b7280; line-height: 1.4;">${safeAddress}</p>
           <div style="font-size: 11px; display: flex; flex-direction: column; gap: 2px;">
-            <div><strong>Contact:</strong> ${fbo.contact_person || "N/A"}</div>
-            <div><strong>Phone:</strong> ${fbo.phone || "N/A"}</div>
+            <div><strong>Contact:</strong> ${safeContactPerson}</div>
+            <div><strong>Phone:</strong> ${safePhone}</div>
           </div>
           <a 
             href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
@@ -177,6 +193,14 @@ export default function AdminMapPage() {
       const bounds = L.featureGroup(Object.values(markersRef.current)).getBounds();
       map.fitBounds(bounds, { padding: [40, 40] });
     }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markersRef.current = {};
+      }
+    };
   }, [mapLoaded, fbos, loading]);
 
   // Center Map on a specific FBO

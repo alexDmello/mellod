@@ -10,7 +10,9 @@ import { FBOOnboardingTab } from "@/app/admin/onboarding/page";
 function FBOHubContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const activeTab = searchParams.get("tab") || "onboarding";
+  const rawTab = searchParams.get("tab");
+  const validTabs = ["onboarding", "map", "price"];
+  const activeTab = validTabs.includes(rawTab || "") ? rawTab! : "onboarding";
 
   function setTab(tab: string) {
     router.push(`/admin/fbo?tab=${tab}`);
