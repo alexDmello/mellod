@@ -431,38 +431,42 @@ export function RoutesManagementTab() {
   const availableFbosToAdd = fbos.filter((f) => !currentTemplateFboIds.includes(f.id));
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Map className="w-7 h-7 text-green-700" />
-            Routes Management
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
+    <div className="space-y-6 animate-fade-in pb-12">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <Map className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Routes Management
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 font-medium">
             Group restaurants into routes, set default pickers, and manage daily dispatch reassignments.
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex rounded-xl bg-gray-100 p-1 self-start sm:self-center">
+        <div className="flex rounded-xl bg-gray-100/80 p-1 border border-gray-200/60 self-start sm:self-center">
           <button
             onClick={() => setActiveTab("dispatch")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === "dispatch"
-                ? "bg-white text-green-700 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white text-emerald-700 shadow-sm"
+                : "text-gray-500 hover:text-gray-800"
             }`}
           >
             <Shuffle className="w-4 h-4" />
-            Daily Dispatch Board
+            Dispatch Board
           </button>
           <button
             onClick={() => setActiveTab("templates")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === "templates"
-                ? "bg-white text-green-700 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white text-emerald-700 shadow-sm"
+                : "text-gray-500 hover:text-gray-800"
             }`}
           >
             <FolderKanban className="w-4 h-4" />

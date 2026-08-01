@@ -389,15 +389,19 @@ export default function CredentialsPage() {
   // ── Unlocked Credentials Directory View ────────────────────────────────────
   return (
     <div className="space-y-6 animate-fade-in pb-12">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Key className="w-6 h-6 text-green-700" />
-            Credentials & Account Directory
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Centralized portal to offboard pickers/FBOs, change passwords, and update partner profile details.
+      {/* Top Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <Key className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Credentials & Account Directory
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 font-medium">
+            Centralized operational hub to manage FBOs & Pickers, reset passwords, update profiles, or toggle offboard status.
           </p>
         </div>
 

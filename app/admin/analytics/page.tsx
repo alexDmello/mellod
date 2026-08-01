@@ -8,22 +8,16 @@ import {
   Droplets,
   IndianRupee,
   Leaf,
-  Users,
-  Truck,
   Download,
-  Calendar,
   RefreshCw,
   Award,
   BarChart3,
-  PieChart,
   MapPin,
   ArrowUpRight,
-  ArrowDownRight,
   Loader2,
-  CheckCircle2,
-  Clock,
   Building2,
   Sparkles,
+  Zap,
 } from "lucide-react";
 
 type TimeRange = "7d" | "30d" | "90d" | "ytd" | "all";
@@ -116,8 +110,7 @@ export default function AnalyticsPage() {
     const totalPayout = completed.reduce((sum, p) => sum + Number(p.total_amount || 0), 0);
     const completedCount = completed.length;
     const avgLitersPerPickup = completedCount > 0 ? totalLiters / completedCount : 0;
-    
-    // Biofuel CO2 offset: ~2.5 kg CO2 avoided per liter of UCO converted to biodiesel
+
     const co2OffsetKg = totalLiters * 2.5;
     const co2OffsetTons = co2OffsetKg / 1000;
 
@@ -140,7 +133,6 @@ export default function AnalyticsPage() {
   const dailyChartData = useMemo(() => {
     const map: Record<string, { date: string; liters: number; payout: number }> = {};
 
-    // Group completed pickups by day
     filteredPickups
       .filter((p) => p.status === "completed")
       .forEach((p) => {
@@ -212,7 +204,6 @@ export default function AnalyticsPage() {
       .filter((p) => p.status === "completed")
       .forEach((p) => {
         const addr = p.fbo?.address || "";
-        // Extract city/locality part from address
         const parts = addr.split(",");
         const area = parts.length > 1 ? parts[parts.length - 2].trim() : "Central City";
         zones[area] = (zones[area] || 0) + Number(p.liters || 0);
@@ -224,7 +215,7 @@ export default function AnalyticsPage() {
       .slice(0, 4);
   }, [filteredPickups]);
 
-  // ── CSV Export Functionality ──────────────────────────────────────────────
+  // ── CSV Export ────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
     if (filteredPickups.length === 0) return;
 
@@ -251,7 +242,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-500 space-y-3">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-gray-500 space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-green-700" />
         <p className="text-sm font-medium">Computing business intelligence metrics...</p>
       </div>
@@ -259,29 +250,33 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
+    <div className="space-y-6 animate-fade-in pb-16">
       {/* ── Top Header Controls ──────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-            <BarChart3 className="w-6 h-6 text-green-700" />
-            Analytics & BI
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Real-time collection volume, financial payouts, environmental impact, and network performance.
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Analytics & Business Intelligence
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 font-medium">
+            Real-time collection volume, financial payouts, environmental metrics, and network performance.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Time Filter Tabs */}
-          <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
+          <div className="flex bg-gray-100/80 p-1 rounded-xl gap-1 border border-gray-200/60">
             {(["7d", "30d", "90d", "ytd", "all"] as TimeRange[]).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   timeRange === range
-                    ? "bg-white text-green-700 shadow-sm"
+                    ? "bg-white text-emerald-700 shadow-sm"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
               >
@@ -293,19 +288,18 @@ export default function AnalyticsPage() {
           <button
             onClick={loadAnalyticsData}
             disabled={refreshing}
-            className="btn btn-secondary text-xs flex items-center gap-1.5 py-2 px-3 bg-white hover:bg-gray-50 border border-gray-200"
+            className="p-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
             title="Refresh analytics data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-green-600" : ""}`} />
-            Refresh
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-emerald-600" : ""}`} />
           </button>
 
           <button
             onClick={handleExportCSV}
-            className="btn btn-primary text-xs flex items-center gap-1.5 py-2 px-4 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 hover:scale-[1.02] active:scale-95"
           >
-            <Download className="w-3.5 h-3.5" />
-            Export CSV
+            <Download className="w-4 h-4" />
+            Export Report
           </button>
         </div>
       </div>
@@ -313,75 +307,75 @@ export default function AnalyticsPage() {
       {/* ── Executive KPI Cards Grid ────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Volume */}
-        <div className="card p-5 bg-gradient-to-br from-green-50/80 to-emerald-50/30 border border-green-100">
+        <div className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-green-800">Total Volume</span>
-            <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center text-green-700">
-              <Droplets className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Total Volume</span>
+            <div className="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-700 group-hover:scale-110 transition-transform">
+              <Droplets className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="text-2xl font-black text-gray-900 mt-3">
             {formatLiters(metrics.totalLiters)}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-green-700 mt-2">
-            <ArrowUpRight className="w-3.5 h-3.5" /> +14.2% vs prev period
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-2">
+            <ArrowUpRight className="w-3.5 h-3.5" /> Live metrics
           </div>
         </div>
 
         {/* Total Payout */}
-        <div className="card p-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/30 border border-blue-100">
+        <div className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-800">Total Disbursed</span>
-            <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center text-blue-700">
-              <IndianRupee className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Total Disbursed</span>
+            <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center text-blue-700 group-hover:scale-110 transition-transform">
+              <IndianRupee className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="text-2xl font-black text-gray-900 mt-3">
             {formatCurrency(metrics.totalPayout)}
           </div>
           <div className="text-[11px] text-gray-500 font-medium mt-2">
-            across {metrics.completedCount} completed pickups
+            across {metrics.completedCount} pickups
           </div>
         </div>
 
-        {/* Environmental Impact (CO2 Offset) */}
-        <div className="card p-5 bg-gradient-to-br from-teal-50/80 to-emerald-50/40 border border-teal-100">
+        {/* Environmental Impact */}
+        <div className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal-800">CO₂ Avoided</span>
-            <div className="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center text-teal-700">
-              <Leaf className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700">CO₂ Avoided</span>
+            <div className="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center text-teal-700 group-hover:scale-110 transition-transform">
+              <Leaf className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="text-2xl font-black text-gray-900 mt-3">
-            {metrics.co2OffsetTons.toFixed(2)} <span className="text-sm font-semibold text-gray-500">Tons</span>
+            {metrics.co2OffsetTons.toFixed(2)} <span className="text-xs font-semibold text-gray-500">Tons</span>
           </div>
           <div className="text-[11px] text-teal-700 font-semibold mt-2 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" /> Biodiesel Conversion
+            <Sparkles className="w-3 h-3" /> Biodiesel Supply
           </div>
         </div>
 
-        {/* Avg Volume per Pickup */}
-        <div className="card p-5 bg-gradient-to-br from-purple-50/80 to-fuchsia-50/30 border border-purple-100">
+        {/* Avg Volume */}
+        <div className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-purple-800">Avg Yield / Stop</span>
-            <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700">
-              <TrendingUp className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700">Avg Yield / Stop</span>
+            <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center text-purple-700 group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="text-2xl font-black text-gray-900 mt-3">
-            {metrics.avgLitersPerPickup.toFixed(1)} <span className="text-sm font-semibold text-gray-500">L</span>
+            {metrics.avgLitersPerPickup.toFixed(1)} <span className="text-xs font-semibold text-gray-500">L</span>
           </div>
           <div className="text-[11px] text-gray-500 font-medium mt-2">
-            Per completed pickup stop
+            Per pickup stop
           </div>
         </div>
 
-        {/* Active FBO Rate */}
-        <div className="card p-5 bg-gradient-to-br from-amber-50/80 to-orange-50/30 border border-amber-100">
+        {/* Network Active Rate */}
+        <div className="group relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-800">Network Active</span>
-            <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center text-amber-700">
-              <Building2 className="w-4 h-4" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Network Active</span>
+            <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center text-amber-700 group-hover:scale-110 transition-transform">
+              <Building2 className="w-4.5 h-4.5" />
             </div>
           </div>
           <div className="text-2xl font-black text-gray-900 mt-3">
@@ -394,18 +388,18 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Collection Volume Trend Chart ──────────────────────────────── */}
-      <div className="card p-6 space-y-6">
+      <div className="rounded-2xl p-6 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
           <div>
-            <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-700" />
+            <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
               UCO Collection Volume Trend
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">Daily volume collected (Liters) over the selected timeframe.</p>
           </div>
           <div className="flex items-center gap-4 text-xs font-semibold">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-green-600 rounded-sm" />
+              <div className="w-3 h-3 bg-emerald-600 rounded-sm" />
               <span>Volume (Liters)</span>
             </div>
           </div>
@@ -422,17 +416,17 @@ export default function AnalyticsPage() {
                 const heightPercent = Math.max((item.liters / maxDailyVolume) * 100, 8);
                 return (
                   <div key={idx} className="flex-1 min-w-[36px] flex flex-col items-center gap-2 group h-full justify-end">
-                    {/* Tooltip on hover */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-[10px] py-1 px-2 rounded-md shadow-lg pointer-events-none mb-1 text-center whitespace-nowrap z-20">
+                    {/* Tooltip */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-xl pointer-events-none mb-1 text-center whitespace-nowrap z-20 border border-slate-800">
                       <div className="font-bold">{item.date}</div>
                       <div>{item.liters} Liters</div>
-                      <div className="text-green-300">{formatCurrency(item.payout)}</div>
+                      <div className="text-emerald-400 font-semibold">{formatCurrency(item.payout)}</div>
                     </div>
 
                     {/* Bar */}
                     <div className="w-full bg-gray-100 rounded-t-lg overflow-hidden flex items-end h-full">
                       <div
-                        className="w-full bg-gradient-to-t from-green-700 to-emerald-500 rounded-t-lg group-hover:from-green-600 group-hover:to-emerald-400 transition-all"
+                        className="w-full bg-gradient-to-t from-emerald-600 to-teal-500 rounded-t-lg group-hover:from-emerald-500 group-hover:to-teal-400 transition-all duration-300"
                         style={{ height: `${heightPercent}%` }}
                       />
                     </div>
@@ -449,9 +443,9 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Leaderboards & Zone Breakdown ────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Top Suppliers & Pickers Leaderboard (2 Cols) */}
-        <div className="lg:col-span-2 card p-6 space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Top Suppliers & Pickers Leaderboard */}
+        <div className="lg:col-span-2 rounded-2xl p-6 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 space-y-5">
           <div className="flex items-center justify-between border-b border-gray-100 pb-4">
             <div>
               <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
@@ -466,7 +460,7 @@ export default function AnalyticsPage() {
               <button
                 onClick={() => setActiveLeaderboardTab("fbo")}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  activeLeaderboardTab === "fbo" ? "bg-white text-green-700 shadow-sm" : "text-gray-500"
+                  activeLeaderboardTab === "fbo" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-500"
                 }`}
               >
                 Top FBOs
@@ -486,9 +480,9 @@ export default function AnalyticsPage() {
             topFbos.length === 0 ? (
               <div className="py-8 text-center text-gray-400 text-sm">No FBO collections recorded yet.</div>
             ) : (
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-100">
                 {topFbos.map((fbo, rank) => (
-                  <div key={fbo.name} className="flex items-center justify-between py-3.5 hover:bg-gray-50/50 px-2 rounded-xl">
+                  <div key={fbo.name} className="flex items-center justify-between py-3.5 hover:bg-gray-50/80 px-2 rounded-xl transition-colors">
                     <div className="flex items-center gap-3.5">
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${
@@ -511,7 +505,7 @@ export default function AnalyticsPage() {
 
                     <div className="text-right">
                       <p className="text-sm font-black text-gray-900">{formatLiters(fbo.liters)}</p>
-                      <p className="text-xs font-semibold text-green-700">{formatCurrency(fbo.payout)}</p>
+                      <p className="text-xs font-semibold text-emerald-600">{formatCurrency(fbo.payout)}</p>
                     </div>
                   </div>
                 ))}
@@ -520,9 +514,9 @@ export default function AnalyticsPage() {
           ) : topPickers.length === 0 ? (
             <div className="py-8 text-center text-gray-400 text-sm">No Picker dispatches completed yet.</div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-gray-100">
               {topPickers.map((picker, rank) => (
-                <div key={picker.name} className="flex items-center justify-between py-3.5 hover:bg-gray-50/50 px-2 rounded-xl">
+                <div key={picker.name} className="flex items-center justify-between py-3.5 hover:bg-gray-50/80 px-2 rounded-xl transition-colors">
                   <div className="flex items-center gap-3.5">
                     <div className="w-7 h-7 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-black">
                       #{rank + 1}
@@ -543,12 +537,12 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {/* Zone Breakdown & Environmental Goal Card (1 Col) */}
+        {/* Zone Breakdown & Environmental Goal Card */}
         <div className="space-y-6">
           {/* Zone Breakdown */}
-          <div className="card p-6 space-y-4">
+          <div className="rounded-2xl p-6 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 space-y-4">
             <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-              <MapPin className="w-5 h-5 text-green-700" />
+              <MapPin className="w-5 h-5 text-emerald-600" />
               <h2 className="font-bold text-gray-900 text-base">Zonal Collection Breakdown</h2>
             </div>
 
@@ -565,7 +559,7 @@ export default function AnalyticsPage() {
                         <span className="text-gray-900">{formatLiters(zone.liters)} ({percent.toFixed(0)}%)</span>
                       </div>
                       <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                        <div className="bg-green-600 h-full rounded-full" style={{ width: `${percent}%` }} />
+                        <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${percent}%` }} />
                       </div>
                     </div>
                   );
@@ -574,27 +568,30 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          {/* Environmental Target Badge */}
-          <div className="card p-6 bg-gradient-to-br from-green-700 to-emerald-900 text-white space-y-4 shadow-lg">
+          {/* Environmental Target Card */}
+          <div className="rounded-2xl p-6 bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950 text-white space-y-4 shadow-xl border border-emerald-800/40">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-green-200">Recycling Target</span>
-              <Sparkles className="w-5 h-5 text-green-300" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                Recycling Goal
+              </span>
+              <Sparkles className="w-5 h-5 text-emerald-400" />
             </div>
 
             <div>
               <div className="text-3xl font-black">{formatLiters(metrics.totalLiters)}</div>
-              <p className="text-xs text-green-200 mt-1">Goal: 50,000 Liters Biodiesel Feedstock</p>
+              <p className="text-xs text-emerald-200 mt-1">Target: 50,000 Liters Feedstock</p>
             </div>
 
-            <div className="w-full bg-white/20 h-2.5 rounded-full overflow-hidden">
+            <div className="w-full bg-white/10 h-2.5 rounded-full overflow-hidden border border-white/10">
               <div
-                className="bg-white h-full rounded-full transition-all duration-500"
+                className="bg-emerald-400 h-full rounded-full transition-all duration-500 shadow-md shadow-emerald-400/50"
                 style={{ width: `${Math.min((metrics.totalLiters / 50000) * 100, 100)}%` }}
               />
             </div>
 
-            <p className="text-[11px] text-green-100 leading-relaxed">
-              Every liter of UCO collected prevents water contamination and is repurposed into clean biofuel.
+            <p className="text-[11px] text-emerald-100/80 leading-relaxed">
+              Every liter of UCO collected prevents water contamination and is converted into clean biodiesel.
             </p>
           </div>
         </div>

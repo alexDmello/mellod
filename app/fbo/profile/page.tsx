@@ -57,6 +57,8 @@ const methodLabels: Record<PaymentMethodType, string> = {
   cash: "Cash",
 };
 
+import FBOHeader from "@/components/FBOHeader";
+
 export default function FBOProfilePage() {
   const [fbo, setFbo] = useState<FBO | null>(null);
   const [fssaiLicense, setFssaiLicense] = useState<string>("");
@@ -117,7 +119,7 @@ export default function FBOProfilePage() {
 
     if (error) {
       console.error("Failed to save FSSAI license:", error);
-      alert("Database error saving FSSAI license: " + error.message + "\n\nPlease ensure you ran supabase/fssai_license_setup.sql in Supabase SQL Editor.");
+      alert("Database error saving FSSAI license: " + error.message);
       setSavingFssai(false);
       return;
     }
@@ -187,57 +189,57 @@ export default function FBOProfilePage() {
 
   if (fetching) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500">
-        <Loader2 className="w-6 h-6 animate-spin text-green-700 mr-2" />
-        Loading partner profile...
+      <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <p className="text-xs font-semibold text-gray-600">Loading partner profile...</p>
       </div>
     );
   }
 
   return (
     <div className="animate-fade-in space-y-4 pb-8">
-      {/* Welcome Banner */}
-      <div className="bg-green-700 px-4 pt-6 pb-10 text-white rounded-b-3xl shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-xl font-bold border border-white/20">
+      {/* Modern Unified Header */}
+      <FBOHeader subtitle="FBO Partner Portal">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-xl font-black border border-white/20 shadow-inner">
             {fbo?.business_name?.charAt(0) || "F"}
           </div>
           <div>
-            <h1 className="text-xl font-bold">{fbo?.business_name}</h1>
-            <p className="text-green-200 text-xs mt-0.5">Partner Profile & Payout Preferences</p>
+            <h1 className="text-xl font-black tracking-tight">{fbo?.business_name}</h1>
+            <p className="text-emerald-200/80 text-xs mt-0.5 font-medium">Partner Profile & Payout Preferences</p>
           </div>
         </div>
-      </div>
+      </FBOHeader>
 
-      <div className="px-4 -mt-6 space-y-4">
+      <div className="px-4 -mt-6 relative z-10 space-y-4">
         {/* ── SECTION 1: Business Details & FSSAI License ────────────────── */}
-        <div className="card p-5 space-y-4 bg-white border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-2xl p-5 space-y-4 border border-gray-100 shadow-xl shadow-gray-200/80">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-green-700" />
+              <Building2 className="w-4 h-4 text-emerald-700" />
               Business & Regulatory Details
             </h2>
-            <span className="badge bg-green-50 text-green-800 text-[10px] uppercase font-semibold">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] uppercase font-extrabold tracking-wider">
               Verified Partner
             </span>
           </div>
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-gray-400 block font-medium">Contact Person</span>
-              <span className="font-semibold text-gray-800 text-sm">{fbo?.contact_person || "—"}</span>
+              <span className="text-gray-400 block font-bold text-[10px] uppercase">Contact Person</span>
+              <span className="font-bold text-gray-900 text-sm mt-0.5 block">{fbo?.contact_person || "—"}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <span className="text-gray-400 block font-medium">Phone Number</span>
-                <span className="font-semibold text-gray-800 flex items-center gap-1">
+                <span className="text-gray-400 block font-bold text-[10px] uppercase">Phone Number</span>
+                <span className="font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
                   <Phone className="w-3.5 h-3.5 text-gray-400" /> {fbo?.phone || "Not provided"}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 block font-medium">Pickup Location Address</span>
-                <span className="font-semibold text-gray-800 flex items-center gap-1">
+                <span className="text-gray-400 block font-bold text-[10px] uppercase">Pickup Location Address</span>
+                <span className="font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                   <span className="truncate">{fbo?.address || "Address configured"}</span>
                 </span>
@@ -248,17 +250,17 @@ export default function FBOProfilePage() {
             <div className="pt-3 border-t border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-gray-500 font-semibold block flex items-center gap-1.5">
-                    <FileCheck className="w-4 h-4 text-green-700" />
+                  <span className="text-gray-700 font-bold block flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-emerald-700" />
                     FSSAI License / Registration No.
                   </span>
-                  <p className="text-[11px] text-gray-400">Used Cooking Oil regulatory compliance identifier</p>
+                  <p className="text-[11px] text-gray-400 font-medium">Used Cooking Oil regulatory compliance identifier</p>
                 </div>
 
                 {!fbo?.fssai_license && !isEditingFssai && (
                   <button
                     onClick={() => setIsEditingFssai(true)}
-                    className="text-xs text-green-700 hover:text-green-800 font-semibold flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100"
+                    className="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm transition-all"
                   >
                     + Add FSSAI
                   </button>
@@ -270,21 +272,21 @@ export default function FBOProfilePage() {
                   <input
                     type="text"
                     placeholder="Enter 14-digit FSSAI license no..."
-                    className="form-input text-xs font-mono uppercase bg-gray-50"
+                    className="w-full px-3 py-2 text-xs font-mono uppercase bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold"
                     value={fssaiLicense}
                     onChange={(e) => setFssaiLicense(e.target.value)}
                   />
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={() => setIsEditingFssai(false)}
-                      className="btn btn-ghost text-xs py-1.5 px-3"
+                      className="px-3 py-1.5 text-xs text-gray-600 font-bold rounded-xl hover:bg-gray-100"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveFssai}
                       disabled={savingFssai || !fssaiLicense.trim()}
-                      className="btn btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
+                      className="py-1.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-md shadow-emerald-700/20"
                     >
                       {savingFssai ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save & Lock"}
                     </button>
@@ -294,14 +296,14 @@ export default function FBOProfilePage() {
                 <div className="mt-2">
                   {fbo?.fssai_license ? (
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between bg-green-50/80 p-2.5 rounded-xl border border-green-200">
+                      <div className="flex items-center justify-between bg-emerald-50/80 p-3 rounded-xl border border-emerald-200">
                         <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-green-700 flex-shrink-0" />
-                          <span className="badge bg-green-100 text-green-900 font-mono text-xs px-2.5 py-0.5 font-bold">
+                          <ShieldCheck className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                          <span className="bg-emerald-100 text-emerald-950 font-mono text-xs px-2.5 py-0.5 rounded-md font-bold">
                             {fbo.fssai_license}
                           </span>
                         </div>
-                        <span className="text-[10px] text-gray-500 font-semibold flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-gray-200">
+                        <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-gray-200">
                           Verified & Locked
                         </span>
                       </div>
@@ -318,7 +320,7 @@ export default function FBOProfilePage() {
               )}
 
               {fssaiSuccess && (
-                <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
+                <p className="text-xs text-emerald-700 mt-2 flex items-center gap-1 font-bold">
                   <CheckCircle2 className="w-3.5 h-3.5" /> FSSAI license registered & locked successfully!
                 </p>
               )}
@@ -326,20 +328,20 @@ export default function FBOProfilePage() {
           </div>
         </div>
 
-        {/* ── SECTION 2: Payment & Payout Options (Moved Here) ────────────── */}
-        <div className="card p-5 space-y-4 bg-white border border-gray-100 shadow-sm">
+        {/* ── SECTION 2: Payment & Payout Options ────────────────────────── */}
+        <div className="bg-white rounded-2xl p-5 space-y-4 border border-gray-100 shadow-xl shadow-gray-200/80">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
               <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-green-700" />
+                <CreditCard className="w-4 h-4 text-emerald-700" />
                 Payout Payment Methods
               </h2>
-              <p className="text-[11px] text-gray-500">Configure how you receive your UCO earnings</p>
+              <p className="text-[11px] text-gray-500 font-medium">Configure how you receive your UCO earnings</p>
             </div>
           </div>
 
           {paymentSuccess && (
-            <div className="p-3 flex items-center gap-2 border border-green-200 bg-green-50 text-green-700 text-xs rounded-xl">
+            <div className="p-3 flex items-center gap-2 border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
               Payment method saved successfully!
             </div>
@@ -352,19 +354,24 @@ export default function FBOProfilePage() {
                 <div key={method.id} className="p-3.5 border border-gray-100 rounded-xl bg-gray-50/50">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${method.is_primary ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"
-                        }`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        method.is_primary ? "bg-emerald-100 text-emerald-800" : "bg-gray-200 text-gray-500"
+                      }`}
                     >
                       {methodIcons[method.method_type]}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-800 text-xs">{methodLabels[method.method_type]}</p>
-                        {method.is_primary && <span className="badge badge-green text-[10px]">Primary Payout</span>}
+                        <p className="font-bold text-gray-900 text-xs">{methodLabels[method.method_type]}</p>
+                        {method.is_primary && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-extrabold uppercase">
+                            Primary Payout
+                          </span>
+                        )}
                       </div>
 
                       {method.method_type === "bank" && (
-                        <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+                        <div className="mt-1 space-y-0.5 text-xs text-gray-600 font-medium">
                           <p>{method.account_holder} · {method.bank_name}</p>
                           <p className="font-mono text-[11px] text-gray-400">
                             ···· {method.account_number?.slice(-4)} · IFSC: {method.ifsc_code}
@@ -372,7 +379,7 @@ export default function FBOProfilePage() {
                         </div>
                       )}
                       {method.method_type === "upi" && (
-                        <p className="text-xs text-gray-600 mt-1 font-mono">{method.upi_id}</p>
+                        <p className="text-xs text-gray-600 mt-1 font-mono font-bold">{method.upi_id}</p>
                       )}
                     </div>
 
@@ -380,7 +387,7 @@ export default function FBOProfilePage() {
                       {!method.is_primary && (
                         <button
                           onClick={() => setPrimary(method.id)}
-                          className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                          className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
                           title="Set as primary"
                         >
                           <Star className="w-3.5 h-3.5" />
@@ -388,7 +395,7 @@ export default function FBOProfilePage() {
                       )}
                       <button
                         onClick={() => deleteMethod(method.id)}
-                        className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                        className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
                         title="Remove"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -401,10 +408,10 @@ export default function FBOProfilePage() {
           )}
 
           {paymentMethods.length === 0 && !showForm && (
-            <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-2">
+            <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200 space-y-2">
               <CreditCard className="w-8 h-8 text-gray-300 mx-auto" />
-              <p className="text-xs text-gray-600 font-medium">No payment methods added yet</p>
-              <p className="text-[11px] text-gray-400">Add a bank account or UPI ID to receive payouts.</p>
+              <p className="text-xs text-gray-700 font-bold">No payment methods added yet</p>
+              <p className="text-[11px] text-gray-400 font-medium">Add a bank account or UPI ID to receive payouts.</p>
             </div>
           )}
 
@@ -412,22 +419,23 @@ export default function FBOProfilePage() {
           {!showForm ? (
             <button
               onClick={() => setShowForm(true)}
-              className="btn btn-secondary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 font-semibold bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800"
+              className="w-full py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 transition-all shadow-sm"
             >
-              <Plus className="w-4 h-4 text-green-700" /> Add Payout Method
+              <Plus className="w-4 h-4 text-emerald-700" /> Add Payout Method
             </button>
           ) : (
-            <div className="p-4 border rounded-xl bg-gray-50 space-y-4">
-              <h3 className="font-semibold text-gray-800 text-xs">Add New Method</h3>
+            <div className="p-4 border rounded-2xl bg-gray-50/80 space-y-4">
+              <h3 className="font-bold text-gray-900 text-xs">Add New Method</h3>
 
-              <div className="flex rounded-xl bg-gray-200 p-1">
+              <div className="flex rounded-xl bg-gray-200/80 p-1">
                 {(["upi", "bank"] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${activeTab === tab ? "bg-white text-green-800 shadow-sm" : "text-gray-600"
-                      }`}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      activeTab === tab ? "bg-white text-emerald-900 shadow-sm" : "text-gray-600"
+                    }`}
                   >
                     {tab === "upi" ? "UPI ID" : "Bank Account"}
                   </button>
@@ -437,14 +445,14 @@ export default function FBOProfilePage() {
               {activeTab === "upi" && (
                 <form onSubmit={upiForm.handleSubmit(submitUPI)} className="space-y-3">
                   <div>
-                    <label className="form-label text-xs">UPI ID</label>
-                    <input className="form-input text-xs" placeholder="restaurant@upi" {...upiForm.register("upi_id")} />
-                    {upiForm.formState.errors.upi_id && <p className="form-error">{upiForm.formState.errors.upi_id.message}</p>}
+                    <label className="text-[11px] font-bold text-gray-700 block mb-1">UPI ID</label>
+                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" placeholder="restaurant@upi" {...upiForm.register("upi_id")} />
+                    {upiForm.formState.errors.upi_id && <p className="text-[10px] text-rose-500 mt-0.5">{upiForm.formState.errors.upi_id.message}</p>}
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost text-xs flex-1">Cancel</button>
-                    <button type="submit" disabled={loading} className="btn btn-primary text-xs flex-1">
-                      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save UPI"}
+                    <button type="button" onClick={() => setShowForm(false)} className="px-3 py-2 text-xs text-gray-600 font-bold rounded-xl hover:bg-gray-200 flex-1">Cancel</button>
+                    <button type="submit" disabled={loading} className="py-2 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex-1 shadow-md shadow-emerald-700/20">
+                      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : "Save UPI"}
                     </button>
                   </div>
                 </form>
@@ -453,25 +461,25 @@ export default function FBOProfilePage() {
               {activeTab === "bank" && (
                 <form onSubmit={bankForm.handleSubmit(submitBank)} className="space-y-3">
                   <div>
-                    <label className="form-label text-xs">Account Holder Name</label>
-                    <input className="form-input text-xs" placeholder="Full name on account" {...bankForm.register("account_holder")} />
+                    <label className="text-[11px] font-bold text-gray-700 block mb-1">Account Holder Name</label>
+                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" placeholder="Full name on account" {...bankForm.register("account_holder")} />
                   </div>
                   <div>
-                    <label className="form-label text-xs">Bank Name</label>
-                    <input className="form-input text-xs" placeholder="State Bank of India" {...bankForm.register("bank_name")} />
+                    <label className="text-[11px] font-bold text-gray-700 block mb-1">Bank Name</label>
+                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" placeholder="State Bank of India" {...bankForm.register("bank_name")} />
                   </div>
                   <div>
-                    <label className="form-label text-xs">Account Number</label>
-                    <input className="form-input text-xs" type="text" placeholder="Account number" {...bankForm.register("account_number")} />
+                    <label className="text-[11px] font-bold text-gray-700 block mb-1">Account Number</label>
+                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" type="text" placeholder="Account number" {...bankForm.register("account_number")} />
                   </div>
                   <div>
-                    <label className="form-label text-xs">IFSC Code</label>
-                    <input className="form-input text-xs uppercase" placeholder="SBIN0001234" {...bankForm.register("ifsc_code")} />
+                    <label className="text-[11px] font-bold text-gray-700 block mb-1">IFSC Code</label>
+                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono uppercase font-medium" placeholder="SBIN0001234" {...bankForm.register("ifsc_code")} />
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost text-xs flex-1">Cancel</button>
-                    <button type="submit" disabled={loading} className="btn btn-primary text-xs flex-1">
-                      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save Bank"}
+                    <button type="button" onClick={() => setShowForm(false)} className="px-3 py-2 text-xs text-gray-600 font-bold rounded-xl hover:bg-gray-200 flex-1">Cancel</button>
+                    <button type="submit" disabled={loading} className="py-2 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex-1 shadow-md shadow-emerald-700/20">
+                      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : "Save Bank"}
                     </button>
                   </div>
                 </form>
@@ -481,26 +489,26 @@ export default function FBOProfilePage() {
         </div>
 
         {/* ── SECTION 3: Support Desk ───────────────────────── */}
-        <div className="card p-5 space-y-3 bg-white border border-gray-100 shadow-sm text-xs">
+        <div className="bg-white rounded-2xl p-5 space-y-3 border border-gray-100 shadow-xl shadow-gray-200/80 text-xs">
           <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
-            <HelpCircle className="w-4 h-4 text-green-700" />
+            <HelpCircle className="w-4 h-4 text-emerald-700" />
             Support & Assistance
           </h2>
 
           <a
             href="tel:+919876543210"
-            className="flex items-center justify-between p-3 rounded-xl bg-green-50 border border-green-100 text-green-900 font-semibold hover:bg-green-100 transition-colors"
+            className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-950 font-bold hover:bg-emerald-100 transition-colors shadow-sm"
           >
             <span className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-green-700" />
+              <Phone className="w-4 h-4 text-emerald-700" />
               Mellod Biofuels Support Line
             </span>
-            <ExternalLink className="w-4 h-4 text-green-700" />
+            <ExternalLink className="w-4 h-4 text-emerald-700" />
           </a>
         </div>
 
         {/* ── SECTION 4: Account Session & Sign Out ───────────────────────── */}
-        <div className="card p-5 space-y-3 bg-white border border-gray-100 shadow-sm text-xs">
+        <div className="bg-white rounded-2xl p-5 space-y-3 border border-gray-100 shadow-xl shadow-gray-200/80 text-xs">
           <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
             <LogOut className="w-4 h-4 text-rose-600" />
             Account Session

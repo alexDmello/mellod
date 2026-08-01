@@ -1060,31 +1060,47 @@ export default function OnboardingPage() {
   const [activeSectionId, setActiveSectionId] = useState<"fbo" | "picker">("fbo");
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Onboarding & Management</h1>
-        <p className="text-sm text-gray-500 mt-1">Register new partners and manage active user credentials.</p>
-      </div>
+    <div className="space-y-6 animate-fade-in pb-12">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <UserPlus className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Onboarding & Partner Registration
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 font-medium">
+            Register new collection partners (FBOs) and field drivers (Pickers) with auto-generated login credentials.
+          </p>
+        </div>
 
-      <div className="flex border-b border-gray-200 bg-white rounded-xl shadow-sm p-1.5 gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveSectionId("fbo")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all ${
-            activeSectionId === "fbo" ? "bg-green-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
-          }`}
-        >
-          <Building2 className="w-4 h-4" /> FBO Onboarding
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSectionId("picker")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all ${
-            activeSectionId === "picker" ? "bg-green-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100"
-          }`}
-        >
-          <Truck className="w-4 h-4" /> Picker Onboarding
-        </button>
+        <div className="flex rounded-xl bg-gray-100/80 p-1 border border-gray-200/60 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => setActiveSectionId("fbo")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeSectionId === "fbo"
+                ? "bg-white text-emerald-700 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Building2 className="w-4 h-4" /> FBO Onboarding
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSectionId("picker")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeSectionId === "picker"
+                ? "bg-white text-emerald-700 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Truck className="w-4 h-4" /> Picker Onboarding
+          </button>
+        </div>
       </div>
 
       {activeSectionId === "fbo" ? <FBOOnboardingTab /> : <PickerOnboardingTab />}

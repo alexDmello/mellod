@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Leaf, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, User, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -82,8 +82,6 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
-
-    // Derive the internal email from username
     const email = `${username.trim().toLowerCase()}@mellod.internal`;
 
     const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -101,7 +99,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Fetch role and redirect
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("role")
@@ -110,7 +107,7 @@ export default function LoginPage() {
 
     if (profileError) {
       console.error("Profile query error:", profileError);
-      setError(`Account configuration error: ${profileError.message} (Code: ${profileError.code})`);
+      setError(`Account configuration error: ${profileError.message}`);
       setLoading(false);
       return;
     }
@@ -118,7 +115,7 @@ export default function LoginPage() {
     const profile = profileData as { role: string } | null;
 
     if (!profile) {
-      setError("Account configuration error: Profile not found. Please ensure the profile row was inserted in the database.");
+      setError("Account configuration error: Profile not found.");
       setLoading(false);
       return;
     }
@@ -143,7 +140,7 @@ export default function LoginPage() {
 
       if (picker && picker.is_active === false) {
         await supabase.auth.signOut();
-        setError("This picker account has been offboarded or suspended. Please contact Mellod administration.");
+        setError("This picker account has been offboarded or suspended.");
         setLoading(false);
         return;
       }
@@ -157,7 +154,7 @@ export default function LoginPage() {
 
       if (fbo && fbo.is_active === false) {
         await supabase.auth.signOut();
-        setError("This FBO account has been offboarded or suspended. Please contact Mellod administration.");
+        setError("This FBO account has been offboarded or suspended.");
         setLoading(false);
         return;
       }
@@ -170,13 +167,16 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50 px-4">
-        <div className="flex flex-col items-center space-y-3 animate-fade-in">
-          <div className="w-16 h-16 flex items-center justify-center drop-shadow-md">
-            <img src="/icons/logo.png" alt="Mellod Logo" className="w-16 h-16 object-contain" />
-          </div>
-          <div className="flex items-center gap-2 text-green-800 text-sm font-semibold mt-2">
-            <Loader2 className="w-4 h-4 animate-spin text-green-700" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 font-sans relative overflow-hidden">
+        {/* Animated Background Fluid Orbs */}
+        <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-emerald-300/30 rounded-full blur-3xl animate-float-green-1 pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/3 w-[30rem] h-[30rem] bg-teal-400/20 rounded-full blur-3xl animate-float-green-2 pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center space-y-3 animate-fade-in">
+          {/* Logo with NO shape or container behind it */}
+          <img src="/icons/logo.png" alt="Mellod Logo" className="w-16 h-16 object-contain" />
+          <div className="flex items-center gap-2 text-emerald-950 text-xs font-bold mt-2 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-100 shadow-sm">
+            <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
             Opening Mellod...
           </div>
         </div>
@@ -185,53 +185,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-green-50 px-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-green-100 rounded-full opacity-40 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-green-100 rounded-full opacity-40 blur-3xl" />
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50/80 px-4 py-8 font-sans relative overflow-hidden selection:bg-emerald-600 selection:text-white">
+      {/* Dynamic Animated Fluid Green Background */}
+      <div className="absolute -top-20 -left-20 w-[32rem] h-[32rem] bg-gradient-to-br from-emerald-400/35 via-teal-300/30 to-green-500/20 rounded-full blur-3xl animate-float-green-1 pointer-events-none" />
+      <div className="absolute -bottom-32 -right-20 w-[38rem] h-[38rem] bg-gradient-to-tr from-teal-500/30 via-emerald-300/25 to-emerald-600/20 rounded-full blur-3xl animate-float-green-2 pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[28rem] h-[28rem] bg-emerald-200/25 rounded-full blur-3xl animate-float-green-3 pointer-events-none" />
 
-      <div className="relative w-full max-w-sm animate-slide-up">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 flex items-center justify-center drop-shadow-md mb-4">
-            <img src="/icons/logo.png" alt="Mellod Logo" className="w-16 h-16 object-contain" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mellod</h1>
-          <p className="text-sm text-gray-500 mt-1">UCO Collection Platform</p>
+      {/* Main Container */}
+      <div className="relative z-10 w-full max-w-sm animate-slide-up space-y-6">
+        {/* Branding Area: Clean Logo directly on page background, NO container behind logo */}
+        <div className="flex flex-col items-center text-center">
+          <img src="/icons/logo.png" alt="Mellod Logo" className="w-20 h-20 object-contain mb-3 drop-shadow-sm" />
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mellod</h1>
+          <p className="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wider">UCO Collection & Operations</p>
         </div>
 
-        {/* Card */}
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-1">Welcome back</h2>
-          <p className="text-sm text-gray-500 mb-6">Enter your credentials to continue</p>
+        {/* Crisp Premium White Login Card */}
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-7 border border-gray-100 shadow-2xl shadow-emerald-950/10 space-y-6">
+          <div>
+            <h2 className="text-xl font-black text-gray-900 tracking-tight">Sign In</h2>
+            <p className="text-xs text-gray-500 font-medium mt-1">Enter your assigned username to access portal</p>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label htmlFor="username" className="form-label">Username</label>
-              <input
-                id="username"
-                type="text"
-                autoComplete="username"
-                autoCapitalize="none"
-                className="form-input"
-                placeholder="e.g. picker_john_01"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
+            {/* Username */}
+            <div className="space-y-1.5">
+              <label htmlFor="username" className="text-xs font-extrabold text-gray-700 uppercase tracking-wider block">
+                Username
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400 pointer-events-none" />
+                <input
+                  id="username"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  className="w-full pl-11 pr-4 py-3 text-xs font-bold bg-gray-50/70 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/15 focus:border-emerald-600 focus:bg-white text-gray-900 transition-all placeholder:text-gray-400"
+                  placeholder="e.g. fbo_hotel_01"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="form-label">Password</label>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-xs font-extrabold text-gray-700 uppercase tracking-wider block">
+                Password
+              </label>
               <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400 pointer-events-none" />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  className="form-input !pr-11"
-                  placeholder="Enter your password"
+                  className="w-full pl-11 pr-11 py-3 text-xs font-bold bg-gray-50/70 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/15 focus:border-emerald-600 focus:bg-white text-gray-900 transition-all placeholder:text-gray-400"
+                  placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -239,7 +249,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-emerald-700 transition-colors p-1"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -249,31 +259,37 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <span className="text-red-600 text-sm">{error}</span>
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-bold flex items-center gap-2 shadow-sm animate-fade-in">
+                <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading || !username || !password}
-              className="btn btn-primary btn-full btn-lg mt-2"
+              className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
+                  Authenticating...
                 </>
               ) : (
-                "Sign In"
+                <>
+                  Sign In <ArrowRight className="w-4 h-4" />
+                </>
               )}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Credentials are provided by your Mellod administrator.
-        </p>
+        {/* Sub-footer Note */}
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 font-semibold">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Secured by Mellod Logistics Platform</span>
+        </div>
       </div>
     </div>
   );

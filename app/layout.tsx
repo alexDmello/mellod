@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#15803d",
+  themeColor: "#022c22",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -44,16 +44,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="bg-[#15803d] font-sans">
+    <html lang="en" className="bg-gray-50 font-sans">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="theme-color" content="#15803d" />
-        <meta name="background-color" content="#15803d" />
+        <meta name="theme-color" content="#022c22" />
+        <meta name="background-color" content="#f9fafb" />
       </head>
-      <body className="min-h-screen bg-gray-50 antialiased selection:bg-green-600 selection:text-white">
+      <body className="min-h-screen bg-gray-50 antialiased selection:bg-emerald-600 selection:text-white">
         <ServiceWorkerRegister />
         {children}
         <SpeedInsights />

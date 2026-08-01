@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Save, FileText, Search, ChevronLeft, StickyNote, CornerDownLeft } from "lucide-react";
-import Link from "next/link";
+import { Plus, Trash2, Save, FileText, Search, ChevronLeft, StickyNote } from "lucide-react";
+import PickerHeader from "@/components/PickerHeader";
 
 interface PickerNote {
   id: string;
@@ -106,22 +106,14 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-green-700 px-4 pb-3.5 sticky top-0 z-30 flex items-center gap-3" style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}>
-        <Link href="/picker" className="text-white hover:text-green-200 transition-colors">
-          <ChevronLeft className="w-6 h-6" />
-        </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-            <StickyNote className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-sm leading-none">Note Taking</h1>
-            <p className="text-green-200 text-[10px] mt-0.5">PWA Notes Integration</p>
-          </div>
+      <PickerHeader subtitle="PWA Notes Integration" showBack={true}>
+        <div className="space-y-0.5">
+          <h1 className="text-white font-black text-lg leading-none">Field Note Taking</h1>
+          <p className="text-emerald-200 text-xs mt-1 font-medium">Record gate codes & store contacts on-device</p>
         </div>
-      </header>
+      </PickerHeader>
 
       {/* Editor & Notes Layout */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">

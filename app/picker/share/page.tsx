@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Share2, MapPin, Save, ChevronLeft, CheckCircle, Info } from "lucide-react";
 import Link from "next/link";
+import PickerHeader from "@/components/PickerHeader";
 
 function ShareTargetForm() {
   const searchParams = useSearchParams();
@@ -176,22 +177,14 @@ function ShareTargetForm() {
 
 export default function ShareTargetPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-green-700 px-4 pb-3.5 sticky top-0 z-30 flex items-center gap-3" style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}>
-        <Link href="/picker" className="text-white hover:text-green-200 transition-colors">
-          <ChevronLeft className="w-6 h-6" />
-        </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
-            <Share2 className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-sm leading-none">Share Target</h1>
-            <p className="text-green-200 text-[10px] mt-0.5">Quick Lead Creator</p>
-          </div>
+      <PickerHeader subtitle="Quick Lead Creator" showBack={true}>
+        <div className="space-y-0.5">
+          <h1 className="text-white font-black text-lg leading-none">Share Target Lead</h1>
+          <p className="text-emerald-200 text-xs mt-1 font-medium">Create collection lead from system share sheet</p>
         </div>
-      </header>
+      </PickerHeader>
 
       <Suspense fallback={
         <div className="flex-1 flex items-center justify-center text-gray-500 text-xs">

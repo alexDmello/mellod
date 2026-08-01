@@ -26,7 +26,14 @@ export function LocationPicker({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const onChangeRef = useRef(onChange);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Initial Map creation & cleanup
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
@@ -56,36 +63,67 @@ export function LocationPicker({
 
       marker.on("dragend", () => {
         const pos = marker.getLatLng();
-        onChange({ lat: Number(pos.lat.toFixed(6)), lng: Number(pos.lng.toFixed(6)) });
+        onChangeRef.current({ lat: Number(pos.lat.toFixed(6)), lng: Number(pos.lng.toFixed(6)) });
       });
 
       map.on("click", (e: L.LeafletMouseEvent) => {
         const { lat: clickLat, lng: clickLng } = e.latlng;
         marker.setLatLng([clickLat, clickLng]);
-        onChange({ lat: Number(clickLat.toFixed(6)), lng: Number(clickLng.toFixed(6)) });
+        onChangeRef.current({ lat: Number(clickLat.toFixed(6)), lng: Number(clickLng.toFixed(6)) });
       });
 
-      setTimeout(() => {
-        map.invalidateSize();
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        if (mapInstanceRef.current && (mapContainerRef.current as any)?._leaflet_id) {
+          try {
+            mapInstanceRef.current.invalidateSize();
+          } catch (e) {
+            // Ignore if map pane was already removed
+          }
+        }
       }, 200);
-    } else {
-      mapInstanceRef.current.setView([lat, lng], mapInstanceRef.current.getZoom());
-      if (markerRef.current) {
-        markerRef.current.setLatLng([lat, lng]);
-      }
-      setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize();
-      }, 100);
     }
 
     return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch (e) {
+          // Ignore cleanup error if DOM element was removed
+        }
         mapInstanceRef.current = null;
         markerRef.current = null;
       }
     };
-  }, [coords.lat, coords.lng]);
+  }, []);
+
+  // Update map view & marker position safely when coords prop updates
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const marker = markerRef.current;
+    if (!map || !marker) return;
+
+    const lat = coords?.lat && !isNaN(Number(coords.lat)) ? Number(coords.lat) : 12.9716;
+    const lng = coords?.lng && !isNaN(Number(coords.lng)) ? Number(coords.lng) : 77.5946;
+
+    const currentPos = marker.getLatLng();
+    if (Math.abs(currentPos.lat - lat) > 0.00001 || Math.abs(currentPos.lng - lng) > 0.00001) {
+      marker.setLatLng([lat, lng]);
+      map.setView([lat, lng], map.getZoom());
+    }
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (mapInstanceRef.current && (mapContainerRef.current as any)?._leaflet_id) {
+        try {
+          mapInstanceRef.current.invalidateSize();
+        } catch (e) {
+          // Ignore if map pane was removed
+        }
+      }
+    }, 150);
+  }, [coords?.lat, coords?.lng]);
 
   const handleLocateMe = () => {
     if ("geolocation" in navigator) {
@@ -117,7 +155,7 @@ export function LocationPicker({
         <button
           type="button"
           onClick={handleLocateMe}
-          className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg hover:bg-green-100 transition-colors font-semibold"
+          className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg hover:bg-emerald-100 transition-colors font-semibold"
         >
           <MapPin className="w-3.5 h-3.5" /> Use Current Location
         </button>

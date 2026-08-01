@@ -672,16 +672,20 @@ export default function FinancialsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
+    <div className="space-y-6 animate-fade-in pb-16">
       {/* ── Header Bar ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-            <Wallet className="w-6 h-6 text-green-700" />
-            Financial Management Ledger
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Manual entry ledger. Values appear only when entered by admin.
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Financial Management Ledger
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 font-medium">
+            Manual entry ledger & audit tracking. Non-confidential operational disbursements and settlement records.
           </p>
         </div>
 

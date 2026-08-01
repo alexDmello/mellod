@@ -528,23 +528,27 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Top Banner Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Settings className="w-6 h-6 text-green-700" />
-            System Administration & Role Control
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage custom roles, staff account section permissions, and oil market prices.
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <Settings className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              System Administration & Role Control
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 font-medium">
+            Manage custom roles, staff account section permissions, and baseline market UCO procurement rates.
           </p>
         </div>
 
         <button
           onClick={fetchStaffAndRoles}
-          className="btn btn-secondary text-xs py-2 px-3 self-start sm:self-auto flex items-center gap-1.5 font-semibold"
+          className="p-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${fetchingStaff ? "animate-spin" : ""}`} />
-          Refresh
+          <RefreshCw className={`w-4 h-4 ${fetchingStaff ? "animate-spin text-emerald-600" : ""}`} />
+          <span>Refresh</span>
         </button>
       </div>
 

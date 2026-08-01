@@ -16,8 +16,11 @@ import {
   CheckCircle2,
   Receipt,
   CreditCard,
+  CheckCircle,
 } from "lucide-react";
 import type { Pickup, FBO, FBOPayment } from "@/lib/types";
+
+import FBOHeader from "@/components/FBOHeader";
 
 export default function FBOPickupsPage() {
   const [loading, setLoading] = useState(true);
@@ -73,9 +76,9 @@ export default function FBOPickupsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500">
-        <Loader2 className="w-6 h-6 animate-spin text-green-700 mr-2" />
-        Loading collection logs & statements...
+      <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+        <p className="text-xs font-semibold text-gray-600">Loading collection logs & statements...</p>
       </div>
     );
   }
@@ -84,29 +87,32 @@ export default function FBOPickupsPage() {
     <div className="animate-fade-in space-y-4 pb-8">
       {/* App Content — hidden during print */}
       <div className="no-print-content space-y-4">
-        {/* Header Banner */}
-        <div className="bg-green-700 px-4 pt-6 pb-10 text-white rounded-b-3xl shadow-md">
+        {/* Modern Unified Header */}
+        <FBOHeader subtitle="FBO Partner Portal">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold">Collections & Settlement Receipts</h1>
-              <p className="text-green-200 text-xs mt-0.5">Track collection earnings and access monthly settlement receipts</p>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                Financial Audit Trail
+              </span>
+              <h1 className="text-xl font-black tracking-tight mt-1">Collections & Receipts</h1>
+              <p className="text-emerald-200/80 text-xs mt-0.5 font-medium">Track oil collection earnings and settlement receipts</p>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-white" />
+            <div className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
+              <Receipt className="w-6 h-6 text-white" />
             </div>
           </div>
-        </div>
+        </FBOHeader>
 
-        <div className="px-4 -mt-6 space-y-4">
+        <div className="px-4 -mt-6 relative z-10 space-y-4">
           {/* Sub-Tabs: Individual Pickups vs Monthly Settlement Receipts */}
-          <div className="flex border border-gray-200 bg-white rounded-2xl p-1 shadow-sm gap-1">
+          <div className="flex border border-gray-100 bg-white rounded-2xl p-1.5 shadow-xl shadow-gray-200/80 gap-1.5">
             <button
               type="button"
               onClick={() => setActiveTab("pickups")}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "pickups"
-                  ? "bg-green-700 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-emerald-700 text-white shadow-md shadow-emerald-700/20"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <Droplets className="w-4 h-4" />
@@ -118,83 +124,83 @@ export default function FBOPickupsPage() {
               onClick={() => setActiveTab("receipts")}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                 activeTab === "receipts"
-                  ? "bg-green-700 text-white shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-emerald-700 text-white shadow-md shadow-emerald-700/20"
+                  : "text-gray-600 hover:bg-gray-50"
               }`}
             >
               <FileText className="w-4 h-4" />
-              Monthly Receipts ({disbursements.length})
+              Monthly Statements ({disbursements.length})
             </button>
           </div>
 
-          {/* TAB 1: INDIVIDUAL PICKUP LOGS (HOW MUCH MADE PER PICKUP, NO INDIVIDUAL RECEIPT BUTTON) */}
+          {/* TAB 1: INDIVIDUAL PICKUP LOGS */}
           {activeTab === "pickups" && (
             <div className="space-y-3">
               {pickups.length === 0 ? (
-                <div className="card p-8 text-center text-gray-400 space-y-2">
+                <div className="bg-white rounded-2xl p-10 text-center text-gray-400 space-y-2 border border-gray-100 shadow-xl shadow-gray-200/80">
                   <Clock className="w-10 h-10 mx-auto text-gray-300" />
-                  <p className="font-semibold text-gray-700 text-sm">No pickups found</p>
+                  <p className="font-bold text-gray-800 text-sm">No Pickups Found</p>
                   <p className="text-xs text-gray-400">Oil collections logged by pickers will appear here with verification status.</p>
                 </div>
               ) : (
                 pickups.map((pickup) => (
-                  <div key={pickup.id} className="card p-4 space-y-3 hover:border-green-200 transition-colors bg-white">
+                  <div key={pickup.id} className="bg-white rounded-2xl p-4.5 space-y-3.5 border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl transition-all">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900 text-sm">{formatDate(pickup.picked_up_at)}</span>
-                        <span className="text-xs text-gray-400">· {formatTime(pickup.picked_up_at)}</span>
+                        <span className="font-black text-gray-900 text-sm">{formatDate(pickup.picked_up_at)}</span>
+                        <span className="text-xs text-gray-400 font-medium">· {formatTime(pickup.picked_up_at)}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`badge text-[10px] font-bold flex items-center gap-1 px-2.5 py-0.5 rounded-full ${
+                          className={`text-[9px] font-extrabold flex items-center gap-1 px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                             pickup.status === "completed"
-                              ? "bg-green-100 text-green-800 border border-green-200"
+                              ? "bg-emerald-100 text-emerald-900 border border-emerald-200"
                               : "bg-amber-100 text-amber-900 border border-amber-200"
                           }`}
                         >
                           {pickup.status === "completed" ? (
                             <>
-                              <ShieldCheck className="w-3 h-3 text-green-700" />
+                              <ShieldCheck className="w-3 h-3 text-emerald-700" />
                               Verified ✓
                             </>
                           ) : (
                             <>
                               <Clock className="w-3 h-3 text-amber-700" />
-                              Pending Verification ⏳
+                              Pending Review ⏳
                             </>
                           )}
                         </span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl text-xs">
+                    <div className="grid grid-cols-2 gap-2 bg-gray-50/80 p-3.5 rounded-xl text-xs border border-gray-100">
                       <div>
-                        <span className="text-gray-400 block font-medium">Oil Volume</span>
-                        <span className="font-bold text-gray-900 text-sm flex items-center gap-1">
-                          <Droplets className="w-4 h-4 text-blue-600" />
+                        <span className="text-gray-400 block font-bold text-[10px] uppercase">Oil Volume</span>
+                        <span className="font-black text-gray-900 text-base flex items-center gap-1 mt-0.5">
+                          <Droplets className="w-4 h-4 text-teal-600" />
                           {formatLiters(Number(pickup.liters))}
                         </span>
                       </div>
 
                       <div>
-                        <span className="text-gray-400 block font-medium">Earned in Pickup</span>
-                        <span className="font-extrabold text-green-700 text-sm flex items-center gap-1">
-                          <IndianRupee className="w-4 h-4 text-green-600" />
+                        <span className="text-gray-400 block font-bold text-[10px] uppercase">Collection Earnings</span>
+                        <span className="font-black text-emerald-700 text-base flex items-center gap-1 mt-0.5">
+                          <IndianRupee className="w-4 h-4 text-emerald-600" />
                           {formatCurrency(Number(pickup.total_amount))}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-1 text-xs text-gray-500">
-                      <span className="font-mono text-[11px]">
+                      <span className="font-mono text-[11px] font-semibold text-gray-600">
                         Rate: {formatCurrency(Number(pickup.price_per_liter))}/L
                       </span>
 
                       <span
-                        className={`font-semibold text-[11px] px-2 py-0.5 rounded ${
+                        className={`font-bold text-[10px] uppercase px-2.5 py-0.5 rounded-md ${
                           pickup.payment_status === "paid"
-                            ? "bg-green-50 text-green-700 border border-green-200"
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                             : "bg-amber-50 text-amber-800 border border-amber-200"
                         }`}
                       >
@@ -211,39 +217,39 @@ export default function FBOPickupsPage() {
           {activeTab === "receipts" && (
             <div className="space-y-3">
               {disbursements.length === 0 ? (
-                <div className="card p-8 text-center text-gray-400 space-y-2 bg-white">
+                <div className="bg-white rounded-2xl p-10 text-center text-gray-400 space-y-2 border border-gray-100 shadow-xl shadow-gray-200/80">
                   <FileText className="w-10 h-10 mx-auto text-gray-300" />
-                  <p className="font-semibold text-gray-700 text-sm">No monthly settlement receipts issued yet</p>
+                  <p className="font-bold text-gray-800 text-sm">No Monthly Statements Issued Yet</p>
                   <p className="text-xs text-gray-400">Official monthly disbursement receipts issued by Mellod Admin will appear here.</p>
                 </div>
               ) : (
                 disbursements.map((pay) => (
-                  <div key={pay.id} className="card p-4 space-y-3 bg-white border border-gray-200 hover:border-green-300 transition-all">
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <div key={pay.id} className="bg-white rounded-2xl p-4.5 space-y-3.5 border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl transition-all">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                       <div>
-                        <span className="font-mono font-bold text-green-800 text-xs block">
-                          Receipt #{pay.receipt_number}
+                        <span className="font-mono font-black text-emerald-800 text-xs block">
+                          Statement #{pay.receipt_number}
                         </span>
-                        <span className="text-[11px] text-gray-500">
+                        <span className="text-[11px] text-gray-500 font-medium">
                           Issued on {formatDate(pay.paid_at)}
                         </span>
                       </div>
-                      <span className="badge bg-green-100 text-green-800 text-[10px] font-bold uppercase">
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-extrabold uppercase tracking-wider">
                         Official Statement
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 bg-green-50/60 p-3 rounded-xl text-xs border border-green-100">
+                    <div className="grid grid-cols-2 gap-2 bg-emerald-50/60 p-3.5 rounded-xl text-xs border border-emerald-100">
                       <div>
-                        <span className="text-gray-500 block text-[11px]">Disbursed Amount</span>
-                        <span className="font-black text-green-800 text-base">
+                        <span className="text-gray-500 block text-[10px] font-bold uppercase">Disbursed Amount</span>
+                        <span className="font-black text-emerald-900 text-lg mt-0.5 block">
                           {formatCurrency(Number(pay.amount))}
                         </span>
                       </div>
 
                       <div>
-                        <span className="text-gray-500 block text-[11px]">Total Volume</span>
-                        <span className="font-bold text-gray-900 text-sm">
+                        <span className="text-gray-500 block text-[10px] font-bold uppercase">Total Volume</span>
+                        <span className="font-black text-gray-900 text-base mt-0.5 block">
                           {formatLiters(Number(pay.total_liters))}
                         </span>
                       </div>
@@ -252,7 +258,7 @@ export default function FBOPickupsPage() {
                     <div className="flex items-center justify-between text-xs pt-1">
                       <div className="text-gray-500 text-[11px]">
                         <span>Method: </span>
-                        <span className="font-bold uppercase text-gray-700">{pay.payment_method}</span>
+                        <span className="font-bold uppercase text-gray-800">{pay.payment_method}</span>
                         {pay.reference_number && (
                           <span className="block font-mono text-[10px] text-gray-400">Ref: {pay.reference_number}</span>
                         )}
@@ -261,10 +267,10 @@ export default function FBOPickupsPage() {
                       <button
                         type="button"
                         onClick={() => setSelectedDisbursement(pay)}
-                        className="btn btn-secondary text-xs py-1.5 px-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 flex items-center gap-1.5 font-bold shadow-sm"
+                        className="py-2 px-3.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all shadow-sm"
                       >
-                        <FileText className="w-3.5 h-3.5 text-green-700" />
-                        View Statement Receipt
+                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                        View Statement
                       </button>
                     </div>
                   </div>
@@ -277,29 +283,29 @@ export default function FBOPickupsPage() {
 
       {/* OFFICIAL CONSOLIDATED DISBURSEMENT STATEMENT MODAL */}
       {selectedDisbursement && (
-        <div className="printable-receipt-modal fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 sm:p-4">
-          <div className="printable-receipt-card bg-white rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-gray-200">
-            <div className="no-print flex-shrink-0 flex items-center justify-between px-4 py-3 bg-green-800 text-white">
+        <div className="printable-receipt-modal fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="printable-receipt-card bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-gray-100">
+            <div className="no-print flex-shrink-0 flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-emerald-900 to-teal-950 text-white">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-green-300" />
-                <span className="font-bold text-sm">Official Monthly Settlement Statement</span>
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <span className="font-extrabold text-sm tracking-tight">Official Monthly Settlement Statement</span>
               </div>
               <button
                 onClick={() => setSelectedDisbursement(null)}
-                className="text-green-200 hover:text-white p-1"
+                className="text-emerald-200 hover:text-white p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-white text-gray-900">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white text-gray-900">
               {/* Formal Letterhead */}
-              <div className="border-b-2 border-green-800 pb-3 flex flex-row items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
+              <div className="border-b-2 border-emerald-800 pb-3.5 flex flex-row items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/icons/logo.png" alt="Mellod Logo" className="w-10 h-10 object-contain mt-0.5" />
                   <div>
-                    <h2 className="text-lg font-black text-green-900 tracking-tight leading-tight">
+                    <h2 className="text-lg font-black text-emerald-950 tracking-tight leading-tight">
                       MELLOD BIOFUELS
                     </h2>
                     <p className="text-[11px] text-gray-600 font-medium">
@@ -308,8 +314,8 @@ export default function FBOPickupsPage() {
                   </div>
                 </div>
 
-                <div className="text-right bg-green-50 px-2.5 py-1.5 rounded-lg border border-green-100">
-                  <span className="inline-block bg-green-800 text-white text-[9px] uppercase font-black px-2 py-0.5 rounded">
+                <div className="text-right bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
+                  <span className="inline-block bg-emerald-800 text-white text-[9px] uppercase font-black px-2 py-0.5 rounded">
                     Payment Statement
                   </span>
                   <p className="text-[11px] font-mono font-bold text-gray-800 mt-0.5">
@@ -323,8 +329,8 @@ export default function FBOPickupsPage() {
 
               {/* FBO & Settlement Details */}
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
-                  <span className="font-bold uppercase text-[9px] text-green-800 block border-b pb-0.5">
+                <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
+                  <span className="font-bold uppercase text-[9px] text-emerald-800 block border-b pb-0.5">
                     FBO Supplier Account
                   </span>
                   <p className="font-bold text-gray-900">{fbo?.business_name || "FBO Account"}</p>
@@ -332,8 +338,8 @@ export default function FBOPickupsPage() {
                   <p className="text-gray-500 text-[10px]">FSSAI: {fbo?.fssai_license || "N/A"}</p>
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
-                  <span className="font-bold uppercase text-[9px] text-green-800 block border-b pb-0.5">
+                <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200 space-y-1">
+                  <span className="font-bold uppercase text-[9px] text-emerald-800 block border-b pb-0.5">
                     Disbursement Details
                   </span>
                   <p className="font-semibold text-gray-800">Method: <span className="uppercase font-bold">{selectedDisbursement.payment_method}</span></p>
@@ -345,12 +351,12 @@ export default function FBOPickupsPage() {
               </div>
 
               {/* Financial Breakdown */}
-              <div className="border border-gray-300 rounded-xl overflow-hidden text-xs">
-                <div className="bg-gray-100 p-2.5 font-bold text-gray-700 border-b border-gray-300 flex justify-between">
+              <div className="border border-gray-200 rounded-xl overflow-hidden text-xs">
+                <div className="bg-gray-100 p-3 font-bold text-gray-700 border-b border-gray-200 flex justify-between">
                   <span>Description</span>
                   <span>Quantity & Amount</span>
                 </div>
-                <div className="p-3 space-y-2 text-[11px]">
+                <div className="p-3.5 space-y-2 text-[11px]">
                   <div className="flex justify-between font-medium">
                     <span>Total UCO Volume Collected & Verified:</span>
                     <span className="font-bold text-gray-900">{formatLiters(Number(selectedDisbursement.total_liters))}</span>
@@ -360,9 +366,9 @@ export default function FBOPickupsPage() {
                     <span className="font-bold text-gray-900">{selectedDisbursement.pickup_ids?.length || 1} pickup(s)</span>
                   </div>
                 </div>
-                <div className="bg-green-50 p-3 border-t border-gray-300 flex items-center justify-between font-bold">
+                <div className="bg-emerald-50 p-3.5 border-t border-gray-200 flex items-center justify-between font-bold">
                   <span className="text-gray-800 uppercase text-[11px]">Total Net Amount Disbursed</span>
-                  <span className="text-base text-green-900 font-mono font-black">
+                  <span className="text-base text-emerald-950 font-mono font-black">
                     {formatCurrency(Number(selectedDisbursement.amount))}
                   </span>
                 </div>
@@ -370,26 +376,26 @@ export default function FBOPickupsPage() {
 
               {/* Regulatory Declaration */}
               <div className="border-t border-gray-200 pt-3 text-[10px] text-gray-500 space-y-2">
-                <p className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                <p className="bg-gray-50 p-2.5 rounded-xl border border-gray-200">
                   <strong>Declaration:</strong> This official statement confirms full payment disbursement for Used Cooking Oil collected under FSSAI RUCO standards.
                 </p>
-                <div className="text-right pt-2 font-mono text-[9px] text-green-800 font-bold">
+                <div className="text-right pt-2 font-mono text-[9px] text-emerald-800 font-bold">
                   Mellod Biofuels Digital Settlement Seal ✓
                 </div>
               </div>
             </div>
 
-            <div className="no-print flex-shrink-0 px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div className="no-print flex-shrink-0 px-5 py-3.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
               <button
                 onClick={handlePrintReceipt}
-                className="btn btn-primary text-xs py-2 px-4 flex items-center gap-2 font-bold shadow-sm"
+                className="py-2.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl flex items-center gap-2 text-xs font-bold shadow-md shadow-emerald-700/20 transition-all"
               >
                 <Printer className="w-4 h-4" />
                 Print / Save Statement PDF
               </button>
               <button
                 onClick={() => setSelectedDisbursement(null)}
-                className="btn btn-ghost text-xs px-3 py-2 text-gray-600 hover:bg-gray-200 font-semibold"
+                className="px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-200 font-bold rounded-xl transition-all"
               >
                 Close
               </button>
