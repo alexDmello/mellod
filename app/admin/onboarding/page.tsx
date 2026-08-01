@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { createBrowserClient } from "@supabase/ssr";
 import { generateCredentials } from "@/lib/utils";
 import Link from "next/link";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   UserPlus, Copy, Check, Eye, EyeOff, Loader2,
   Building2, Truck, Search, Key, Lock, MapPin
@@ -142,31 +144,13 @@ export function LocationPicker({
   onChange: (c: { lat: number; lng: number }) => void;
 }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !mapContainerRef.current) return;
 
-    if (!document.getElementById("leaflet-css")) {
-      const link = document.createElement("link");
-      link.id = "leaflet-css";
-      link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-
-    const initMap = () => {
-      const L = (window as any).L;
-      if (!L || mapInstanceRef.current || !mapContainerRef.current) return;
-
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
-
+    if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current).setView([coords.lat, coords.lng], 13);
       mapInstanceRef.current = map;
 
@@ -182,27 +166,18 @@ export function LocationPicker({
         onChange({ lat: position.lat, lng: position.lng });
       });
 
-      map.on("click", (e: any) => {
+      map.on("click", (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng;
         marker.setLatLng([lat, lng]);
         onChange({ lat, lng });
       });
-    };
-
-    if ((window as any).L) {
-      initMap();
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      script.async = true;
-      script.onload = initMap;
-      document.body.appendChild(script);
     }
 
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        markerRef.current = null;
       }
     };
   }, []);
@@ -452,12 +427,47 @@ export function PickerRegistrationForm({ onSuccess }: { onSuccess: (acc: Generat
   );
 }
 
+export interface DirectoryUser {
+  id: string;
+  full_name: string;
+  role: "fbo" | "picker" | "admin";
+  username: string;
+  phone: string | null;
+  generated_password: string | null;
+  business_name?: string;
+  contact_person?: string;
+  address?: string;
+  fssai_license?: string;
+  vehicle_info?: string;
+  is_active?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 // ── Shared Directory Component ────────────────────────────────────────────────
 export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" }) {
   const [directory, setDirectory] = useState<DirectoryUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingDirectory, setLoadingDirectory] = useState(true);
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+
+  // Action states
+  const [editingUser, setEditingUser] = useState<DirectoryUser | null>(null);
+  const [passwordUser, setPasswordUser] = useState<DirectoryUser | null>(null);
+  const [offboardUser, setOffboardUser] = useState<DirectoryUser | null>(null);
+
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    phone: "",
+    businessName: "",
+    contactPerson: "",
+    address: "",
+    fssaiLicense: "",
+    vehicleInfo: "",
+  });
+  const [newPassword, setNewPassword] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const supabase = createClient();
 
@@ -476,21 +486,35 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
         username,
         phone,
         generated_password,
-        fbos ( business_name )
+        fbos ( business_name, contact_person, address, fssai_license, is_active, latitude, longitude ),
+        pickers ( vehicle_info, is_active )
       `)
       .in("role", roleFilter ? [roleFilter] : ["fbo", "picker"])
       .order("created_at", { ascending: false });
 
     if (!error && profiles) {
-      const formatted = profiles.map((p: any) => ({
-        id: p.id,
-        full_name: p.full_name,
-        role: p.role,
-        username: p.username,
-        phone: p.phone,
-        generated_password: p.generated_password,
-        business_name: p.fbos?.[0]?.business_name,
-      }));
+      const formatted: DirectoryUser[] = profiles.map((p: any) => {
+        const fboObj = Array.isArray(p.fbos) ? p.fbos[0] : p.fbos;
+        const pickerObj = Array.isArray(p.pickers) ? p.pickers[0] : p.pickers;
+        const isActive = p.role === "fbo" ? fboObj?.is_active ?? true : pickerObj?.is_active ?? true;
+
+        return {
+          id: p.id,
+          full_name: p.full_name,
+          role: p.role,
+          username: p.username,
+          phone: p.phone,
+          generated_password: p.generated_password,
+          business_name: fboObj?.business_name,
+          contact_person: fboObj?.contact_person,
+          address: fboObj?.address,
+          fssai_license: fboObj?.fssai_license,
+          latitude: fboObj?.latitude,
+          longitude: fboObj?.longitude,
+          vehicle_info: pickerObj?.vehicle_info,
+          is_active: isActive,
+        };
+      });
       setDirectory(formatted);
     }
     setLoadingDirectory(false);
@@ -504,12 +528,130 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
     await navigator.clipboard.writeText(text);
   };
 
+  const openEditModal = (user: DirectoryUser) => {
+    setEditingUser(user);
+    setEditForm({
+      fullName: user.full_name || "",
+      phone: user.phone || "",
+      businessName: user.business_name || "",
+      contactPerson: user.contact_person || user.full_name || "",
+      address: user.address || "",
+      fssaiLicense: user.fssai_license || "",
+      vehicleInfo: user.vehicle_info || "",
+    });
+    setActionMessage(null);
+  };
+
+  const handleSaveDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setActionLoading(true);
+    setActionMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/update-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          action: "update_details",
+          fullName: editForm.fullName,
+          phone: editForm.phone,
+          businessName: editForm.businessName,
+          contactPerson: editForm.contactPerson,
+          address: editForm.address,
+          fssaiLicense: editForm.fssaiLicense,
+          vehicleInfo: editForm.vehicleInfo,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update details");
+
+      setActionMessage({ type: "success", text: data.message || "Details updated" });
+      await fetchDirectory();
+      setTimeout(() => setEditingUser(null), 1200);
+    } catch (err: any) {
+      setActionMessage({ type: "error", text: err.message || "An error occurred" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openPasswordModal = (user: DirectoryUser) => {
+    setPasswordUser(user);
+    setNewPassword("");
+    setActionMessage(null);
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordUser) return;
+    if (!newPassword || newPassword.length < 6) {
+      setActionMessage({ type: "error", text: "Password must be at least 6 characters" });
+      return;
+    }
+
+    setActionLoading(true);
+    setActionMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/update-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: passwordUser.id,
+          action: "change_password",
+          password: newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update password");
+
+      setActionMessage({ type: "success", text: data.message || "Password updated" });
+      await fetchDirectory();
+      setTimeout(() => setPasswordUser(null), 1200);
+    } catch (err: any) {
+      setActionMessage({ type: "error", text: err.message || "An error occurred" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleOffboardStatus = async (user: DirectoryUser) => {
+    setActionLoading(true);
+    const nextAction = user.is_active ? "offboard" : "activate";
+
+    try {
+      const res = await fetch("/api/admin/update-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          action: nextAction,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Failed to ${nextAction} user`);
+
+      setOffboardUser(null);
+      await fetchDirectory();
+    } catch (err: any) {
+      alert(err.message || "An error occurred");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const filteredDirectory = directory.filter((user) => {
     const searchLower = searchTerm.toLowerCase();
     return (
       user.full_name.toLowerCase().includes(searchLower) ||
       user.username.toLowerCase().includes(searchLower) ||
-      (user.business_name?.toLowerCase() || "").includes(searchLower)
+      (user.business_name?.toLowerCase() || "").includes(searchLower) ||
+      (user.address?.toLowerCase() || "").includes(searchLower)
     );
   });
 
@@ -522,7 +664,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
             {roleFilter === "fbo" ? "FBO Accounts Directory" : roleFilter === "picker" ? "Picker Accounts Directory" : "Credentials Directory"}
           </h2>
           <p className="text-xs text-gray-500">
-            View active credentials for {roleFilter === "fbo" ? "registered FBO collection points" : roleFilter === "picker" ? "registered pickers" : "all active users"}.
+            View active credentials, offboard/reactivate users, change passwords, and update partner details.
           </p>
         </div>
         <div className="relative flex-1 sm:max-w-xs">
@@ -553,9 +695,11 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
               <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 font-semibold">
                 <th className="px-4 py-3">User/Business</th>
                 <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Username</th>
                 <th className="px-4 py-3">Generated Password</th>
-                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Contact/Info</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-gray-700">
@@ -572,11 +716,18 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
                       {user.role.toUpperCase()}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    {user.is_active ? (
+                      <span className="badge badge-green text-xs font-semibold">Active</span>
+                    ) : (
+                      <span className="badge bg-red-50 text-red-700 border-red-200 text-xs font-semibold">Offboarded</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs">{user.username}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-xs">
-                        {showPasswordMap[user.id] ? user.generated_password : "••••••••"}
+                        {showPasswordMap[user.id] ? user.generated_password || "N/A" : "••••••••"}
                       </span>
                       {user.generated_password && (
                         <>
@@ -600,7 +751,41 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{user.phone || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">
+                    {user.phone && <p>📞 {user.phone}</p>}
+                    {user.fssai_license && <p>FSSAI: {user.fssai_license}</p>}
+                    {user.vehicle_info && <p>🚛 {user.vehicle_info}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(user)}
+                        className="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50 text-gray-700"
+                        title="Edit Details"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openPasswordModal(user)}
+                        className="px-2 py-1 text-xs border rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                        title="Change Password"
+                      >
+                        Key
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOffboardUser(user)}
+                        className={`px-2 py-1 text-xs border rounded ${
+                          user.is_active ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200" : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                        }`}
+                        title={user.is_active ? "Offboard" : "Reactivate"}
+                      >
+                        {user.is_active ? "Offboard" : "Activate"}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
