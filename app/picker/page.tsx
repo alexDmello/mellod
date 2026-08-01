@@ -69,12 +69,18 @@ export default function PickerDashboard() {
       // Fetch picker relation
       const { data: picker } = await supabase
         .from("pickers")
-        .select("id")
+        .select("id, is_active")
         .eq("profile_id", user.id)
         .single();
 
       if (!picker) {
         setError("Picker account details could not be found. Contact admin.");
+        setLoading(false);
+        return;
+      }
+
+      if (picker.is_active === false) {
+        setError("Your picker account has been offboarded or suspended. Please contact Mellod administration.");
         setLoading(false);
         return;
       }

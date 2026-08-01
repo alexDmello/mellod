@@ -116,13 +116,13 @@ export async function POST(request: Request) {
         if (pickerError) {
           return NextResponse.json({ error: "Failed to update Picker status: " + pickerError.message }, { status: 500 });
         }
-      } else if (targetRole === "sub_admin") {
-        // Toggle ban / unban in Supabase Auth for sub_admin
-        if (!isActive) {
-          await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" }); // Ban for ~100 yrs
-        } else {
-          await adminClient.auth.admin.updateUserById(userId, { ban_duration: "none" });
-        }
+      }
+
+      // Ban or unban user credentials in Supabase Auth across all roles (fbo, picker, sub_admin)
+      if (!isActive) {
+        await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" }); // Ban for ~100 yrs
+      } else {
+        await adminClient.auth.admin.updateUserById(userId, { ban_duration: "none" });
       }
 
       return NextResponse.json({

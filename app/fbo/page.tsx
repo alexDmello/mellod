@@ -35,6 +35,22 @@ export default async function FBODashboard() {
     );
   }
 
+  if (data.fbo.is_active === false) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
+        <div className="card p-8 max-w-sm w-full bg-white shadow-md border border-red-100 flex flex-col items-center">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-4">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Account Offboarded</h2>
+          <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+            Your FBO account ({data.fbo.business_name}) has been offboarded or suspended by Mellod administration. Access to this portal is restricted.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { fbo, stats, currentPrice, recentPickups } = data;
 
   return (

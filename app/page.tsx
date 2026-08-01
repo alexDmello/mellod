@@ -39,8 +39,28 @@ export default function LoginPage() {
                 dest = perm.allowed_routes[0];
               }
             } else if (profile.role === "picker") {
+              const { data: picker } = await supabase
+                .from("pickers")
+                .select("is_active")
+                .eq("profile_id", user.id)
+                .maybeSingle();
+              if (picker && picker.is_active === false) {
+                await supabase.auth.signOut();
+                setCheckingSession(false);
+                return;
+              }
               dest = "/picker";
             } else if (profile.role === "fbo") {
+              const { data: fbo } = await supabase
+                .from("fbos")
+                .select("is_active")
+                .eq("profile_id", user.id)
+                .maybeSingle();
+              if (fbo && fbo.is_active === false) {
+                await supabase.auth.signOut();
+                setCheckingSession(false);
+                return;
+              }
               dest = "/fbo";
             }
             router.replace(dest);
@@ -72,7 +92,11 @@ export default function LoginPage() {
     });
 
     if (authError || !data.user) {
-      setError("Invalid username or password. Please try again.");
+      if (authError?.message?.toLowerCase().includes("banned") || authError?.message?.toLowerCase().includes("suspended")) {
+        setError("This account has been offboarded or suspended. Contact Mellod admin.");
+      } else {
+        setError("Invalid username or password. Please try again.");
+      }
       setLoading(false);
       return;
     }
@@ -111,8 +135,32 @@ export default function LoginPage() {
         destination = perm.allowed_routes[0];
       }
     } else if (profile.role === "picker") {
+      const { data: picker } = await supabase
+        .from("pickers")
+        .select("is_active")
+        .eq("profile_id", data.user.id)
+        .maybeSingle();
+
+      if (picker && picker.is_active === false) {
+        await supabase.auth.signOut();
+        setError("This picker account has been offboarded or suspended. Please contact Mellod administration.");
+        setLoading(false);
+        return;
+      }
       destination = "/picker";
     } else if (profile.role === "fbo") {
+      const { data: fbo } = await supabase
+        .from("fbos")
+        .select("is_active")
+        .eq("profile_id", data.user.id)
+        .maybeSingle();
+
+      if (fbo && fbo.is_active === false) {
+        await supabase.auth.signOut();
+        setError("This FBO account has been offboarded or suspended. Please contact Mellod administration.");
+        setLoading(false);
+        return;
+      }
       destination = "/fbo";
     }
 
