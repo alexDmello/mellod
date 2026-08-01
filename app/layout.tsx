@@ -44,13 +44,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={interVariable}>
+    <html lang="en" className="bg-[#15803d] font-sans">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="theme-color" content="#15803d" />
+        <meta name="background-color" content="#15803d" />
       </head>
-      <body className="min-h-screen bg-gray-50 antialiased">
+      <body className="min-h-screen bg-gray-50 antialiased selection:bg-green-600 selection:text-white">
         <ServiceWorkerRegister />
         {children}
         <SpeedInsights />
