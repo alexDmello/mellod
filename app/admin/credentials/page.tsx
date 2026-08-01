@@ -24,6 +24,7 @@ import {
   MapPin,
   RefreshCw,
 } from "lucide-react";
+import { LocationPicker } from "@/components/LocationPicker";
 
 export interface DirectoryUser {
   id: string;
@@ -71,6 +72,8 @@ export default function CredentialsPage() {
     address: "",
     fssaiLicense: "",
     vehicleInfo: "",
+    latitude: 12.9716,
+    longitude: 77.5946,
   });
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -188,6 +191,8 @@ export default function CredentialsPage() {
       address: user.address || "",
       fssaiLicense: user.fssai_license || "",
       vehicleInfo: user.vehicle_info || "",
+      latitude: user.latitude ? Number(user.latitude) : 12.9716,
+      longitude: user.longitude ? Number(user.longitude) : 77.5946,
     });
     setActionMessage(null);
   };
@@ -212,6 +217,8 @@ export default function CredentialsPage() {
           address: editForm.address,
           fssaiLicense: editForm.fssaiLicense,
           vehicleInfo: editForm.vehicleInfo,
+          latitude: editForm.latitude,
+          longitude: editForm.longitude,
         }),
       });
 
@@ -670,6 +677,20 @@ export default function CredentialsPage() {
                       placeholder="Street, area, city, pincode..."
                       value={editForm.address}
                       onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <LocationPicker
+                      coords={{ lat: editForm.latitude, lng: editForm.longitude }}
+                      onChange={(coords) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          latitude: coords.lat,
+                          longitude: coords.lng,
+                        }))
+                      }
+                      label="Update FBO Location on Map"
                     />
                   </div>
                 </>

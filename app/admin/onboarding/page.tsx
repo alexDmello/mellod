@@ -12,8 +12,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   UserPlus, Copy, Check, Eye, EyeOff, Loader2,
-  Building2, Truck, Search, Key, Lock, MapPin
+  Building2, Truck, Search, Key, Lock, MapPin, Edit3, X, Save
 } from "lucide-react";
+import { LocationPicker } from "@/components/LocationPicker";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 const fboSchema = z.object({
@@ -136,98 +137,7 @@ export function CredentialCard({ account }: { account: GeneratedAccount }) {
 }
 
 // ── Interactive Location Picker ──────────────────────────────────────────────
-export function LocationPicker({
-  coords,
-  onChange,
-}: {
-  coords: { lat: number; lng: number };
-  onChange: (c: { lat: number; lng: number }) => void;
-}) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !mapContainerRef.current) return;
-
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current).setView([coords.lat, coords.lng], 13);
-      mapInstanceRef.current = map;
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
-
-      const marker = L.marker([coords.lat, coords.lng], { draggable: true }).addTo(map);
-      markerRef.current = marker;
-
-      marker.on("dragend", () => {
-        const position = marker.getLatLng();
-        onChange({ lat: position.lat, lng: position.lng });
-      });
-
-      map.on("click", (e: L.LeafletMouseEvent) => {
-        const { lat, lng } = e.latlng;
-        marker.setLatLng([lat, lng]);
-        onChange({ lat, lng });
-      });
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-        markerRef.current = null;
-      }
-    };
-  }, []);
-
-  const handleLocateMe = () => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newCoords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          onChange(newCoords);
-          if (mapInstanceRef.current && markerRef.current) {
-            mapInstanceRef.current.setView([newCoords.lat, newCoords.lng], 15);
-            markerRef.current.setLatLng([newCoords.lat, newCoords.lng]);
-          }
-        },
-        (error) => {
-          alert("Could not get your current location: " + error.message);
-        }
-      );
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="form-label font-semibold text-gray-700">Pinpoint exact location *</label>
-        <button
-          type="button"
-          onClick={handleLocateMe}
-          className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg hover:bg-green-100 transition-colors font-semibold"
-        >
-          <MapPin className="w-3.5 h-3.5" /> Use Current Location
-        </button>
-      </div>
-
-      <div
-        ref={mapContainerRef}
-        className="w-full h-[220px] rounded-xl border border-gray-200 bg-gray-50 overflow-hidden relative z-10"
-      />
-      
-      <div className="grid grid-cols-2 gap-3 text-xs font-mono bg-gray-100 p-2.5 rounded-lg border border-gray-200 text-gray-600">
-        <div>Lat: {coords.lat.toFixed(6)}</div>
-        <div>Lng: {coords.lng.toFixed(6)}</div>
-      </div>
-    </div>
-  );
-}
 
 // ── FBO Registration Form ─────────────────────────────────────────────────────
 export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
@@ -464,6 +374,8 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
     address: "",
     fssaiLicense: "",
     vehicleInfo: "",
+    latitude: 12.9716,
+    longitude: 77.5946,
   });
   const [newPassword, setNewPassword] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -538,6 +450,8 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
       address: user.address || "",
       fssaiLicense: user.fssai_license || "",
       vehicleInfo: user.vehicle_info || "",
+      latitude: user.latitude ? Number(user.latitude) : 12.9716,
+      longitude: user.longitude ? Number(user.longitude) : 77.5946,
     });
     setActionMessage(null);
   };
@@ -562,6 +476,8 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
           address: editForm.address,
           fssaiLicense: editForm.fssaiLicense,
           vehicleInfo: editForm.vehicleInfo,
+          latitude: editForm.latitude,
+          longitude: editForm.longitude,
         }),
       });
 
@@ -790,6 +706,283 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── MODAL 1: Edit User Details ───────────────────────────────────────── */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-green-700" />
+                <h3 className="font-bold text-gray-900 text-lg">Update Account Details</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDetails} className="space-y-4">
+              <div className="p-3 bg-gray-50 rounded-xl text-xs space-y-1 font-mono border border-gray-100">
+                <p className="text-gray-500">
+                  Account: <span className="font-bold text-gray-900">{editingUser.username}</span> ({editingUser.role.toUpperCase()})
+                </p>
+              </div>
+
+              {editingUser.role === "fbo" && (
+                <div>
+                  <label className="form-label font-semibold">Business Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editForm.businessName}
+                    onChange={(e) => setEditForm({ ...editForm, businessName: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label font-semibold">
+                    {editingUser.role === "fbo" ? "Contact Person Name *" : "Full Name *"}
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingUser.role === "fbo" ? editForm.contactPerson : editForm.fullName}
+                    onChange={(e) =>
+                      editingUser.role === "fbo"
+                        ? setEditForm({ ...editForm, contactPerson: e.target.value, fullName: e.target.value })
+                        : setEditForm({ ...editForm, fullName: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label font-semibold">Phone Number</label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    placeholder="+91 98765 43210"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {editingUser.role === "fbo" && (
+                <>
+                  <div>
+                    <label className="form-label font-semibold">FSSAI License No.</label>
+                    <input
+                      type="text"
+                      className="form-input font-mono text-xs uppercase"
+                      placeholder="e.g. 12224999000123"
+                      value={editForm.fssaiLicense}
+                      onChange={(e) => setEditForm({ ...editForm, fssaiLicense: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label font-semibold">Full Address</label>
+                    <textarea
+                      rows={3}
+                      className="form-input text-xs"
+                      placeholder="Street, area, city, pincode..."
+                      value={editForm.address}
+                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100">
+                    <LocationPicker
+                      coords={{ lat: editForm.latitude, lng: editForm.longitude }}
+                      onChange={(coords) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          latitude: coords.lat,
+                          longitude: coords.lng,
+                        }))
+                      }
+                      label="Update FBO Location on Map"
+                    />
+                  </div>
+                </>
+              )}
+
+              {editingUser.role === "picker" && (
+                <div>
+                  <label className="form-label font-semibold">Vehicle Info</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. White Tempo, KA 01 AB 1234"
+                    value={editForm.vehicleInfo}
+                    onChange={(e) => setEditForm({ ...editForm, vehicleInfo: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {actionMessage && (
+                <div
+                  className={`p-3 rounded-xl text-xs ${
+                    actionMessage.type === "success"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-red-50 text-red-700 border border-red-200"
+                  }`}
+                >
+                  {actionMessage.text}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="btn btn-secondary text-xs"
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={actionLoading} className="btn btn-primary text-xs py-2 px-4">
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" /> Save Details
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 2: Change Password ───────────────────────────────────────── */}
+      {passwordUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-amber-600" />
+                <h3 className="font-bold text-gray-900 text-lg">Change User Password</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPasswordUser(null)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePassword} className="space-y-4">
+              <div className="p-3 bg-amber-50/50 rounded-xl text-xs space-y-1 border border-amber-100">
+                <p className="font-semibold text-amber-900">
+                  Target Account: {passwordUser.full_name} ({passwordUser.username})
+                </p>
+                <p className="text-amber-700">
+                  This will instantly update the user&apos;s password in Auth and directory.
+                </p>
+              </div>
+
+              <div>
+                <label className="form-label font-semibold">New Password *</label>
+                <input
+                  type="password"
+                  className="form-input font-mono text-sm"
+                  placeholder="Enter new password (min 6 chars)..."
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              {actionMessage && (
+                <div
+                  className={`p-3 rounded-xl text-xs ${
+                    actionMessage.type === "success"
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-red-50 text-red-700 border border-red-200"
+                  }`}
+                >
+                  {actionMessage.text}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setPasswordUser(null)}
+                  className="btn btn-secondary text-xs"
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={actionLoading} className="btn btn-primary text-xs py-2 px-4">
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL 3: Offboard / Reactivate Confirmation ─────────────────────── */}
+      {offboardUser && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <h3 className="font-bold text-gray-900 text-lg">
+              {offboardUser.is_active ? "Offboard Account?" : "Reactivate Account?"}
+            </h3>
+            <p className="text-xs text-gray-600">
+              {offboardUser.is_active
+                ? `Are you sure you want to offboard ${offboardUser.full_name} (${offboardUser.username})? They will be blocked from logging in.`
+                : `Reactivate ${offboardUser.full_name} (${offboardUser.username}) to restore platform access.`}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setOffboardUser(null)}
+                className="btn btn-secondary text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleToggleOffboardStatus(offboardUser)}
+                className={`btn text-xs py-2 px-4 ${
+                  offboardUser.is_active
+                    ? "bg-red-600 hover:bg-red-700 text-white"
+                    : "bg-green-700 hover:bg-green-800 text-white"
+                }`}
+              >
+                {actionLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : offboardUser.is_active ? (
+                  "Offboard Account"
+                ) : (
+                  "Reactivate Account"
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
