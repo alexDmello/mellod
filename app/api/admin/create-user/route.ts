@@ -95,7 +95,7 @@ export async function POST(request: Request) {
         await adminClient.auth.admin.deleteUser(userId);
         return NextResponse.json({ error: "Failed to create Picker record: " + pickerError.message }, { status: 500 });
       }
-    } else if (normalizedRole === "sub_admin") {
+    } else if (normalizedRole !== "fbo" && normalizedRole !== "picker") {
       const { error: permError } = await adminClient.from("sub_admin_permissions").insert({
         profile_id: userId,
         allowed_routes: Array.isArray(allowedRoutes) ? allowedRoutes : ["/admin"],
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
       if (permError) {
         await adminClient.auth.admin.deleteUser(userId);
-        return NextResponse.json({ error: "Failed to create Sub-Admin permissions: " + permError.message }, { status: 500 });
+        return NextResponse.json({ error: "Failed to set role permissions: " + permError.message }, { status: 500 });
       }
     }
 

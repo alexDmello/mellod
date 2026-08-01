@@ -19,6 +19,8 @@ export const ADMIN_SECTIONS = [
   { href: "/admin", label: "Dashboard", description: "Main stats & system overview" },
   { href: "/admin/analytics", label: "Analytics", description: "Volume trends & performance metrics" },
   { href: "/admin/financials", label: "Financials", description: "Monthly P&L simulator & OpEx tracking" },
+  { href: "/admin/payments", label: "Payments", description: "Disburse FBO payments & issue monthly statements" },
+  { href: "/admin/pickers", label: "Pickup Reviews", description: "Review and verify picker collection logs" },
   { href: "/admin/routes", label: "Routes", description: "Daily route scheduling & templates" },
   { href: "/admin/map", label: "Map", description: "Live GPS pickup tracking map" },
   { href: "/admin/onboarding", label: "Onboarding", description: "Register new FBOs & Pickers" },
@@ -149,6 +151,7 @@ export interface Pickup {
   photo_url: string | null;
   notes: string | null;
   status: PickupStatus;
+  payment_status?: "unpaid" | "paid" | "void";
   picked_up_at: string;
   created_at: string;
 }
@@ -194,4 +197,20 @@ export interface GeneratedCredentials {
   username: string;
   password: string;
   email: string;
+}
+
+export interface FBOPayment {
+  id: string;
+  fbo_id: string;
+  receipt_number: string;
+  amount: number;
+  total_liters: number;
+  payment_method: PaymentMethodType;
+  reference_number: string | null;
+  notes: string | null;
+  period_label: string | null;
+  pickup_ids: string[];
+  paid_at: string;
+  created_at: string;
+  fbo?: FBO;
 }

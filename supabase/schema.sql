@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS public.pickups (
   photo_url       TEXT,
   notes           TEXT,
   status          TEXT DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'disputed')),
+  payment_status  TEXT DEFAULT 'unpaid' NOT NULL CHECK (payment_status IN ('unpaid', 'paid', 'void')),
   picked_up_at    TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

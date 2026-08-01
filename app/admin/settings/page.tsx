@@ -9,7 +9,6 @@ import {
   History,
   Loader2,
   CheckCircle2,
-  ShieldAlert,
   ShieldCheck,
   UserPlus,
   Lock,
@@ -17,7 +16,6 @@ import {
   Users,
   Eye,
   EyeOff,
-  Check,
   Settings,
   X,
   AlertCircle,
@@ -29,7 +27,10 @@ import {
   Phone,
   Shield,
   Save,
-  AlertTriangle
+  Plus,
+  Sliders,
+  ChevronRight,
+  Building2,
 } from "lucide-react";
 import { ADMIN_SECTIONS } from "@/lib/types";
 
@@ -41,7 +42,7 @@ interface PriceRecord {
   created_at: string;
 }
 
-interface SubAdminProfile {
+interface StaffProfile {
   id: string;
   full_name: string;
   username: string;
@@ -53,8 +54,16 @@ interface SubAdminProfile {
   is_active?: boolean;
 }
 
+interface RoleTemplate {
+  id: string;
+  role_key: string;
+  role_name: string;
+  description: string | null;
+  default_routes: string[];
+}
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<"subadmins" | "marketprice">("subadmins");
+  const [activeTab, setActiveTab] = useState<"staff" | "roles" | "marketprice">("staff");
 
   // Market price state
   const [currentPrice, setCurrentPrice] = useState<PriceRecord | null>(null);
@@ -65,53 +74,77 @@ export default function SettingsPage() {
   const [priceSuccess, setPriceSuccess] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
 
-  // Sub-admin state
-  const [subAdmins, setSubAdmins] = useState<SubAdminProfile[]>([]);
-  const [fetchingSubAdmins, setFetchingSubAdmins] = useState(true);
+  // Staff accounts & Roles state
+  const [staffList, setStaffList] = useState<StaffProfile[]>([]);
+  const [rolesList, setRolesList] = useState<RoleTemplate[]>([]);
+  const [fetchingStaff, setFetchingStaff] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
-  // Sub-admin form state
+  // Staff creation form state
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("sub_admin");
   const [selectedRoutes, setSelectedRoutes] = useState<string[]>([
     "/admin",
     "/admin/onboarding",
     "/admin/routes",
   ]);
 
-  const [creatingSubAdmin, setCreatingSubAdmin] = useState(false);
-  const [subAdminError, setSubAdminError] = useState<string | null>(null);
-  const [subAdminSuccess, setSubAdminSuccess] = useState<string | null>(null);
+  const [creatingStaff, setCreatingStaff] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
+  const [staffSuccess, setStaffSuccess] = useState<string | null>(null);
+
+  // Role creation form state
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDesc, setNewRoleDesc] = useState("");
+  const [newRoleRoutes, setNewRoleRoutes] = useState<string[]>([
+    "/admin",
+    "/admin/pickers",
+    "/admin/routes",
+  ]);
+  const [creatingRole, setCreatingRole] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  // Edit Role modal state
+  const [editingRole, setEditingRole] = useState<RoleTemplate | null>(null);
+  const [editRoleName, setEditRoleName] = useState("");
+  const [editRoleDesc, setEditRoleDesc] = useState("");
+  const [editRoleRoutes, setEditRoleRoutes] = useState<string[]>([]);
+  const [savingRole, setSavingRole] = useState(false);
+
+  // Delete Role modal state
+  const [deletingRole, setDeletingRole] = useState<RoleTemplate | null>(null);
+  const [deletingRoleAction, setDeletingRoleAction] = useState(false);
 
   // Edit permissions modal state
-  const [editingSubAdminPerms, setEditingSubAdminPerms] = useState<SubAdminProfile | null>(null);
+  const [editingStaffPerms, setEditingStaffPerms] = useState<StaffProfile | null>(null);
   const [editRoutes, setEditRoutes] = useState<string[]>([]);
   const [updatingPerms, setUpdatingPerms] = useState(false);
 
-  // Edit sub-admin details modal state
-  const [editingSubAdminDetails, setEditingSubAdminDetails] = useState<SubAdminProfile | null>(null);
-  const [editDetailForm, setEditDetailForm] = useState({ fullName: "", username: "", phone: "" });
+  // Edit staff details modal state
+  const [editingStaffDetails, setEditingStaffDetails] = useState<StaffProfile | null>(null);
+  const [editDetailForm, setEditDetailForm] = useState({ fullName: "", username: "", phone: "", role: "sub_admin" });
   const [savingDetails, setSavingDetails] = useState(false);
 
-  // Change sub-admin password modal state
-  const [passwordSubAdmin, setPasswordSubAdmin] = useState<SubAdminProfile | null>(null);
-  const [newSubAdminPassword, setNewSubAdminPassword] = useState("");
-  const [showNewSubAdminPassword, setShowNewSubAdminPassword] = useState(false);
+  // Change staff password modal state
+  const [passwordStaff, setPasswordStaff] = useState<StaffProfile | null>(null);
+  const [newStaffPassword, setNewStaffPassword] = useState("");
+  const [showNewStaffPassword, setShowNewStaffPassword] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // Delete sub-admin modal state
-  const [deletingSubAdmin, setDeletingSubAdmin] = useState<SubAdminProfile | null>(null);
-  const [deletingSubAdminAction, setDeletingSubAdminAction] = useState(false);
+  // Delete staff modal state
+  const [deletingStaff, setDeletingStaff] = useState<StaffProfile | null>(null);
+  const [deletingStaffAction, setDeletingStaffAction] = useState(false);
 
   const supabase = createClient();
 
   useEffect(() => {
     fetchPrices();
-    fetchSubAdmins();
+    fetchStaffAndRoles();
   }, []);
 
   async function fetchPrices() {
@@ -129,18 +162,35 @@ export default function SettingsPage() {
     setFetchingPrice(false);
   }
 
-  async function fetchSubAdmins() {
-    setFetchingSubAdmins(true);
+  async function fetchStaffAndRoles() {
+    setFetchingStaff(true);
     try {
-      const res = await fetch("/api/admin/sub-admins/permissions");
-      const json = await res.json();
-      if (json.subAdmins) {
-        setSubAdmins(json.subAdmins);
+      // 1. Fetch staff accounts
+      const resStaff = await fetch("/api/admin/sub-admins/permissions");
+      const jsonStaff = await resStaff.json();
+      if (jsonStaff.staff) {
+        setStaffList(jsonStaff.staff);
+      }
+
+      // 2. Fetch role templates
+      const resRoles = await fetch("/api/admin/roles");
+      const jsonRoles = await resRoles.json();
+      if (jsonRoles.roles) {
+        setRolesList(jsonRoles.roles);
       }
     } catch (err) {
-      console.error("Failed to fetch sub-admins:", err);
+      console.error("Failed to fetch staff/roles:", err);
     } finally {
-      setFetchingSubAdmins(false);
+      setFetchingStaff(false);
+    }
+  }
+
+  // When role selection changes during creation, auto-fill default routes for that role
+  function handleRoleSelectChange(roleKey: string) {
+    setSelectedRole(roleKey);
+    const matchedRole = rolesList.find((r) => r.role_key === roleKey);
+    if (matchedRole && Array.isArray(matchedRole.default_routes)) {
+      setSelectedRoutes(matchedRole.default_routes);
     }
   }
 
@@ -176,9 +226,17 @@ export default function SettingsPage() {
     setLoadingPrice(false);
   }
 
-  function toggleRouteSelection(route: string, isEdit = false) {
-    if (isEdit) {
+  function toggleRouteSelection(route: string, target: "create" | "edit" | "newrole" | "editrole") {
+    if (target === "edit") {
       setEditRoutes((prev) =>
+        prev.includes(route) ? prev.filter((r) => r !== route) : [...prev, route]
+      );
+    } else if (target === "newrole") {
+      setNewRoleRoutes((prev) =>
+        prev.includes(route) ? prev.filter((r) => r !== route) : [...prev, route]
+      );
+    } else if (target === "editrole") {
+      setEditRoleRoutes((prev) =>
         prev.includes(route) ? prev.filter((r) => r !== route) : [...prev, route]
       );
     } else {
@@ -188,76 +246,170 @@ export default function SettingsPage() {
     }
   }
 
-  function handleSelectAllRoutes(isEdit = false) {
+  function handleSelectAllRoutes(target: "create" | "edit" | "newrole" | "editrole") {
     const all = ADMIN_SECTIONS.map((s) => s.href);
-    if (isEdit) setEditRoutes(all);
+    if (target === "edit") setEditRoutes(all);
+    else if (target === "newrole") setNewRoleRoutes(all);
+    else if (target === "editrole") setEditRoleRoutes(all);
     else setSelectedRoutes(all);
   }
 
-  function handleClearAllRoutes(isEdit = false) {
-    if (isEdit) setEditRoutes([]);
+  function handleClearAllRoutes(target: "create" | "edit" | "newrole" | "editrole") {
+    if (target === "edit") setEditRoutes([]);
+    else if (target === "newrole") setNewRoleRoutes([]);
+    else if (target === "editrole") setEditRoleRoutes([]);
     else setSelectedRoutes([]);
   }
 
-  async function handleCreateSubAdmin(e: React.FormEvent) {
+  async function handleCreateStaffAccount(e: React.FormEvent) {
     e.preventDefault();
-    if (!fullName || !username || !password) {
-      setSubAdminError("Please fill in all required fields.");
+    setStaffError(null);
+    setStaffSuccess(null);
+
+    if (!fullName.trim() || !username.trim() || !password.trim()) {
+      setStaffError("Full name, username, and password are required.");
       return;
     }
 
     if (selectedRoutes.length === 0) {
-      setSubAdminError("Please select at least one permission section for the sub-admin.");
+      setStaffError("Please select at least one accessible option/section.");
       return;
     }
 
-    setCreatingSubAdmin(true);
-    setSubAdminError(null);
-
-    const cleanUsername = username.trim().toLowerCase();
+    setCreatingStaff(true);
 
     try {
       const res = await fetch("/api/admin/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "Sub-Admin",
-          fullName,
-          username: cleanUsername,
-          email: `${cleanUsername}@mellod.internal`,
-          phone,
-          password,
+          type: selectedRole,
+          username: username.trim(),
+          password: password.trim(),
+          fullName: fullName.trim(),
+          phone: phone.trim() || null,
           allowedRoutes: selectedRoutes,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create sub-admin account.");
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to create staff account");
       }
 
-      setSubAdminSuccess(`Sub-Admin account '${cleanUsername}' created successfully!`);
-      setShowCreateModal(false);
-
-      // Reset form
+      setStaffSuccess(`Account created for ${fullName} with role '${selectedRole}'!`);
       setFullName("");
       setUsername("");
-      setEmail("");
-      setPhone("");
       setPassword("");
-      setSelectedRoutes(["/admin", "/admin/onboarding", "/admin/routes"]);
-
-      await fetchSubAdmins();
-      setTimeout(() => setSubAdminSuccess(null), 4000);
+      setPhone("");
+      setShowCreateModal(false);
+      await fetchStaffAndRoles();
     } catch (err: any) {
-      setSubAdminError(err.message);
+      setStaffError(err.message || "Failed to create staff account.");
     } finally {
-      setCreatingSubAdmin(false);
+      setCreatingStaff(false);
+    }
+  }
+
+  async function handleCreateRoleTemplate(e: React.FormEvent) {
+    e.preventDefault();
+    setRoleError(null);
+
+    if (!newRoleName.trim()) {
+      setRoleError("Role name is required.");
+      return;
+    }
+
+    if (newRoleRoutes.length === 0) {
+      setRoleError("Select at least one default option/route for this role.");
+      return;
+    }
+
+    setCreatingRole(true);
+
+    try {
+      const res = await fetch("/api/admin/roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roleName: newRoleName.trim(),
+          description: newRoleDesc.trim() || null,
+          defaultRoutes: newRoleRoutes,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to create role template.");
+      }
+
+      setNewRoleName("");
+      setNewRoleDesc("");
+      setShowRoleModal(false);
+      await fetchStaffAndRoles();
+    } catch (err: any) {
+      setRoleError(err.message || "Failed to create role template.");
+    } finally {
+      setCreatingRole(false);
+    }
+  }
+
+  async function handleUpdateRole(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingRole || !editRoleName.trim()) return;
+    setSavingRole(true);
+
+    try {
+      const res = await fetch("/api/admin/roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roleKey: editingRole.role_key,
+          roleName: editRoleName.trim(),
+          description: editRoleDesc.trim() || null,
+          defaultRoutes: editRoleRoutes,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update role.");
+      }
+
+      setEditingRole(null);
+      await fetchStaffAndRoles();
+    } catch (err: any) {
+      alert(err.message || "Error updating role");
+    } finally {
+      setSavingRole(false);
+    }
+  }
+
+  async function handleDeleteRole() {
+    if (!deletingRole) return;
+    setDeletingRoleAction(true);
+
+    try {
+      const res = await fetch(`/api/admin/roles?roleKey=${encodeURIComponent(deletingRole.role_key)}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete role.");
+      }
+
+      setDeletingRole(null);
+      await fetchStaffAndRoles();
+    } catch (err: any) {
+      alert(err.message || "Error deleting role");
+    } finally {
+      setDeletingRoleAction(false);
     }
   }
 
   async function handleUpdatePermissions() {
-    if (!editingSubAdminPerms) return;
+    if (!editingStaffPerms) return;
     setUpdatingPerms(true);
 
     try {
@@ -265,38 +417,27 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profileId: editingSubAdminPerms.id,
+          profileId: editingStaffPerms.id,
           allowedRoutes: editRoutes,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update permissions");
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update permissions.");
+      }
 
-      setSubAdminSuccess(`Permissions updated for ${editingSubAdminPerms.full_name}!`);
-      setEditingSubAdminPerms(null);
-      await fetchSubAdmins();
-      setTimeout(() => setSubAdminSuccess(null), 4000);
+      setEditingStaffPerms(null);
+      await fetchStaffAndRoles();
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert(err.message || "Error updating permissions");
     } finally {
       setUpdatingPerms(false);
     }
   }
 
-  // ── Handlers for Sub-Admin Professional Control ──────────────────────────────
-  const openEditDetailsModal = (subAdmin: SubAdminProfile) => {
-    setEditingSubAdminDetails(subAdmin);
-    setEditDetailForm({
-      fullName: subAdmin.full_name || "",
-      username: subAdmin.username || "",
-      phone: subAdmin.phone || "",
-    });
-  };
-
-  const handleSaveSubAdminDetails = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingSubAdminDetails) return;
+  async function handleSaveDetails() {
+    if (!editingStaffDetails) return;
     setSavingDetails(true);
 
     try {
@@ -304,50 +445,31 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: editingSubAdminDetails.id,
-          action: "update_details",
-          fullName: editDetailForm.fullName,
-          username: editDetailForm.username,
-          phone: editDetailForm.phone,
+          userId: editingStaffDetails.id,
+          action: "update_profile",
+          fullName: editDetailForm.fullName.trim(),
+          username: editDetailForm.username.trim(),
+          phone: editDetailForm.phone.trim() || null,
+          role: editDetailForm.role,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update sub-admin details");
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update user details.");
+      }
 
-      setSubAdminSuccess(`Profile updated for ${editDetailForm.fullName}!`);
-      setEditingSubAdminDetails(null);
-      await fetchSubAdmins();
-      setTimeout(() => setSubAdminSuccess(null), 3000);
+      setEditingStaffDetails(null);
+      await fetchStaffAndRoles();
     } catch (err: any) {
-      alert("Error updating profile: " + err.message);
+      alert(err.message || "Error saving user details");
     } finally {
       setSavingDetails(false);
     }
-  };
+  }
 
-  const openPasswordModal = (subAdmin: SubAdminProfile) => {
-    setPasswordSubAdmin(subAdmin);
-    setNewSubAdminPassword("");
-  };
-
-  const handleGenerateRandomPassword = () => {
-    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-    let pwd = "";
-    for (let i = 0; i < 8; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setNewSubAdminPassword(pwd);
-  };
-
-  const handleSaveSubAdminPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passwordSubAdmin) return;
-    if (!newSubAdminPassword || newSubAdminPassword.length < 6) {
-      alert("Password must be at least 6 characters long.");
-      return;
-    }
-
+  async function handleSavePassword() {
+    if (!passwordStaff || !newStaffPassword.trim()) return;
     setSavingPassword(true);
 
     try {
@@ -355,488 +477,565 @@ export default function SettingsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: passwordSubAdmin.id,
-          action: "change_password",
-          password: newSubAdminPassword,
+          userId: passwordStaff.id,
+          action: "reset_password",
+          newPassword: newStaffPassword.trim(),
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update password");
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update password.");
+      }
 
-      setSubAdminSuccess(`Password updated for ${passwordSubAdmin.full_name}!`);
-      setPasswordSubAdmin(null);
-      await fetchSubAdmins();
-      setTimeout(() => setSubAdminSuccess(null), 3000);
+      setPasswordStaff(null);
+      setNewStaffPassword("");
+      await fetchStaffAndRoles();
     } catch (err: any) {
-      alert("Error: " + err.message);
+      alert(err.message || "Error updating password");
     } finally {
       setSavingPassword(false);
     }
-  };
+  }
 
-  const handleToggleStatus = async (subAdmin: SubAdminProfile) => {
-    const isCurrentlyActive = subAdmin.is_active !== false;
-    const nextAction = isCurrentlyActive ? "suspend" : "activate";
-
+  async function handleToggleOffboard(staff: StaffProfile) {
+    setDeletingStaffAction(true);
     try {
       const res = await fetch("/api/admin/update-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: subAdmin.id,
-          action: nextAction,
+          userId: staff.id,
+          action: "toggle_status",
+          isActive: staff.is_active === false ? true : false,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Failed to ${nextAction} account`);
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to toggle status.");
+      }
 
-      setSubAdminSuccess(`Account ${isCurrentlyActive ? "suspended" : "activated"} for ${subAdmin.full_name}!`);
-      await fetchSubAdmins();
-      setTimeout(() => setSubAdminSuccess(null), 3000);
+      setDeletingStaff(null);
+      await fetchStaffAndRoles();
     } catch (err: any) {
-      alert("Error: " + err.message);
-    }
-  };
-
-  const handleDeleteSubAdmin = async () => {
-    if (!deletingSubAdmin) return;
-    setDeletingSubAdminAction(true);
-
-    try {
-      const res = await fetch("/api/admin/update-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: deletingSubAdmin.id,
-          action: "delete",
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete sub-admin");
-
-      setSubAdminSuccess(`Sub-Admin account '${deletingSubAdmin.username}' deleted.`);
-      setDeletingSubAdmin(null);
-      await fetchSubAdmins();
-      setTimeout(() => setSubAdminSuccess(null), 3000);
-    } catch (err: any) {
-      alert("Error: " + err.message);
+      alert(err.message || "Error toggling account status");
     } finally {
-      setDeletingSubAdminAction(false);
+      setDeletingStaffAction(false);
     }
-  };
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-6xl">
-      {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+    <div className="space-y-6 animate-fade-in pb-12">
+      {/* Top Banner Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Settings className="w-6 h-6 text-green-700" />
-            Admin Settings & Control
+            System Administration & Role Control
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Manage sub-admin access roles, page permissions, and live UCO market pricing.
+          <p className="text-sm text-gray-500 mt-1">
+            Manage custom roles, staff account section permissions, and oil market prices.
           </p>
         </div>
 
-        {/* Tab Selector */}
-        <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 self-start sm:self-auto">
-          <button
-            onClick={() => setActiveTab("subadmins")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "subadmins"
-                ? "bg-white text-green-800 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-green-700" />
-            Sub-Admin Access ({subAdmins.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("marketprice")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "marketprice"
-                ? "bg-white text-green-800 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <TrendingUp className="w-4 h-4 text-green-700" />
-            Market Price
-          </button>
-        </div>
+        <button
+          onClick={fetchStaffAndRoles}
+          className="btn btn-secondary text-xs py-2 px-3 self-start sm:self-auto flex items-center gap-1.5 font-semibold"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${fetchingStaff ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
       </div>
 
-      {subAdminSuccess && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm flex items-center gap-2 shadow-sm animate-fade-in">
-          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <span>{subAdminSuccess}</span>
+      {staffSuccess && (
+        <div className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl text-sm flex items-center gap-2 font-semibold">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+          {staffSuccess}
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* TAB 1: SUB-ADMIN MANAGEMENT & ACCESS CONTROL */}
-      {/* ========================================================= */}
-      {activeTab === "subadmins" && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
+      {/* Tabs Bar */}
+      <div className="flex border-b border-gray-200 gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("staff")}
+          className={`pb-3 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "staff"
+              ? "border-green-700 text-green-800"
+              : "border-transparent text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Staff & User Accounts ({staffList.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("roles")}
+          className={`pb-3 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "roles"
+              ? "border-green-700 text-green-800"
+              : "border-transparent text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          Role Templates & Presets ({rolesList.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("marketprice")}
+          className={`pb-3 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "marketprice"
+              ? "border-green-700 text-green-800"
+              : "border-transparent text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          Market UCO Pricing
+        </button>
+      </div>
+
+      {/* TAB 1: STAFF & USER ACCOUNTS */}
+      {activeTab === "staff" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
             <div>
-              <h2 className="text-lg font-bold text-gray-800">Sub-Admin Accounts Directory</h2>
-              <p className="text-xs text-gray-500">
-                Grant, configure, and monitor team member credentials and section permissions.
+              <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                <Users className="w-5 h-5 text-green-700" />
+                Staff Role Accounts & Granular Access
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Assign custom roles (Manager, Staff, Sub-Admin, Finance, Dispatcher) and customize accessible sections for each individual.
               </p>
             </div>
+
             <button
-              onClick={() => {
-                setSubAdminError(null);
-                setShowCreateModal(true);
-              }}
-              className="btn btn-primary text-xs py-2 px-4 flex items-center gap-2 font-bold shadow-sm"
+              onClick={() => setShowCreateModal(true)}
+              className="btn btn-primary text-xs py-2 px-4 font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
             >
               <UserPlus className="w-4 h-4" />
-              Create New Sub-Admin
+              + Create Staff Account
             </button>
           </div>
 
-          {/* Sub-Admins Grid / List */}
-          {fetchingSubAdmins ? (
-            <div className="card p-8 text-center flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-7 h-7 animate-spin text-green-700" />
-              <p className="text-sm text-gray-500 font-medium">Loading sub-admin permissions...</p>
+          {fetchingStaff ? (
+            <div className="p-12 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">
+              <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto mb-2" />
+              Loading staff accounts...
             </div>
-          ) : subAdmins.length === 0 ? (
-            <div className="card p-10 text-center border-dashed border-2 border-gray-200">
-              <ShieldAlert className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-gray-800">No Sub-Admins Created Yet</h3>
-              <p className="text-xs text-gray-500 max-w-md mx-auto mt-1 mb-4">
-                Sub-admin accounts allow team members to log in and access assigned portal sections (like FBOs, Pickers, or Route Planner) without super-admin rights.
-              </p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn btn-primary text-xs py-2 px-4 inline-flex items-center gap-2 font-bold"
-              >
-                <UserPlus className="w-4 h-4" />
-                Create First Sub-Admin
-              </button>
+          ) : staffList.length === 0 ? (
+            <div className="card p-12 text-center text-gray-400 bg-white">
+              <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+              <p className="font-bold text-gray-700 text-sm">No internal staff accounts found</p>
+              <p className="text-xs text-gray-400 mt-1">Create accounts for managers, staff, or sub-admins to delegate portal options.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subAdmins.map((subAdmin) => {
-                const allowedCount = subAdmin.allowed_routes.length;
-                const totalSections = ADMIN_SECTIONS.length;
-                const isActive = subAdmin.is_active !== false;
-
-                return (
-                  <div
-                    key={subAdmin.id}
-                    className={`card p-5 border transition-all space-y-4 shadow-sm ${
-                      isActive ? "border-gray-200 hover:border-green-300" : "border-red-200 bg-red-50/20"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                          isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }`}>
-                          {subAdmin.full_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                            {subAdmin.full_name}
-                          </h3>
-                          <p className="text-xs text-gray-500 font-mono">@{subAdmin.username}</p>
-                        </div>
+            <div className="grid grid-cols-1 gap-4">
+              {staffList.map((sa) => (
+                <div key={sa.id} className="card p-5 bg-white border border-gray-200 shadow-sm space-y-4 hover:border-green-300 transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-green-100 text-green-800 flex items-center justify-center font-bold flex-shrink-0">
+                        <Users className="w-5 h-5" />
                       </div>
-
-                      {/* Status Badge */}
-                      {isActive ? (
-                        <span className="badge badge-green text-[10px] font-bold flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-green-600 rounded-full animate-pulse" /> Active
-                        </span>
-                      ) : (
-                        <span className="badge bg-red-100 text-red-800 border-red-200 text-[10px] font-bold flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full" /> Suspended
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-gray-600 space-y-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                      <p className="flex items-center gap-1 text-gray-700">
-                        <Phone className="w-3 h-3 text-gray-400" />
-                        <strong>Phone:</strong> {subAdmin.phone || "Not provided"}
-                      </p>
-                      {subAdmin.generated_password && (
-                        <p className="font-mono text-[11px] text-gray-700 flex items-center gap-1">
-                          <Key className="w-3 h-3 text-gray-400" />
-                          <strong>Key:</strong>{" "}
-                          <span className="bg-white px-1.5 py-0.5 rounded border border-gray-200 font-semibold">
-                            {subAdmin.generated_password}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-gray-900 text-base">{sa.full_name}</h3>
+                          <span className="badge bg-green-100 text-green-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">
+                            Role: {sa.role}
                           </span>
+                          {sa.is_active === false && (
+                            <span className="badge bg-red-100 text-red-700 text-[10px] font-bold">Offboarded</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Username: <span className="font-mono font-bold text-gray-700">{sa.username}</span> {sa.phone ? `· Phone: ${sa.phone}` : ""}
                         </p>
-                      )}
-                    </div>
-
-                    {/* Permissions Summary */}
-                    <div>
-                      <div className="flex items-center justify-between text-xs mb-2">
-                        <span className="font-semibold text-gray-700">
-                          Access Rights ({allowedCount}/{totalSections}):
-                        </span>
-                        <button
-                          onClick={() => {
-                            setEditingSubAdminPerms(subAdmin);
-                            setEditRoutes(subAdmin.allowed_routes);
-                          }}
-                          className="text-green-700 hover:text-green-900 font-bold text-[11px] hover:underline"
-                        >
-                          Edit Rights
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {ADMIN_SECTIONS.map((sec) => {
-                          const isAllowed = subAdmin.allowed_routes.includes(sec.href);
-                          return (
-                            <span
-                              key={sec.href}
-                              className={`text-[10px] px-2 py-0.5 rounded font-medium border ${
-                                isAllowed
-                                  ? "bg-green-50 text-green-800 border-green-200"
-                                  : "bg-gray-100 text-gray-400 border-gray-200 line-through opacity-60"
-                              }`}
-                            >
-                              {sec.label}
-                            </span>
-                          );
-                        })}
                       </div>
                     </div>
 
-                    {/* Action Toolbar */}
-                    <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-1 text-xs">
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openEditDetailsModal(subAdmin)}
-                          className="btn btn-secondary text-[11px] px-2 py-1 flex items-center gap-1 border border-gray-200 hover:border-green-300 hover:text-green-700"
-                          title="Edit Profile Details"
-                        >
-                          <Edit3 className="w-3 h-3" /> Details
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openPasswordModal(subAdmin)}
-                          className="btn btn-secondary text-[11px] px-2 py-1 flex items-center gap-1 border border-gray-200 hover:border-amber-300 hover:text-amber-700"
-                          title="Change Password"
-                        >
-                          <Key className="w-3 h-3" /> Password
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingStaffPerms(sa);
+                          setEditRoutes(sa.allowed_routes || []);
+                        }}
+                        className="btn btn-secondary text-xs py-1.5 px-3 bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 font-semibold flex items-center gap-1.5"
+                      >
+                        <Sliders className="w-3.5 h-3.5 text-green-700" />
+                        Customize Access ({sa.allowed_routes?.length || 0})
+                      </button>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(subAdmin)}
-                          className={`btn text-[11px] px-2 py-1 flex items-center gap-1 border ${
-                            isActive
-                              ? "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
-                              : "bg-green-50 text-green-800 border-green-200 hover:bg-green-100"
-                          }`}
-                          title={isActive ? "Suspend Account" : "Activate Account"}
-                        >
-                          {isActive ? <UserX className="w-3 h-3" /> : <UserCheck className="w-3 h-3" />}
-                          {isActive ? "Suspend" : "Activate"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingSubAdmin(subAdmin)}
-                          className="btn bg-red-50 text-red-700 border-red-200 hover:bg-red-100 text-[11px] px-2 py-1 flex items-center gap-1"
-                          title="Delete Account"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingStaffDetails(sa);
+                          setEditDetailForm({ fullName: sa.full_name, username: sa.username, phone: sa.phone || "", role: sa.role });
+                        }}
+                        className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
+                        title="Edit Details"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setPasswordStaff(sa);
+                          setNewStaffPassword("");
+                        }}
+                        className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
+                        title="Change Password"
+                      >
+                        <Key className="w-3.5 h-3.5 text-amber-600" />
+                      </button>
+
+                      <button
+                        onClick={() => setDeletingStaff(sa)}
+                        className={`btn text-xs py-1.5 px-2.5 border font-semibold ${
+                          sa.is_active === false
+                            ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                            : "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                        }`}
+                        title={sa.is_active === false ? "Reactivate Account" : "Offboard Account"}
+                      >
+                        {sa.is_active === false ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
                   </div>
-                );
-              })}
+
+                  {/* Section Access Preview Pills */}
+                  <div className="bg-gray-50 p-3 rounded-xl">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1.5">
+                      Authorized Admin Sections ({sa.allowed_routes?.length || 0}):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ADMIN_SECTIONS.map((sec) => {
+                        const isAllowed = sa.allowed_routes?.includes(sec.href);
+                        return (
+                          <span
+                            key={sec.href}
+                            className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-all ${
+                              isAllowed
+                                ? "bg-green-700 text-white font-bold"
+                                : "bg-gray-200 text-gray-400 line-through opacity-60"
+                            }`}
+                          >
+                            {sec.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* TAB 2: MARKET PRICE TAB */}
-      {/* ========================================================= */}
-      {activeTab === "marketprice" && (
-        <MarketPriceTab
-          currentPrice={currentPrice}
-          priceHistory={priceHistory}
-          inputPrice={inputPrice}
-          setInputPrice={setInputPrice}
-          loadingPrice={loadingPrice}
-          fetchingPrice={fetchingPrice}
-          priceSuccess={priceSuccess}
-          priceError={priceError}
-          handleSetPrice={handleSetPrice}
-        />
+      {/* TAB 2: ROLE TEMPLATES & PRESETS */}
+      {activeTab === "roles" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+            <div>
+              <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                <Shield className="w-5 h-5 text-green-700" />
+                Role Templates & Default Presets
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Create, edit, or delete role templates (e.g., Regional Supervisor, Auditor) and define their default section permissions.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowRoleModal(true)}
+              className="btn btn-primary text-xs py-2 px-4 font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              + Create New Role Template
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {rolesList.map((rt) => (
+              <div key={rt.role_key} className="card p-5 bg-white border border-gray-200 shadow-sm space-y-3 hover:border-green-300 transition-all">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base">{rt.role_name}</h3>
+                    <span className="font-mono text-[11px] text-gray-400">role_key: {rt.role_key}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">
+                      {rt.default_routes?.length || 0} Sections
+                    </span>
+
+                    <button
+                      onClick={() => {
+                        setEditingRole(rt);
+                        setEditRoleName(rt.role_name);
+                        setEditRoleDesc(rt.description || "");
+                        setEditRoleRoutes(rt.default_routes || []);
+                      }}
+                      className="btn btn-secondary text-xs p-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
+                      title="Edit Role Template"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                    </button>
+
+                    <button
+                      onClick={() => setDeletingRole(rt)}
+                      className="btn btn-secondary text-xs p-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold"
+                      title="Delete Role Template"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {rt.description && (
+                  <p className="text-xs text-gray-600">{rt.description}</p>
+                )}
+
+                <div className="bg-gray-50 p-3 rounded-xl space-y-1">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                    Default Allowed Sections:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {ADMIN_SECTIONS.map((sec) => {
+                      const isAllowed = rt.default_routes?.includes(sec.href);
+                      return (
+                        <span
+                          key={sec.href}
+                          className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                            isAllowed ? "bg-green-100 text-green-900 border border-green-200 font-bold" : "bg-gray-100 text-gray-400"
+                          }`}
+                        >
+                          {sec.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 1: CREATE NEW SUB-ADMIN */}
-      {/* ========================================================= */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl animate-fade-in overflow-hidden">
-            <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-green-700 text-white">
-              <div className="flex items-center gap-2.5">
-                <UserPlus className="w-5 h-5" />
-                <h3 className="font-bold text-base">Create Sub-Admin Account</h3>
+      {/* TAB 3: MARKET PRICE SETTINGS */}
+      {activeTab === "marketprice" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="card p-6 bg-white space-y-4 lg:col-span-1">
+            <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+              <IndianRupee className="w-5 h-5 text-green-700" />
+              Update Daily UCO Price
+            </h2>
+            <p className="text-xs text-gray-500">
+              Set the benchmark rate (₹/Liter) offered to FBOs for verified oil collections.
+            </p>
+
+            <form onSubmit={handleSetPrice} className="space-y-4">
+              <div>
+                <label className="font-semibold text-xs text-gray-700 block mb-1">New Price per Liter (₹)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  placeholder="e.g. 52.50"
+                  className="form-input text-base font-bold font-mono"
+                  value={inputPrice}
+                  onChange={(e) => setInputPrice(e.target.value)}
+                />
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="text-green-200 hover:text-white">
+
+              {priceError && <p className="text-xs text-red-600 font-semibold">{priceError}</p>}
+              {priceSuccess && <p className="text-xs text-green-700 font-bold">Daily market price updated successfully!</p>}
+
+              <button
+                type="submit"
+                disabled={loadingPrice}
+                className="btn btn-primary w-full text-xs py-2.5 font-bold flex items-center justify-center gap-2"
+              >
+                {loadingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Publish New Benchmark Rate
+              </button>
+            </form>
+          </div>
+
+          <div className="card p-6 bg-white lg:col-span-2 space-y-4">
+            <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+              <History className="w-5 h-5 text-gray-700" />
+              Recent UCO Price History
+            </h2>
+
+            {fetchingPrice ? (
+              <div className="p-8 text-center text-gray-400">
+                <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto" />
+              </div>
+            ) : priceHistory.length === 0 ? (
+              <p className="text-xs text-gray-400">No price records found.</p>
+            ) : (
+              <div className="space-y-2">
+                {priceHistory.map((ph, idx) => (
+                  <div key={ph.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-gray-900 text-sm">{formatCurrency(ph.price_per_liter)} / Liter</span>
+                      <span className="text-gray-400 block text-[11px]">Effective from {new Date(ph.effective_from).toLocaleString()}</span>
+                    </div>
+                    {idx === 0 && <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">Active Rate</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: CREATE STAFF ACCOUNT */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-green-800 text-white">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-green-300" />
+                <h3 className="font-bold text-base">Create Staff Account & Assign Access</h3>
+              </div>
+              <button onClick={() => setShowCreateModal(false)} className="text-green-200 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubAdmin} className="flex-1 overflow-y-auto p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleCreateStaffAccount} className="p-5 space-y-4 text-xs overflow-y-auto">
+              {staffError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {staffError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label text-xs">Full Name *</label>
+                  <label className="font-semibold text-gray-700 block mb-1">Full Name *</label>
                   <input
                     type="text"
-                    required
-                    className="form-input text-xs"
                     placeholder="e.g. Ramesh Kumar"
+                    className="form-input text-xs"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                   />
                 </div>
+
                 <div>
-                  <label className="form-label text-xs">Username *</label>
+                  <label className="font-semibold text-gray-700 block mb-1">Username *</label>
                   <input
                     type="text"
-                    required
-                    className="form-input text-xs"
-                    placeholder="e.g. ramesh_subadmin"
+                    placeholder="e.g. ramesh_mgr"
+                    className="form-input text-xs font-mono"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="form-label text-xs">Phone Number</label>
+                  <label className="font-semibold text-gray-700 block mb-1">Assigned Role *</label>
+                  <select
+                    className="form-select text-xs font-bold"
+                    value={selectedRole}
+                    onChange={(e) => handleRoleSelectChange(e.target.value)}
+                  >
+                    {rolesList.map((r) => (
+                      <option key={r.role_key} value={r.role_key}>
+                        {r.role_name} ({r.role_key})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-semibold text-gray-700 block mb-1">Phone Number</label>
                   <input
-                    type="tel"
+                    type="text"
+                    placeholder="+91 9876543210"
                     className="form-input text-xs"
-                    placeholder="+91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                   />
                 </div>
-                <div>
-                  <label className="form-label text-xs">Login Password *</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      className="form-input text-xs pr-10"
-                      placeholder="Set secure password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Initial Password *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Set account password"
+                    className="form-input text-xs pr-8 font-mono"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
-              {/* Access Permissions Checklist */}
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="form-label text-xs mb-0 font-bold text-gray-900">
-                    Assign Page Access Permissions:
-                  </label>
+              {/* Granular Section Access Checkboxes */}
+              <div className="border border-gray-200 p-4 rounded-xl bg-gray-50 space-y-2">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div>
+                    <span className="font-bold text-gray-900 block">Custom Section Access Options</span>
+                    <span className="text-[11px] text-gray-500">Add or take away specific options for this staff member before creating account.</span>
+                  </div>
                   <div className="flex items-center gap-2 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectAllRoutes(false)}
-                      className="text-green-700 font-bold hover:underline"
-                    >
+                    <button type="button" onClick={() => handleSelectAllRoutes("create")} className="text-green-700 font-bold hover:underline">
                       Select All
                     </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      type="button"
-                      onClick={() => handleClearAllRoutes(false)}
-                      className="text-gray-500 font-bold hover:underline"
-                    >
+                    <span>·</span>
+                    <button type="button" onClick={() => handleClearAllRoutes("create")} className="text-red-600 font-bold hover:underline">
                       Clear All
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   {ADMIN_SECTIONS.map((sec) => {
-                    const isChecked = selectedRoutes.includes(sec.href);
+                    const checked = selectedRoutes.includes(sec.href);
                     return (
                       <label
                         key={sec.href}
-                        className={`flex items-start gap-2.5 p-2 rounded-lg border cursor-pointer transition-all ${
-                          isChecked
-                            ? "bg-white border-green-300 text-gray-900 shadow-sm"
-                            : "bg-gray-100/60 border-transparent text-gray-500 hover:bg-gray-100"
+                        className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                          checked
+                            ? "bg-green-50 border-green-300 text-green-900 font-bold"
+                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-100"
                         }`}
                       >
                         <input
                           type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleRouteSelection(sec.href, false)}
-                          className="mt-0.5 text-green-700 rounded focus:ring-green-600"
+                          checked={checked}
+                          onChange={() => toggleRouteSelection(sec.href, "create")}
+                          className="rounded text-green-700 focus:ring-green-700"
                         />
-                        <div>
-                          <p className="text-xs font-bold leading-tight">{sec.label}</p>
-                          <p className="text-[10px] text-gray-400 leading-tight">{sec.description}</p>
-                        </div>
+                        <span>{sec.label}</span>
                       </label>
                     );
                   })}
                 </div>
               </div>
 
-              {subAdminError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{subAdminError}</span>
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="btn btn-ghost text-xs px-4 py-2"
-                >
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-secondary text-xs px-4 py-2">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={creatingSubAdmin}
-                  className="btn btn-primary text-xs py-2 px-5 font-bold shadow-sm"
-                >
-                  {creatingSubAdmin ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Creating Account...</>
-                  ) : (
-                    <><Check className="w-4 h-4" /> Save & Create Account</>
-                  )}
+                <button type="submit" disabled={creatingStaff} className="btn btn-primary text-xs px-5 py-2 font-bold flex items-center gap-1.5">
+                  {creatingStaff ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  Create Staff Account
                 </button>
               </div>
             </form>
@@ -844,119 +1043,302 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 2: EDIT SUB-ADMIN PERMISSIONS */}
-      {/* ========================================================= */}
-      {editingSubAdminPerms && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl animate-fade-in">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-              <div>
-                <h3 className="font-bold text-base text-gray-900">
-                  Edit Access Rights — {editingSubAdminPerms.full_name}
-                </h3>
-                <p className="text-xs text-gray-500 font-mono">@{editingSubAdminPerms.username}</p>
+      {/* MODAL 2: CREATE ROLE TEMPLATE */}
+      {showRoleModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-green-800 text-white">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-green-300" />
+                <h3 className="font-bold text-base">Create New Role Template</h3>
               </div>
-              <button onClick={() => setEditingSubAdminPerms(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowRoleModal(false)} className="text-green-200 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-800">Allowed Sections:</span>
-                <div className="flex items-center gap-2 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectAllRoutes(true)}
-                    className="text-green-700 font-bold hover:underline"
-                  >
-                    Select All
-                  </button>
-                  <span className="text-gray-300">|</span>
-                  <button
-                    type="button"
-                    onClick={() => handleClearAllRoutes(true)}
-                    className="text-gray-500 font-bold hover:underline"
-                  >
-                    Clear All
-                  </button>
+            <form onSubmit={handleCreateRoleTemplate} className="p-5 space-y-4 text-xs">
+              {roleError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {roleError}
+                </div>
+              )}
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Role Title / Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Regional Supervisor or Quality Inspector"
+                  className="form-input text-xs"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Description</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Oversees quality checks, picker routes, and onboarding"
+                  className="form-input text-xs"
+                  value={newRoleDesc}
+                  onChange={(e) => setNewRoleDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="border border-gray-200 p-3.5 rounded-xl bg-gray-50 space-y-2">
+                <span className="font-bold text-gray-900 block">Default Allowed Sections for this Role</span>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {ADMIN_SECTIONS.map((sec) => {
+                    const checked = newRoleRoutes.includes(sec.href);
+                    return (
+                      <label
+                        key={sec.href}
+                        className={`p-2 rounded-lg border text-xs flex items-center gap-2 cursor-pointer ${
+                          checked ? "bg-green-50 border-green-300 text-green-900 font-bold" : "bg-white border-gray-200 text-gray-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRouteSelection(sec.href, "newrole")}
+                          className="rounded text-green-700 focus:ring-green-700"
+                        />
+                        <span>{sec.label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-200 max-h-64 overflow-y-auto">
-                {ADMIN_SECTIONS.map((sec) => {
-                  const isChecked = editRoutes.includes(sec.href);
-                  return (
-                    <label
-                      key={sec.href}
-                      className={`flex items-start gap-2.5 p-2 rounded-lg border cursor-pointer transition-all ${
-                        isChecked
-                          ? "bg-white border-green-300 text-gray-900 shadow-sm"
-                          : "bg-gray-100/60 border-transparent text-gray-500 hover:bg-gray-100"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleRouteSelection(sec.href, true)}
-                        className="mt-0.5 text-green-700 rounded focus:ring-green-600"
-                      />
-                      <div>
-                        <p className="text-xs font-bold leading-tight">{sec.label}</p>
-                        <p className="text-[10px] text-gray-400 leading-tight">{sec.description}</p>
-                      </div>
-                    </label>
-                  );
-                })}
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setShowRoleModal(false)} className="btn btn-secondary text-xs px-4 py-2">
+                  Cancel
+                </button>
+                <button type="submit" disabled={creatingRole} className="btn btn-primary text-xs px-5 py-2 font-bold">
+                  {creatingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Role Template"}
+                </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2B: EDIT ROLE TEMPLATE */}
+      {editingRole && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-green-800 text-white">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-green-300" />
+                <h3 className="font-bold text-base">Edit Role Template ({editingRole.role_name})</h3>
+              </div>
+              <button onClick={() => setEditingRole(null)} className="text-green-200 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="pt-3 flex items-center justify-end gap-2 border-t border-gray-200">
-              <button
-                onClick={() => setEditingSubAdminPerms(null)}
-                className="btn btn-ghost text-xs px-4 py-2"
-              >
-                Cancel
+            <form onSubmit={handleUpdateRole} className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Role Title / Name *</label>
+                <input
+                  type="text"
+                  className="form-input text-xs"
+                  value={editRoleName}
+                  onChange={(e) => setEditRoleName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Description</label>
+                <input
+                  type="text"
+                  className="form-input text-xs"
+                  value={editRoleDesc}
+                  onChange={(e) => setEditRoleDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="border border-gray-200 p-3.5 rounded-xl bg-gray-50 space-y-2">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <span className="font-bold text-gray-900 block">Default Allowed Sections for this Role</span>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <button type="button" onClick={() => handleSelectAllRoutes("editrole")} className="text-green-700 font-bold hover:underline">
+                      Select All
+                    </button>
+                    <span>·</span>
+                    <button type="button" onClick={() => handleClearAllRoutes("editrole")} className="text-red-600 font-bold hover:underline">
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {ADMIN_SECTIONS.map((sec) => {
+                    const checked = editRoleRoutes.includes(sec.href);
+                    return (
+                      <label
+                        key={sec.href}
+                        className={`p-2 rounded-lg border text-xs flex items-center gap-2 cursor-pointer ${
+                          checked ? "bg-green-50 border-green-300 text-green-900 font-bold" : "bg-white border-gray-200 text-gray-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRouteSelection(sec.href, "editrole")}
+                          className="rounded text-green-700 focus:ring-green-700"
+                        />
+                        <span>{sec.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setEditingRole(null)} className="btn btn-secondary text-xs px-4 py-2">
+                  Cancel
+                </button>
+                <button type="submit" disabled={savingRole} className="btn btn-primary text-xs px-5 py-2 font-bold flex items-center gap-1.5">
+                  {savingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Role Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2C: DELETE ROLE TEMPLATE CONFIRMATION */}
+      {deletingRole && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-red-800 text-white">
+              <h3 className="font-bold text-base">Confirm Role Template Deletion</h3>
+              <button onClick={() => setDeletingRole(null)} className="text-red-200 hover:text-white p-1">
+                <X className="w-5 h-5" />
               </button>
-              <button
-                onClick={handleUpdatePermissions}
-                disabled={updatingPerms}
-                className="btn btn-primary text-xs py-2 px-5 font-bold"
-              >
-                {updatingPerms ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                ) : (
-                  <><Check className="w-4 h-4" /> Update Rights</>
-                )}
-              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <p className="text-gray-700 font-medium">
+                Are you sure you want to delete the role template <strong className="text-gray-900">{deletingRole.role_name}</strong>?
+              </p>
+              <p className="text-[11px] text-gray-500">
+                This will remove the role template preset. Existing staff accounts assigned to this role key will retain their individual section permissions.
+              </p>
+
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setDeletingRole(null)} className="btn btn-secondary text-xs px-4 py-2">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteRole}
+                  disabled={deletingRoleAction}
+                  className="btn btn-danger text-xs px-5 py-2 font-bold flex items-center gap-1.5"
+                >
+                  {deletingRoleAction ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Confirm Delete Role
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 3: EDIT SUB-ADMIN PROFILE DETAILS */}
-      {/* ========================================================= */}
-      {editingSubAdminDetails && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-fade-in">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+      {/* MODAL 3: CUSTOMIZE PERMISSIONS FOR EXISTING STAFF */}
+      {editingStaffPerms && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-green-800 text-white">
               <div className="flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-green-700" />
-                <h3 className="font-bold text-base text-gray-900">Edit Sub-Admin Details</h3>
+                <Sliders className="w-5 h-5 text-green-300" />
+                <div>
+                  <h3 className="font-bold text-base">Customize Section Access</h3>
+                  <p className="text-xs text-green-200">{editingStaffPerms.full_name} ({editingStaffPerms.username})</p>
+                </div>
               </div>
-              <button onClick={() => setEditingSubAdminDetails(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setEditingStaffPerms(null)} className="text-green-200 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSubAdminDetails} className="space-y-3">
+            <div className="p-5 space-y-4 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 font-semibold">Toggle Accessible Menu Options:</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => handleSelectAllRoutes("edit")} className="text-green-700 font-bold hover:underline">
+                    Select All
+                  </button>
+                  <span>·</span>
+                  <button type="button" onClick={() => handleClearAllRoutes("edit")} className="text-red-600 font-bold hover:underline">
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {ADMIN_SECTIONS.map((sec) => {
+                  const checked = editRoutes.includes(sec.href);
+                  return (
+                    <label
+                      key={sec.href}
+                      className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                        checked
+                          ? "bg-green-50 border-green-300 text-green-900 font-bold"
+                          : "bg-gray-50 border-gray-200 text-gray-500"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRouteSelection(sec.href, "edit")}
+                        className="rounded text-green-700 focus:ring-green-700"
+                      />
+                      <span>{sec.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setEditingStaffPerms(null)} className="btn btn-secondary text-xs px-4 py-2">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdatePermissions}
+                  disabled={updatingPerms}
+                  className="btn btn-primary text-xs px-5 py-2 font-bold flex items-center gap-1.5"
+                >
+                  {updatingPerms ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Custom Access
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: EDIT DETAILS */}
+      {editingStaffDetails && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-gray-900 text-white">
+              <h3 className="font-bold text-base">Edit Account Details</h3>
+              <button onClick={() => setEditingStaffDetails(null)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
               <div>
-                <label className="form-label text-xs font-semibold">Full Name *</label>
+                <label className="font-semibold text-gray-700 block mb-1">Full Name</label>
                 <input
                   type="text"
-                  required
                   className="form-input text-xs"
                   value={editDetailForm.fullName}
                   onChange={(e) => setEditDetailForm({ ...editDetailForm, fullName: e.target.value })}
@@ -964,167 +1346,127 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold">Username *</label>
+                <label className="font-semibold text-gray-700 block mb-1">Username</label>
                 <input
                   type="text"
-                  required
                   className="form-input text-xs font-mono"
                   value={editDetailForm.username}
                   onChange={(e) => setEditDetailForm({ ...editDetailForm, username: e.target.value })}
                 />
-                <p className="text-[10px] text-gray-400 mt-1">
-                  Auth email will sync as: <span className="font-mono text-gray-600">{editDetailForm.username.toLowerCase()}@mellod.internal</span>
-                </p>
               </div>
 
               <div>
-                <label className="form-label text-xs font-semibold">Phone Number</label>
+                <label className="font-semibold text-gray-700 block mb-1">Assigned Role</label>
+                <select
+                  className="form-select text-xs font-bold"
+                  value={editDetailForm.role}
+                  onChange={(e) => setEditDetailForm({ ...editDetailForm, role: e.target.value })}
+                >
+                  {rolesList.map((r) => (
+                    <option key={r.role_key} value={r.role_key}>
+                      {r.role_name} ({r.role_key})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-semibold text-gray-700 block mb-1">Phone</label>
                 <input
-                  type="tel"
+                  type="text"
                   className="form-input text-xs"
-                  placeholder="+91 98765 43210"
                   value={editDetailForm.phone}
                   onChange={(e) => setEditDetailForm({ ...editDetailForm, phone: e.target.value })}
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setEditingSubAdminDetails(null)}
-                  className="btn btn-ghost text-xs px-4 py-2"
-                >
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setEditingStaffDetails(null)} className="btn btn-secondary text-xs px-4 py-2">
                   Cancel
                 </button>
-                <button type="submit" disabled={savingDetails} className="btn btn-primary text-xs py-2 px-4 font-bold">
-                  {savingDetails ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><Save className="w-3.5 h-3.5" /> Save Changes</>}
+                <button type="button" onClick={handleSaveDetails} disabled={savingDetails} className="btn btn-primary text-xs px-5 py-2 font-bold">
+                  {savingDetails ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 4: CHANGE SUB-ADMIN PASSWORD */}
-      {/* ========================================================= */}
-      {passwordSubAdmin && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-fade-in">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-              <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-600" />
-                <h3 className="font-bold text-base text-gray-900">Change Sub-Admin Password</h3>
-              </div>
-              <button onClick={() => setPasswordSubAdmin(null)} className="text-gray-400 hover:text-gray-600">
+      {/* MODAL 5: CHANGE PASSWORD */}
+      {passwordStaff && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-amber-800 text-white">
+              <h3 className="font-bold text-base">Change Password ({passwordStaff.full_name})</h3>
+              <button onClick={() => setPasswordStaff(null)} className="text-amber-200 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSubAdminPassword} className="space-y-4">
-              <div className="p-3 bg-amber-50 rounded-xl text-xs border border-amber-100">
-                <p className="font-semibold text-amber-900">
-                  Target Sub-Admin: {passwordSubAdmin.full_name} (@{passwordSubAdmin.username})
-                </p>
-                <p className="text-amber-700 text-[11px] mt-0.5">
-                  Updating password instantly syncs Supabase Auth credentials.
-                </p>
-              </div>
-
+            <div className="p-5 space-y-4 text-xs">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="form-label text-xs font-semibold !mb-0">New Password *</label>
-                  <button
-                    type="button"
-                    onClick={handleGenerateRandomPassword}
-                    className="text-[11px] font-semibold text-green-700 flex items-center gap-1 hover:underline"
-                  >
-                    <RefreshCw className="w-3 h-3" /> Generate Random
-                  </button>
-                </div>
+                <label className="font-semibold text-gray-700 block mb-1">New Password</label>
                 <div className="relative">
                   <input
-                    type={showNewSubAdminPassword ? "text" : "password"}
-                    className="form-input text-xs pr-10 font-mono"
-                    placeholder="Enter new password (min 6 chars)..."
-                    value={newSubAdminPassword}
-                    onChange={(e) => setNewSubAdminPassword(e.target.value)}
-                    required
+                    type={showNewStaffPassword ? "text" : "password"}
+                    className="form-input text-xs pr-8 font-mono"
+                    value={newStaffPassword}
+                    onChange={(e) => setNewStaffPassword(e.target.value)}
                   />
                   <button
                     type="button"
-                    onClick={() => setShowNewSubAdminPassword(!showNewSubAdminPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={() => setShowNewStaffPassword(!showNewStaffPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400"
                   >
-                    {showNewSubAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showNewStaffPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setPasswordSubAdmin(null)}
-                  className="btn btn-ghost text-xs px-4 py-2"
-                >
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setPasswordStaff(null)} className="btn btn-secondary text-xs px-4 py-2">
                   Cancel
                 </button>
-                <button type="submit" disabled={savingPassword || !newSubAdminPassword} className="btn btn-primary text-xs py-2 px-4 font-bold">
-                  {savingPassword ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...</> : <><Key className="w-3.5 h-3.5" /> Update Password</>}
+                <button type="button" onClick={handleSavePassword} disabled={savingPassword} className="btn btn-primary text-xs px-5 py-2 font-bold">
+                  {savingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update Password"}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL 5: DELETE SUB-ADMIN CONFIRMATION */}
-      {/* ========================================================= */}
-      {deletingSubAdmin && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl animate-fade-in border border-red-100">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-              <div className="flex items-center gap-2 text-red-600">
-                <AlertTriangle className="w-5 h-5" />
-                <h3 className="font-bold text-base text-gray-900">Delete Sub-Admin Account</h3>
-              </div>
-              <button onClick={() => setDeletingSubAdmin(null)} className="text-gray-400 hover:text-gray-600">
+      {/* MODAL 6: OFFBOARD/REACTIVATE CONFIRMATION */}
+      {deletingStaff && (
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 bg-red-800 text-white">
+              <h3 className="font-bold text-base">Confirm Status Toggle</h3>
+              <button onClick={() => setDeletingStaff(null)} className="text-red-200 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs text-gray-600">
-              <p>
-                Are you sure you want to permanently delete the Sub-Admin account for{" "}
-                <span className="font-bold text-gray-900">{deletingSubAdmin.full_name}</span> (
-                <span className="font-mono text-gray-700">@{deletingSubAdmin.username}</span>)?
+            <div className="p-5 space-y-4 text-xs">
+              <p className="text-gray-700 font-medium">
+                Are you sure you want to {deletingStaff.is_active === false ? "reactivate" : "offboard"} account for{" "}
+                <strong className="text-gray-900">{deletingStaff.full_name}</strong>?
               </p>
-              <p className="text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-200">
-                ⚠️ This action cannot be undone. All assigned route permissions and authentication credentials will be revoked immediately.
-              </p>
-            </div>
 
-            <div className="pt-3 flex items-center justify-end gap-2 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => setDeletingSubAdmin(null)}
-                className="btn btn-ghost text-xs px-4 py-2"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteSubAdmin}
-                disabled={deletingSubAdminAction}
-                className="btn bg-red-600 text-white hover:bg-red-700 text-xs py-2 px-4 font-bold"
-              >
-                {deletingSubAdminAction ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting...</>
-                ) : (
-                  <><Trash2 className="w-3.5 h-3.5" /> Confirm Delete</>
-                )}
-              </button>
+              <div className="pt-3 border-t flex justify-end gap-2">
+                <button type="button" onClick={() => setDeletingStaff(null)} className="btn btn-secondary text-xs px-4 py-2">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOffboard(deletingStaff)}
+                  disabled={deletingStaffAction}
+                  className="btn btn-danger text-xs px-5 py-2 font-bold"
+                >
+                  {deletingStaffAction ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Toggle"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1133,37 +1475,23 @@ export default function SettingsPage() {
   );
 }
 
-// ── Exported Component for Market Price Tab ──────────────────────────────────
-export function MarketPriceTab(props?: {
-  currentPrice?: PriceRecord | null;
-  priceHistory?: PriceRecord[];
-  inputPrice?: string;
-  setInputPrice?: (val: string) => void;
-  loadingPrice?: boolean;
-  fetchingPrice?: boolean;
-  priceSuccess?: boolean;
-  priceError?: string | null;
-  handleSetPrice?: (e: React.FormEvent) => void;
-}) {
+export function MarketPriceTab() {
+  const [currentPrice, setCurrentPrice] = useState<PriceRecord | null>(null);
+  const [priceHistory, setPriceHistory] = useState<PriceRecord[]>([]);
+  const [inputPrice, setInputPrice] = useState("");
+  const [loadingPrice, setLoadingPrice] = useState(false);
+  const [fetchingPrice, setFetchingPrice] = useState(true);
+  const [priceSuccess, setPriceSuccess] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
   const supabase = createClient();
-  const [internalCurrentPrice, setInternalCurrentPrice] = useState<PriceRecord | null>(null);
-  const [internalPriceHistory, setInternalPriceHistory] = useState<PriceRecord[]>([]);
-  const [internalInputPrice, setInternalInputPrice] = useState("");
-  const [internalLoadingPrice, setInternalLoadingPrice] = useState(false);
-  const [internalFetchingPrice, setInternalFetchingPrice] = useState(true);
-  const [internalPriceSuccess, setInternalPriceSuccess] = useState(false);
-  const [internalPriceError, setInternalPriceError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!props?.currentPrice && !props?.priceHistory) {
-      fetchPrices();
-    } else {
-      setInternalFetchingPrice(false);
-    }
-  }, [props?.currentPrice, props?.priceHistory]);
+    fetchPrices();
+  }, []);
 
   async function fetchPrices() {
-    setInternalFetchingPrice(true);
+    setFetchingPrice(true);
     const { data } = await supabase
       .from("daily_prices")
       .select("*")
@@ -1171,31 +1499,22 @@ export function MarketPriceTab(props?: {
       .limit(10);
 
     if (data && data.length > 0) {
-      setInternalCurrentPrice(data[0]);
-      setInternalPriceHistory(data);
+      setCurrentPrice(data[0]);
+      setPriceHistory(data);
     }
-    setInternalFetchingPrice(false);
+    setFetchingPrice(false);
   }
 
-  const currentPrice = props?.currentPrice !== undefined ? props.currentPrice : internalCurrentPrice;
-  const priceHistory = props?.priceHistory !== undefined ? props.priceHistory : internalPriceHistory;
-  const inputPrice = props?.inputPrice !== undefined ? props.inputPrice : internalInputPrice;
-  const setInputPrice = props?.setInputPrice || setInternalInputPrice;
-  const loadingPrice = props?.loadingPrice !== undefined ? props.loadingPrice : internalLoadingPrice;
-  const fetchingPrice = props?.fetchingPrice !== undefined ? props.fetchingPrice : internalFetchingPrice;
-  const priceSuccess = props?.priceSuccess !== undefined ? props.priceSuccess : internalPriceSuccess;
-  const priceError = props?.priceError !== undefined ? props.priceError : internalPriceError;
-
-  async function defaultHandleSetPrice(e: React.FormEvent) {
+  async function handleSetPrice(e: React.FormEvent) {
     e.preventDefault();
     const price = parseFloat(inputPrice);
     if (isNaN(price) || price <= 0) {
-      setInternalPriceError("Please enter a valid price greater than 0.");
+      setPriceError("Please enter a valid price greater than 0.");
       return;
     }
 
-    setInternalLoadingPrice(true);
-    setInternalPriceError(null);
+    setLoadingPrice(true);
+    setPriceError(null);
 
     const {
       data: { user },
@@ -1208,159 +1527,79 @@ export function MarketPriceTab(props?: {
     });
 
     if (insertError) {
-      setInternalPriceError(insertError.message);
+      setPriceError(insertError.message);
     } else {
-      setInternalPriceSuccess(true);
-      setInternalInputPrice("");
+      setPriceSuccess(true);
+      setInputPrice("");
       await fetchPrices();
-      setTimeout(() => setInternalPriceSuccess(false), 3000);
+      setTimeout(() => setPriceSuccess(false), 3000);
     }
-    setInternalLoadingPrice(false);
+    setLoadingPrice(false);
   }
 
-  const handleSetPrice = props?.handleSetPrice || defaultHandleSetPrice;
-
   return (
-    <div className="space-y-6">
-      {/* Current Price Banner */}
-      <div className="card p-6 bg-gradient-to-r from-green-800 to-green-700 text-white relative overflow-hidden shadow-lg">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="card p-6 bg-white space-y-4 lg:col-span-1 border border-gray-200">
+        <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+          <IndianRupee className="w-5 h-5 text-green-700" />
+          Update Daily UCO Price
+        </h2>
+        <p className="text-xs text-gray-500">
+          Set the benchmark rate (₹/Liter) offered to FBOs for verified oil collections.
+        </p>
+
+        <form onSubmit={handleSetPrice} className="space-y-4">
           <div>
-            <span className="text-xs uppercase tracking-wider text-green-200 font-semibold">
-              Current Live Market Rate
-            </span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-4xl font-extrabold font-mono">
-                {fetchingPrice ? "..." : currentPrice ? formatCurrency(currentPrice.price_per_liter) : "Not Set"}
-              </span>
-              <span className="text-sm text-green-200 font-medium">/ Liter</span>
-            </div>
-            {currentPrice && (
-              <p className="text-xs text-green-200 mt-2">
-                Last updated: {new Date(currentPrice.effective_from).toLocaleString("en-IN")}
-              </p>
-            )}
+            <label className="font-semibold text-xs text-gray-700 block mb-1">New Price per Liter (₹)</label>
+            <input
+              type="number"
+              step="0.5"
+              placeholder="e.g. 52.50"
+              className="form-input text-base font-bold font-mono"
+              value={inputPrice}
+              onChange={(e) => setInputPrice(e.target.value)}
+            />
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20">
-            <p className="text-xs text-green-100 font-medium mb-1">Standard Market Reference</p>
-            <p className="text-xs text-green-200">
-              This benchmark rate applies across all FBO procurement calculations & picker payouts.
-            </p>
-          </div>
-        </div>
+          {priceError && <p className="text-xs text-red-600 font-semibold">{priceError}</p>}
+          {priceSuccess && <p className="text-xs text-green-700 font-bold">Daily market price updated successfully!</p>}
+
+          <button
+            type="submit"
+            disabled={loadingPrice}
+            className="btn btn-primary w-full text-xs py-2.5 font-bold flex items-center justify-center gap-2"
+          >
+            {loadingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Publish New Benchmark Rate
+          </button>
+        </form>
       </div>
 
-      {/* Set New Price Form & History Table */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Price Update Form */}
-        <div className="card p-6 space-y-4">
-          <div>
-            <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-green-700" />
-              Update Market Price
-            </h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Set a new purchase price per liter for Used Cooking Oil.
-            </p>
+      <div className="card p-6 bg-white lg:col-span-2 space-y-4 border border-gray-200">
+        <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+          <History className="w-5 h-5 text-gray-700" />
+          Recent UCO Price History
+        </h2>
+
+        {fetchingPrice ? (
+          <div className="p-8 text-center text-gray-400">
+            <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto" />
           </div>
-
-          <form onSubmit={handleSetPrice} className="space-y-4">
-            <div>
-              <label className="form-label font-semibold text-gray-700">
-                New Rate (₹ per Liter) *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">
-                  ₹
-                </span>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="1"
-                  required
-                  placeholder="e.g. 55.00"
-                  className="form-input !pl-8 text-base font-bold font-mono"
-                  value={inputPrice}
-                  onChange={(e) => setInputPrice(e.target.value)}
-                />
+        ) : priceHistory.length === 0 ? (
+          <p className="text-xs text-gray-400">No price records found.</p>
+        ) : (
+          <div className="space-y-2">
+            {priceHistory.map((ph, idx) => (
+              <div key={ph.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-bold text-gray-900 text-sm">{formatCurrency(ph.price_per_liter)} / Liter</span>
+                  <span className="text-gray-400 block text-[11px]">Effective from {new Date(ph.effective_from).toLocaleString()}</span>
+                </div>
+                {idx === 0 && <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">Active Rate</span>}
               </div>
-            </div>
-
-            {priceError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs">
-                {priceError}
-              </div>
-            )}
-
-            {priceSuccess && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-xs flex items-center gap-2 font-semibold">
-                <CheckCircle2 className="w-4 h-4" /> Market price updated!
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loadingPrice}
-              className="btn btn-primary w-full py-3 text-sm font-bold shadow-md"
-            >
-              {loadingPrice ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" /> Updating...
-                </>
-              ) : (
-                "Publish New Price"
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Historical Rates Table */}
-        <div className="md:col-span-2 card p-6 space-y-4">
-          <div>
-            <h3 className="font-bold text-gray-900 text-base flex items-center gap-2">
-              <History className="w-5 h-5 text-gray-500" />
-              Rate History Log
-            </h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Historical benchmark price adjustments for reference audit.
-            </p>
+            ))}
           </div>
-
-          {fetchingPrice ? (
-            <div className="flex items-center justify-center py-8 text-gray-400">
-              <Loader2 className="w-6 h-6 animate-spin text-green-700 mr-2" />
-              Loading price log...
-            </div>
-          ) : priceHistory.length === 0 ? (
-            <div className="text-center py-8 text-gray-400 text-xs">
-              No historical price updates found.
-            </div>
-          ) : (
-            <div className="overflow-x-auto border border-gray-100 rounded-xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-100">
-                    <th className="px-4 py-3">Price / L</th>
-                    <th className="px-4 py-3">Effective Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-gray-700 font-mono">
-                  {priceHistory.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-bold text-green-800 text-sm">
-                        {formatCurrency(item.price_per_liter)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 font-sans">
-                        {new Date(item.effective_from).toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

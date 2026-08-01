@@ -736,17 +736,6 @@ export default function FinancialsPage() {
             <Download className="w-4 h-4 text-gray-600" />
             Export CSV
           </button>
-
-          <button
-            onClick={() => {
-              handleCancelEdit();
-              setShowFormModal(true);
-            }}
-            className="btn btn-primary text-xs flex items-center gap-1.5 py-2.5 px-4 shadow-sm font-semibold"
-          >
-            <Plus className="w-4 h-4" />
-            Log New Transaction
-          </button>
         </div>
       </div>
 
@@ -953,18 +942,25 @@ export default function FinancialsPage() {
         </div>
       </div>
 
-      {/* ── SECTION 2 & 3 Grid: Side Entry Form + Main Transaction Ledger ── */}
+      {/* ── SECTION 2 & 3 Grid: Side Form Container + Main Transaction Ledger ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Persistent Desktop Form Panel (4 cols) */}
+        {/* Form Panel (Log New Transaction / Edit Transaction) */}
         <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div className="flex items-center gap-2">
-              {editingTx ? <Pencil className="w-5 h-5 text-amber-600" /> : <ShieldCheck className="w-5 h-5 text-green-700" />}
-              <h2 className="font-bold text-gray-900 text-base">
-                {editingTx ? "Edit Transaction" : "Log New Transaction"}
-              </h2>
+              {editingTx ? (
+                <>
+                  <Pencil className="w-5 h-5 text-amber-600" />
+                  <h2 className="font-bold text-gray-900 text-base">Edit Transaction</h2>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 text-green-700" />
+                  <h2 className="font-bold text-gray-900 text-base">Log New Transaction</h2>
+                </>
+              )}
             </div>
-            {editingTx ? (
+            {editingTx && (
               <button
                 type="button"
                 onClick={handleCancelEdit}
@@ -972,10 +968,6 @@ export default function FinancialsPage() {
               >
                 Cancel Edit
               </button>
-            ) : (
-              <span className="badge bg-green-50 text-green-800 text-[10px] uppercase font-bold">
-                Manual Form
-              </span>
             )}
           </div>
 
@@ -1187,25 +1179,32 @@ export default function FinancialsPage() {
               type="submit"
               disabled={formSubmitting}
               className={`btn text-xs font-bold w-full py-3 shadow-md flex items-center justify-center gap-2 ${
-                editingTx ? "bg-amber-600 hover:bg-amber-700 text-white" : "btn-primary"
+                editingTx
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-green-700 hover:bg-green-800 text-white"
               }`}
             >
               {formSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {editingTx ? "Updating..." : "Saving Transaction..."}
+                  {editingTx ? "Updating..." : "Saving..."}
+                </>
+              ) : editingTx ? (
+                <>
+                  <Pencil className="w-4 h-4" />
+                  Update Transaction
                 </>
               ) : (
                 <>
-                  {editingTx ? <Pencil className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-                  {editingTx ? "Update Transaction" : "Save Transaction"}
+                  <Plus className="w-4 h-4" />
+                  Record Transaction
                 </>
               )}
             </button>
           </form>
         </div>
 
-        {/* ── SECTION 3: Transaction Ledger Table (8 cols) ────────────────── */}
+        {/* ── SECTION 3: Transaction Ledger Table (8 cols) ── */}
         <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
             <div>
@@ -1507,12 +1506,192 @@ export default function FinancialsPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 lg:hidden">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="font-bold text-gray-900 text-base">Log New Transaction</h2>
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-green-700" />
+                <h2 className="font-bold text-gray-900 text-base">Log New Transaction</h2>
+              </div>
               <button onClick={() => setShowFormModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-gray-500">Enter details to record financial transaction into ledger.</p>
+
+            <form
+              onSubmit={async (e) => {
+                await handleSaveTransaction(e);
+                setShowFormModal(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1.5">
+                  Transaction Type *
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 bg-gray-100 p-1 rounded-xl text-xs font-semibold">
+                  {(["Income", "Expense", "Asset", "Transfer", "Liability"] as TransactionType[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => handleTypeChange(t)}
+                      className={`py-2 px-1.5 rounded-lg text-center transition-all ${
+                        formType === t
+                          ? TYPE_BTN_ACTIVE[t]
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-200/60"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Category *
+                </label>
+                <select
+                  className="form-input text-sm font-semibold bg-white"
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value)}
+                >
+                  {CATEGORIES_BY_TYPE[formType].map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Amount (₹) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-gray-400 text-sm">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="0.00"
+                    className="form-input !pl-8 font-bold text-base text-gray-900"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    className="form-input text-xs font-semibold"
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1">
+                    Reference ID *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="INV-2026-001"
+                    className="form-input text-xs font-bold uppercase tracking-wider"
+                    value={formReference}
+                    onChange={(e) => setFormReference(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Description / Notes
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., FBO payout for Royal Diner..."
+                  className="form-input text-xs"
+                  value={formNotes}
+                  onChange={(e) => setFormNotes(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Payment Mode
+                </label>
+                <div className="relative">
+                  <CreditCard className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <select
+                    className="form-input !pl-8 text-xs font-semibold bg-white"
+                    value={formPaymentMode}
+                    onChange={(e) => setFormPaymentMode(e.target.value as PaymentMode | "")}
+                  >
+                    <option value="">— Not specified —</option>
+                    {PAYMENT_MODES.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-700 block mb-1">
+                  Attach Receipt / Proof
+                </label>
+                <div className="relative border-2 border-dashed border-gray-200 hover:border-green-600 rounded-xl p-3 bg-gray-50 text-center transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex items-center justify-center gap-2 text-gray-500 text-xs">
+                    <UploadCloud className="w-4 h-4 text-green-700" />
+                    {formFile ? (
+                      <span className="font-semibold text-green-800 truncate max-w-[200px]">
+                        {formFile.name}
+                      </span>
+                    ) : (
+                      <span>Click or drag receipt file</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {formError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={formSubmitting}
+                className="btn text-xs font-bold w-full py-3 shadow-md flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 text-white"
+              >
+                {formSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Record Transaction
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}

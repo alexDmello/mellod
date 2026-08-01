@@ -21,6 +21,7 @@ import {
   ShieldAlert,
   Loader2,
   UserCog,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ const ALL_NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/financials", label: "Financials", icon: Wallet },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/pickers", label: "Pickup Reviews", icon: Truck },
   { href: "/admin/routes", label: "Routes", icon: Navigation },
   { href: "/admin/map", label: "Map", icon: MapPin },
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
@@ -65,19 +68,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           .eq("id", user.id)
           .single();
 
-        if (!profile || (profile.role !== "admin" && profile.role !== "sub_admin")) {
+        if (!profile || (profile.role === "fbo" || profile.role === "picker")) {
           router.push("/");
           return;
         }
 
-        setUserRole(profile.role as "admin" | "sub_admin");
+        setUserRole(profile.role as any);
         setUserName(profile.full_name || "Admin");
 
         if (profile.role === "admin") {
           // Super admin gets full access to all sections
           setAllowedRoutes(ALL_NAV_ITEMS.map((item) => item.href));
-        } else if (profile.role === "sub_admin") {
-          // Fetch sub-admin permissions
+        } else {
+          // Fetch role permissions for staff / manager / sub-admin
           const { data: perm } = await supabase
             .from("sub_admin_permissions")
             .select("allowed_routes")
@@ -87,7 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           const routes = perm?.allowed_routes || ["/admin"];
           setAllowedRoutes(routes);
 
-          // Check if current route is authorized for this sub-admin
+          // Check if current route is authorized for this user
           const isCurrentAllowed = routes.some((route: string) =>
             route === "/admin" ? pathname === "/admin" : pathname.startsWith(route)
           );

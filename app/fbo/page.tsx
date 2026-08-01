@@ -127,16 +127,28 @@ export default async function FBODashboard() {
         {/* Recent pickups */}
         {recentPickups.length > 0 && (
           <div className="card">
-            <div className="p-4 border-b border-gray-100">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-800">Recent Pickups</h2>
+              <span className="text-xs text-gray-400 font-medium">Verification Status</span>
             </div>
             <div className="divide-y divide-gray-50">
               {recentPickups.map((pickup: any) => (
                 <div key={pickup.id} className="flex items-center justify-between px-4 py-3.5">
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">
-                      {formatDate(pickup.picked_up_at)}
-                    </p>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-800">
+                        {formatDate(pickup.picked_up_at)}
+                      </p>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          pickup.status === "completed"
+                            ? "bg-green-100 text-green-800 border border-green-200"
+                            : "bg-amber-100 text-amber-900 border border-amber-200"
+                        }`}
+                      >
+                        {pickup.status === "completed" ? "Verified ✓" : "Pending Review ⏳"}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-400">{formatTime(pickup.picked_up_at)}</p>
                   </div>
                   <div className="text-right">

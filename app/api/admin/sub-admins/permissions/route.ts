@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-// GET: Fetch list of sub-admins with their profiles & permissions
+// GET: Fetch list of all internal staff/manager/sub-admin profiles & permissions
 export async function GET() {
   try {
     const userClient = await createClient();
@@ -16,19 +16,21 @@ export async function GET() {
 
     const adminClient = createAdminClient();
 
-    // Fetch all sub-admin profiles
-    const { data: subAdmins, error: subAdminError } = await adminClient
+    // Fetch all internal staff profiles (exclude external FBO and Picker roles, keep admin/sub_admin/manager/staff/custom)
+    const { data: staffProfiles, error: staffError } = await adminClient
       .from("profiles")
       .select("id, full_name, username, phone, role, created_at, generated_password")
-      .eq("role", "sub_admin")
+      .neq("role", "fbo")
+      .neq("role", "picker")
+      .neq("role", "admin")
       .order("created_at", { ascending: false });
 
-    if (subAdminError) {
-      return NextResponse.json({ error: subAdminError.message }, { status: 500 });
+    if (staffError) {
+      return NextResponse.json({ error: staffError.message }, { status: 500 });
     }
 
-    // Ensure all sub-admin auth emails and passwords are synced to internal auth format
-    for (const sa of subAdmins) {
+    // Ensure all internal auth emails and passwords are synced to internal auth format
+    for (const sa of staffProfiles || []) {
       if (sa.username && sa.generated_password) {
         const internalEmail = `${sa.username.trim().toLowerCase()}@mellod.internal`;
         try {
@@ -43,29 +45,25 @@ export async function GET() {
       }
     }
 
-    // Fetch permissions
-    const { data: permissions, error: permError } = await adminClient
+    // Fetch custom route permissions
+    const { data: permissions } = await adminClient
       .from("sub_admin_permissions")
       .select("*");
 
-    if (permError) {
-      return NextResponse.json({ error: permError.message }, { status: 500 });
-    }
+    const permMap = new Map((permissions || []).map((p) => [p.profile_id, p.allowed_routes]));
 
-    const permMap = new Map(permissions.map((p) => [p.profile_id, p.allowed_routes]));
-
-    const result = subAdmins.map((profile) => ({
+    const result = (staffProfiles || []).map((profile) => ({
       ...profile,
       allowed_routes: permMap.get(profile.id) || ["/admin"],
     }));
 
-    return NextResponse.json({ subAdmins: result });
+    return NextResponse.json({ subAdmins: result, staff: result });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
   }
 }
 
-// POST: Update allowed routes for a specific sub-admin profile
+// POST: Update allowed routes for a specific staff/sub-admin profile
 export async function POST(request: Request) {
   try {
     const userClient = await createClient();

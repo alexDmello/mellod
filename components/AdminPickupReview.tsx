@@ -123,7 +123,7 @@ export default function AdminPickupReview() {
 
       setMessage({
         type: "success",
-        text: targetStatus === "completed" ? "Pickup reviewed & approved successfully!" : "Pickup saved.",
+        text: targetStatus === "completed" ? "Pickup reviewed & verified! Released to FBO with Verified status." : "Pickup saved.",
       });
 
       await fetchPickups();
@@ -408,7 +408,7 @@ export default function AdminPickupReview() {
                           ) : (
                             <CheckCircle2 className="w-3.5 h-3.5" />
                           )}
-                          {p.status === "pending" ? "Approve Pickup" : "Save Changes"}
+                          {p.status === "pending" ? "Verify & Approve Pickup" : "Save Changes"}
                         </button>
                       </div>
                     </div>
