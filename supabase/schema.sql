@@ -1,5 +1,5 @@
 -- ============================================================
--- MELLOD UCO COLLECTION APP — SUPABASE SQL SCHEMA
+-- MELLOD UCO COLLECTION APP — SUPABASE SQL SCHEMA (COMBINED)
 -- Run this in the Supabase SQL Editor (Database > SQL Editor)
 -- ============================================================
 
@@ -12,7 +12,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================
 
 -- 1. PROFILES (extends Supabase auth.users)
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name   TEXT NOT NULL,
   role        TEXT NOT NULL CHECK (role IN ('admin', 'sub_admin', 'picker', 'fbo')),
@@ -23,7 +23,7 @@ CREATE TABLE public.profiles (
 );
 
 -- 2. FBOS (Food & Beverage Operators / Collection Points)
-CREATE TABLE public.fbos (
+CREATE TABLE IF NOT EXISTS public.fbos (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id    UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   business_name TEXT NOT NULL,
@@ -33,12 +33,13 @@ CREATE TABLE public.fbos (
   is_active     BOOLEAN DEFAULT TRUE,
   latitude      NUMERIC(9, 6),
   longitude     NUMERIC(9, 6),
+  fssai_license VARCHAR(100),
   created_at    TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at    TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- 3. PICKERS (Collection drivers/staff)
-CREATE TABLE public.pickers (
+CREATE TABLE IF NOT EXISTS public.pickers (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id   UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   vehicle_info TEXT,
@@ -48,7 +49,7 @@ CREATE TABLE public.pickers (
 );
 
 -- 4. DAILY PRICES (Admin-set market price per liter)
-CREATE TABLE public.daily_prices (
+CREATE TABLE IF NOT EXISTS public.daily_prices (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   price_per_liter NUMERIC(10, 2) NOT NULL CHECK (price_per_liter > 0),
   currency        TEXT DEFAULT 'INR',
@@ -58,7 +59,7 @@ CREATE TABLE public.daily_prices (
 );
 
 -- 5. ROUTES (Daily picker → FBO assignments)
-CREATE TABLE public.routes (
+CREATE TABLE IF NOT EXISTS public.routes (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   picker_id    UUID REFERENCES public.pickers(id) ON DELETE CASCADE NOT NULL,
   fbo_id       UUID REFERENCES public.fbos(id) ON DELETE CASCADE NOT NULL,
@@ -69,7 +70,7 @@ CREATE TABLE public.routes (
 );
 
 -- 6. PICKUPS (Core transaction table)
-CREATE TABLE public.pickups (
+CREATE TABLE IF NOT EXISTS public.pickups (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   picker_id       UUID REFERENCES public.pickers(id) NOT NULL,
   fbo_id          UUID REFERENCES public.fbos(id) NOT NULL,
@@ -85,7 +86,7 @@ CREATE TABLE public.pickups (
 );
 
 -- 7. PAYMENT METHODS (FBO bank/UPI details)
-CREATE TABLE public.payment_methods (
+CREATE TABLE IF NOT EXISTS public.payment_methods (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   fbo_id         UUID REFERENCES public.fbos(id) ON DELETE CASCADE NOT NULL,
   method_type    TEXT NOT NULL CHECK (method_type IN ('bank', 'upi', 'cash')),
@@ -102,7 +103,7 @@ CREATE TABLE public.payment_methods (
 );
 
 -- 8. ROUTE DEFINITIONS (Templates for grouping FBOs together with a default picker)
-CREATE TABLE public.route_definitions (
+CREATE TABLE IF NOT EXISTS public.route_definitions (
   id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name               TEXT NOT NULL UNIQUE,
   default_picker_id  UUID REFERENCES public.pickers(id) ON DELETE SET NULL,
@@ -111,7 +112,7 @@ CREATE TABLE public.route_definitions (
 );
 
 -- 9. ROUTE STOPS (FBOs assigned to a route template with sequence ordering)
-CREATE TABLE public.route_stops (
+CREATE TABLE IF NOT EXISTS public.route_stops (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   route_definition_id UUID REFERENCES public.route_definitions(id) ON DELETE CASCADE NOT NULL,
   fbo_id              UUID REFERENCES public.fbos(id) ON DELETE CASCADE NOT NULL,
@@ -121,7 +122,7 @@ CREATE TABLE public.route_stops (
 );
 
 -- 10. SUB-ADMIN PERMISSIONS (Granular route access for sub-admins)
-CREATE TABLE public.sub_admin_permissions (
+CREATE TABLE IF NOT EXISTS public.sub_admin_permissions (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id     UUID UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   allowed_routes TEXT[] NOT NULL DEFAULT '{}',
@@ -129,8 +130,22 @@ CREATE TABLE public.sub_admin_permissions (
   updated_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
+-- 11. FINANCIAL TRANSACTIONS (Financial Ledger)
+CREATE TABLE IF NOT EXISTS public.financial_transactions (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type             VARCHAR(20) NOT NULL CHECK (type IN ('Income', 'Expense', 'Asset', 'Transfer')),
+  category         VARCHAR(100) NOT NULL,
+  amount           NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+  transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  reference_id     VARCHAR(100) NOT NULL,
+  notes            TEXT,
+  proof_url        TEXT,
+  proof_name       TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ============================================================
--- STEP 2: ENABLE RLS ON ALL TABLES
+-- STEP 2: ENABLE RLS ON ALL TABLES & GRANT PERMISSIONS
 -- ============================================================
 
 ALTER TABLE public.profiles               ENABLE ROW LEVEL SECURITY;
@@ -143,6 +158,17 @@ ALTER TABLE public.payment_methods        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.route_definitions      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.route_stops            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sub_admin_permissions  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.financial_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Grant permissions to authenticated and anon roles
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
 
 -- ============================================================
 -- STEP 3: HELPER FUNCTIONS (SECURITY DEFINER to avoid RLS recursion)
@@ -190,7 +216,6 @@ CREATE POLICY "Admins manage fbos" ON public.fbos
     public.is_admin()
   );
 
--- NOTE: public.routes now exists, so this cross-table policy is safe
 CREATE POLICY "Pickers read assigned fbos" ON public.fbos
   FOR SELECT USING (
     EXISTS (
@@ -204,6 +229,10 @@ CREATE POLICY "Pickers read assigned fbos" ON public.fbos
 
 CREATE POLICY "FBOs read own record" ON public.fbos
   FOR SELECT USING (profile_id = auth.uid());
+
+CREATE POLICY "FBOs update own record" ON public.fbos
+  FOR UPDATE USING (profile_id = auth.uid())
+  WITH CHECK (profile_id = auth.uid());
 
 -- ── pickers ──────────────────────────────────────────────────
 CREATE POLICY "Admins manage pickers" ON public.pickers
@@ -314,8 +343,18 @@ CREATE POLICY "Sub admins read own permissions" ON public.sub_admin_permissions
     profile_id = auth.uid()
   );
 
+-- ── financial_transactions ─────────────────────────────────────
+CREATE POLICY "Allow read access for authenticated users" ON public.financial_transactions
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Allow insert access for authenticated users" ON public.financial_transactions
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Allow update/delete for authenticated users" ON public.financial_transactions
+  FOR ALL TO authenticated USING (true);
+
 -- ============================================================
--- STEP 4: VIEWS
+-- STEP 5: VIEWS
 -- ============================================================
 
 CREATE OR REPLACE VIEW public.fbo_stats AS
@@ -332,7 +371,7 @@ CREATE OR REPLACE VIEW public.fbo_stats AS
   GROUP BY f.id, f.business_name, f.profile_id;
 
 -- ============================================================
--- STEP 5: UPDATED_AT TRIGGER
+-- STEP 6: UPDATED_AT TRIGGER
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -351,92 +390,28 @@ CREATE TRIGGER set_route_definitions_updated_at     BEFORE UPDATE ON public.rout
 CREATE TRIGGER set_sub_admin_permissions_updated_at BEFORE UPDATE ON public.sub_admin_permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
--- STEP 6: ADMIN CREATION HELPER FUNCTION
--- Run this function anytime to create a Super Admin with ANY custom username & password:
--- Example: SELECT public.create_admin_user('my_custom_username', 'MySecurePassword123!', 'Admin Name');
+-- STEP 7: STORAGE BUCKET & STORAGE POLICIES
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION public.create_admin_user(
-  p_username TEXT,
-  p_password TEXT,
-  p_full_name TEXT DEFAULT 'Super Admin'
-) RETURNS UUID AS $$
-DECLARE
-  v_user_id UUID := gen_random_uuid();
-  v_email TEXT := LOWER(TRIM(p_username)) || '@mellod.internal';
-BEGIN
-  -- 1. Insert into auth.users using pgcrypto for password hashing
-  INSERT INTO auth.users (
-    id,
-    instance_id,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    aud,
-    role,
-    created_at,
-    updated_at
-  ) VALUES (
-    v_user_id,
-    '00000000-0000-0000-0000-000000000000',
-    v_email,
-    crypt(p_password, gen_salt('bf')),
-    NOW(),
-    '{"provider":"email","providers":["email"]}',
-    jsonb_build_object('full_name', p_full_name),
-    'authenticated',
-    'authenticated',
-    NOW(),
-    NOW()
-  );
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('pickup-photos', 'pickup-photos', true)
+ON CONFLICT (id) DO NOTHING;
 
-  -- 2. Insert into auth.identities (REQUIRED by Supabase GoTrue for password authentication)
-  INSERT INTO auth.identities (
-    id,
-    user_id,
-    identity_data,
-    provider,
-    provider_id,
-    last_sign_in_at,
-    created_at,
-    updated_at
-  ) VALUES (
-    gen_random_uuid(),
-    v_user_id,
-    jsonb_build_object('sub', v_user_id::text, 'email', v_email, 'email_verified', true),
-    'email',
-    v_email,
-    NOW(),
-    NOW(),
-    NOW()
-  );
+CREATE POLICY "Public Read Access for pickup-photos"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'pickup-photos');
 
-  -- 3. Insert into public.profiles
-  INSERT INTO public.profiles (
-    id,
-    full_name,
-    role,
-    username,
-    phone,
-    generated_password
-  ) VALUES (
-    v_user_id,
-    p_full_name,
-    'admin',
-    LOWER(TRIM(p_username)),
-    NULL,
-    p_password
-  );
+CREATE POLICY "Authenticated Upload for pickup-photos"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'pickup-photos');
 
-  RETURN v_user_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE POLICY "Authenticated Manage for pickup-photos"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'pickup-photos');
 
--- ============================================================
--- DONE. Next steps:
--- 1. Create "pickup-photos" Storage bucket (private) in dashboard
--- 2. Create your initial admin account by running:
---    SELECT public.create_admin_user('your_custom_username', 'your_custom_password', 'Admin Name');
--- ============================================================
+CREATE POLICY "Authenticated Delete for pickup-photos"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'pickup-photos');

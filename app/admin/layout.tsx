@@ -19,7 +19,8 @@ import {
   UserPlus,
   Settings,
   ShieldAlert,
-  Loader2
+  Loader2,
+  UserCog,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,7 @@ const ALL_NAV_ITEMS = [
   { href: "/admin/routes", label: "Routes", icon: Navigation },
   { href: "/admin/map", label: "Map", icon: MapPin },
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
-  { href: "/admin/credentials", label: "Credentials", icon: Key },
+  { href: "/admin/credentials", label: "Account Management", icon: UserCog },
   { href: "/admin/settings", label: "Sub-Admins & Settings", icon: Settings },
 ];
 

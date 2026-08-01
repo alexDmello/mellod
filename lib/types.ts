@@ -22,7 +22,7 @@ export const ADMIN_SECTIONS = [
   { href: "/admin/routes", label: "Routes", description: "Daily route scheduling & templates" },
   { href: "/admin/map", label: "Map", description: "Live GPS pickup tracking map" },
   { href: "/admin/onboarding", label: "Onboarding", description: "Register new FBOs & Pickers" },
-  { href: "/admin/credentials", label: "Credentials", description: "User password directory" },
+  { href: "/admin/credentials", label: "Account Management", description: "Offboard users, change passwords & update details" },
   { href: "/admin/settings", label: "Sub-Admins & Settings", description: "Sub-Admin access control & permissions" },
 ] as const;
 
