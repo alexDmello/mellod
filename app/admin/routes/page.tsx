@@ -874,6 +874,6 @@ export function RoutesManagementTab() {
   );
 }
 
-export default function AdminRoutesPage() {
+export default function RoutesManagementPage() {
   return <RoutesManagementTab />;
 }
