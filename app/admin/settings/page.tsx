@@ -120,11 +120,6 @@ export default function SettingsPage() {
   const [deletingRole, setDeletingRole] = useState<RoleTemplate | null>(null);
   const [deletingRoleAction, setDeletingRoleAction] = useState(false);
 
-  // Edit permissions modal state
-  const [editingStaffPerms, setEditingStaffPerms] = useState<StaffProfile | null>(null);
-  const [editRoutes, setEditRoutes] = useState<string[]>([]);
-  const [updatingPerms, setUpdatingPerms] = useState(false);
-
   // Edit staff details modal state
   const [editingStaffDetails, setEditingStaffDetails] = useState<StaffProfile | null>(null);
   const [editDetailForm, setEditDetailForm] = useState({ fullName: "", username: "", phone: "", role: "sub_admin" });
@@ -241,12 +236,8 @@ export default function SettingsPage() {
     setLoadingPrice(false);
   }
 
-  function toggleRouteSelection(route: string, target: "create" | "edit" | "newrole" | "editrole") {
-    if (target === "edit") {
-      setEditRoutes((prev) =>
-        prev.includes(route) ? prev.filter((r) => r !== route) : [...prev, route]
-      );
-    } else if (target === "newrole") {
+  function toggleRouteSelection(route: string, target: "create" | "newrole" | "editrole") {
+    if (target === "newrole") {
       setNewRoleRoutes((prev) =>
         prev.includes(route) ? prev.filter((r) => r !== route) : [...prev, route]
       );
@@ -261,17 +252,15 @@ export default function SettingsPage() {
     }
   }
 
-  function handleSelectAllRoutes(target: "create" | "edit" | "newrole" | "editrole") {
+  function handleSelectAllRoutes(target: "create" | "newrole" | "editrole") {
     const all = ADMIN_SECTIONS.map((s) => s.href);
-    if (target === "edit") setEditRoutes(all);
-    else if (target === "newrole") setNewRoleRoutes(all);
+    if (target === "newrole") setNewRoleRoutes(all);
     else if (target === "editrole") setEditRoleRoutes(all);
     else setSelectedRoutes(all);
   }
 
-  function handleClearAllRoutes(target: "create" | "edit" | "newrole" | "editrole") {
-    if (target === "edit") setEditRoutes([]);
-    else if (target === "newrole") setNewRoleRoutes([]);
+  function handleClearAllRoutes(target: "create" | "newrole" | "editrole") {
+    if (target === "newrole") setNewRoleRoutes([]);
     else if (target === "editrole") setEditRoleRoutes([]);
     else setSelectedRoutes([]);
   }
@@ -423,34 +412,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleUpdatePermissions() {
-    if (!editingStaffPerms) return;
-    setUpdatingPerms(true);
-
-    try {
-      const res = await fetch("/api/admin/sub-admins/permissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          profileId: editingStaffPerms.id,
-          allowedRoutes: editRoutes,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to update permissions.");
-      }
-
-      setEditingStaffPerms(null);
-      await fetchStaffAndRoles();
-    } catch (err: any) {
-      alert(err.message || "Error updating permissions");
-    } finally {
-      setUpdatingPerms(false);
-    }
-  }
-
   async function handleSaveDetails() {
     if (!editingStaffDetails) return;
     setSavingDetails(true);
@@ -563,11 +524,11 @@ export default function SettingsPage() {
               <Settings className="w-5 h-5" />
             </div>
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-              System Administration & Role Control
+              Roles & System Settings
             </h1>
           </div>
           <p className="text-xs text-gray-500 font-medium">
-            Manage custom roles, staff account section permissions, and baseline market UCO procurement rates.
+            Manage custom role templates, staff user accounts, and baseline market UCO procurement rates.
           </p>
         </div>
 
@@ -636,10 +597,10 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
                 <Users className="w-5 h-5 text-green-700" />
-                Staff Accounts & Role Credentials
+                Staff Accounts & Roles
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Create staff credentials by assigning a defined Role Template. Access permissions for admin sections are automatically inherited from the selected role.
+                Create staff credentials by assigning a defined Role Template. Section access permissions are automatically inherited from the selected role.
               </p>
             </div>
 
@@ -661,7 +622,7 @@ export default function SettingsPage() {
             <div className="card p-12 text-center text-gray-400 bg-white">
               <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
               <p className="font-bold text-gray-700 text-sm">No internal staff accounts found</p>
-              <p className="text-xs text-gray-400 mt-1">Create accounts for managers, staff, or sub-admins to delegate portal options.</p>
+              <p className="text-xs text-gray-400 mt-1">Create accounts for staff or sub-admins to delegate portal access.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
@@ -691,24 +652,14 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
-                          setEditingStaffPerms(sa);
-                          setEditRoutes(sa.allowed_routes || []);
-                        }}
-                        className="btn btn-secondary text-xs py-1.5 px-3 bg-white border border-gray-200 text-gray-800 hover:bg-gray-50 font-semibold flex items-center gap-1.5"
-                      >
-                        <Sliders className="w-3.5 h-3.5 text-green-700" />
-                        Customize Access ({sa.allowed_routes?.length || 0})
-                      </button>
-
-                      <button
-                        onClick={() => {
                           setEditingStaffDetails(sa);
                           setEditDetailForm({ fullName: sa.full_name, username: sa.username, phone: sa.phone || "", role: sa.role });
                         }}
-                        className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
+                        className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold flex items-center gap-1.5"
                         title="Edit Details"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Edit Details</span>
                       </button>
 
                       <button
@@ -1269,79 +1220,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* MODAL 3: CUSTOMIZE PERMISSIONS FOR EXISTING STAFF */}
-      {editingStaffPerms && (
-        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-200">
-            <div className="flex items-center justify-between px-5 py-4 bg-green-800 text-white">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-green-300" />
-                <div>
-                  <h3 className="font-bold text-base">Customize Section Access</h3>
-                  <p className="text-xs text-green-200">{editingStaffPerms.full_name} ({editingStaffPerms.username})</p>
-                </div>
-              </div>
-              <button onClick={() => setEditingStaffPerms(null)} className="text-green-200 hover:text-white p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 font-semibold">Toggle Accessible Menu Options:</span>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => handleSelectAllRoutes("edit")} className="text-green-700 font-bold hover:underline">
-                    Select All
-                  </button>
-                  <span>·</span>
-                  <button type="button" onClick={() => handleClearAllRoutes("edit")} className="text-red-600 font-bold hover:underline">
-                    Clear All
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {ADMIN_SECTIONS.map((sec) => {
-                  const checked = editRoutes.includes(sec.href);
-                  return (
-                    <label
-                      key={sec.href}
-                      className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                        checked
-                          ? "bg-green-50 border-green-300 text-green-900 font-bold"
-                          : "bg-gray-50 border-gray-200 text-gray-500"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleRouteSelection(sec.href, "edit")}
-                        className="rounded text-green-700 focus:ring-green-700"
-                      />
-                      <span>{sec.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              <div className="pt-3 border-t flex justify-end gap-2">
-                <button type="button" onClick={() => setEditingStaffPerms(null)} className="btn btn-secondary text-xs px-4 py-2">
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleUpdatePermissions}
-                  disabled={updatingPerms}
-                  className="btn btn-primary text-xs px-5 py-2 font-bold flex items-center gap-1.5"
-                >
-                  {updatingPerms ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Save Custom Access
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL 4: EDIT DETAILS */}
       {editingStaffDetails && (

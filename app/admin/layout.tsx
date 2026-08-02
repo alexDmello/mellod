@@ -34,7 +34,7 @@ const ALL_NAV_ITEMS = [
   { href: "/admin/map", label: "Map", icon: MapPin },
   { href: "/admin/onboarding", label: "Onboarding", icon: UserPlus },
   { href: "/admin/credentials", label: "Account Management", icon: UserCog },
-  { href: "/admin/settings", label: "Sub-Admins & Settings", icon: Settings },
+  { href: "/admin/settings", label: "Roles & System Settings", icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

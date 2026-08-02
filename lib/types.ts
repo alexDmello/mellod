@@ -17,7 +17,7 @@ export const ADMIN_SECTIONS = [
   { href: "/admin/map", label: "Map", description: "Live GPS pickup tracking map" },
   { href: "/admin/onboarding", label: "Onboarding", description: "Register new FBOs & Pickers" },
   { href: "/admin/credentials", label: "Account Management", description: "Offboard users, change passwords & update details" },
-  { href: "/admin/settings", label: "Sub-Admins & Settings", description: "Sub-Admin access control & permissions" },
+  { href: "/admin/settings", label: "Roles & System Settings", description: "Role templates, staff access & market price settings" },
 ] as const;
 
 // ---------------------------------------------------------------
