@@ -7,14 +7,6 @@ export type Role = "admin" | "sub_admin" | "picker" | "fbo";
 export type PickupStatus = "pending" | "completed" | "disputed";
 export type PaymentMethodType = "bank" | "upi" | "cash";
 
-export interface SubAdminPermission {
-  id: string;
-  profile_id: string;
-  allowed_routes: string[];
-  created_at: string;
-  updated_at: string;
-}
-
 export const ADMIN_SECTIONS = [
   { href: "/admin", label: "Dashboard", description: "Main stats & system overview" },
   { href: "/admin/analytics", label: "Analytics", description: "Volume trends & performance metrics" },
@@ -68,11 +60,6 @@ export type Database = {
         Row: PaymentMethod;
         Insert: Omit<PaymentMethod, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<PaymentMethod, "id" | "created_at">>;
-      };
-      sub_admin_permissions: {
-        Row: SubAdminPermission;
-        Insert: Omit<SubAdminPermission, "id" | "created_at" | "updated_at">;
-        Update: Partial<Omit<SubAdminPermission, "id" | "created_at">>;
       };
     };
     Views: {

@@ -29,14 +29,14 @@ export default function LoginPage() {
           if (profile) {
             let dest = "/admin";
             if (profile.role !== "admin" && profile.role !== "picker" && profile.role !== "fbo") {
-              const { data: perm } = await supabase
-                .from("sub_admin_permissions")
-                .select("allowed_routes")
-                .eq("profile_id", user.id)
+              const { data: roleData } = await supabase
+                .from("custom_roles")
+                .select("default_routes")
+                .eq("role_key", profile.role)
                 .maybeSingle();
 
-              if (perm?.allowed_routes && perm.allowed_routes.length > 0) {
-                dest = perm.allowed_routes[0];
+              if (roleData?.default_routes && roleData.default_routes.length > 0) {
+                dest = roleData.default_routes[0];
               }
             } else if (profile.role === "picker") {
               const { data: picker } = await supabase
@@ -122,14 +122,14 @@ export default function LoginPage() {
 
     let destination = "/admin";
     if (profile.role !== "admin" && profile.role !== "picker" && profile.role !== "fbo") {
-      const { data: perm } = await supabase
-        .from("sub_admin_permissions")
-        .select("allowed_routes")
-        .eq("profile_id", data.user.id)
+      const { data: roleData } = await supabase
+        .from("custom_roles")
+        .select("default_routes")
+        .eq("role_key", profile.role)
         .maybeSingle();
 
-      if (perm?.allowed_routes && perm.allowed_routes.length > 0) {
-        destination = perm.allowed_routes[0];
+      if (roleData?.default_routes && roleData.default_routes.length > 0) {
+        destination = roleData.default_routes[0];
       }
     } else if (profile.role === "picker") {
       const { data: picker } = await supabase

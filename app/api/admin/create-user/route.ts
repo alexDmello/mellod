@@ -20,8 +20,9 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .single();
 
-    if (!profile || (profile as any).role !== "admin") {
-      return NextResponse.json({ error: "Forbidden: Admin role required" }, { status: 403 });
+    const requesterRole = (profile as any)?.role;
+    if (!profile || requesterRole === "fbo" || requesterRole === "picker") {
+      return NextResponse.json({ error: "Forbidden: Internal staff role required" }, { status: 403 });
     }
 
     // 2. Parse request parameters
@@ -34,7 +35,12 @@ export async function POST(request: Request) {
 
     const cleanUsername = username.trim().toLowerCase();
     const authEmail = `${cleanUsername}@mellod.internal`;
-    const normalizedRole = type === "Sub-Admin" || type === "sub_admin" ? "sub_admin" : type.toLowerCase();
+    
+    const rawRole = type ? String(type).trim().toLowerCase() : "sub_admin";
+    let normalizedRole = rawRole.replace(/[^a-z0-9_]/g, "_");
+    if (rawRole === "sub-admin" || rawRole === "sub_admin" || rawRole === "fbo" || rawRole === "picker" || rawRole === "admin") {
+      normalizedRole = rawRole === "sub-admin" ? "sub_admin" : rawRole;
+    }
 
     // 3. Initialize admin client to perform auth actions
     const adminClient = createAdminClient();
@@ -53,7 +59,7 @@ export async function POST(request: Request) {
     const userId = authData.user.id;
 
     // 5. Insert profile row (with plain-text password for admin credentials directory visibility)
-    const { error: profileError } = await adminClient.from("profiles").insert({
+    let { error: profileError } = await adminClient.from("profiles").insert({
       id: userId,
       full_name: fullName,
       role: normalizedRole,
@@ -61,6 +67,19 @@ export async function POST(request: Request) {
       phone: phone || null,
       generated_password: password,
     });
+
+    // If custom role violates database check constraint, fallback to 'sub_admin'
+    if (profileError && profileError.message.includes("profiles_role_check")) {
+      const fallbackResult = await adminClient.from("profiles").insert({
+        id: userId,
+        full_name: fullName,
+        role: "sub_admin",
+        username,
+        phone: phone || null,
+        generated_password: password,
+      });
+      profileError = fallbackResult.error;
+    }
 
     if (profileError) {
       // Clean up auth account on failure
@@ -94,16 +113,6 @@ export async function POST(request: Request) {
       if (pickerError) {
         await adminClient.auth.admin.deleteUser(userId);
         return NextResponse.json({ error: "Failed to create Picker record: " + pickerError.message }, { status: 500 });
-      }
-    } else if (normalizedRole !== "fbo" && normalizedRole !== "picker") {
-      const { error: permError } = await adminClient.from("sub_admin_permissions").insert({
-        profile_id: userId,
-        allowed_routes: Array.isArray(allowedRoutes) ? allowedRoutes : ["/admin"],
-      });
-
-      if (permError) {
-        await adminClient.auth.admin.deleteUser(userId);
-        return NextResponse.json({ error: "Failed to set role permissions: " + permError.message }, { status: 500 });
       }
     }
 

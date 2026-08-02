@@ -24,8 +24,8 @@ export async function POST(request: Request) {
       .single();
 
     const requesterRole = (profile as any)?.role;
-    if (!profile || (requesterRole !== "admin" && requesterRole !== "sub_admin")) {
-      return NextResponse.json({ error: "Forbidden: Admin or Sub-Admin role required" }, { status: 403 });
+    if (!profile || requesterRole === "fbo" || requesterRole === "picker") {
+      return NextResponse.json({ error: "Forbidden: Internal staff role required" }, { status: 403 });
     }
 
     // 2. Parse request body
@@ -78,8 +78,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Delete action is currently only allowed for staff/sub-admin accounts" }, { status: 400 });
       }
 
-      // Delete permissions
-      await adminClient.from("sub_admin_permissions").delete().eq("profile_id", userId);
       // Delete profile
       await adminClient.from("profiles").delete().eq("id", userId);
       // Delete auth user

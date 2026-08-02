@@ -56,15 +56,15 @@ export async function proxy(request: NextRequest) {
       if (profile) {
         const p = profile as { role: string };
         let destination = "/admin";
-        if (p.role === "sub_admin") {
-          const { data: perm } = await supabase
-            .from("sub_admin_permissions")
-            .select("allowed_routes")
-            .eq("profile_id", user.id)
+        if (p.role !== "admin" && p.role !== "picker" && p.role !== "fbo") {
+          const { data: roleData } = await supabase
+            .from("custom_roles")
+            .select("default_routes")
+            .eq("role_key", p.role)
             .maybeSingle();
 
-          if (perm?.allowed_routes && perm.allowed_routes.length > 0) {
-            destination = perm.allowed_routes[0];
+          if (roleData?.default_routes && roleData.default_routes.length > 0) {
+            destination = roleData.default_routes[0];
           }
         } else if (p.role === "picker") {
           destination = "/picker";
@@ -95,14 +95,17 @@ export async function proxy(request: NextRequest) {
 
   const role = (profile as { role: string }).role;
 
-  if (pathname.startsWith("/admin") && role !== "admin" && role !== "sub_admin") {
-    return NextResponse.redirect(new URL(role === "picker" ? "/picker" : "/fbo", request.url));
+  if (pathname.startsWith("/admin") && role === "picker") {
+    return NextResponse.redirect(new URL("/picker", request.url));
+  }
+  if (pathname.startsWith("/admin") && role === "fbo") {
+    return NextResponse.redirect(new URL("/fbo", request.url));
   }
   if (pathname.startsWith("/picker") && role !== "picker") {
-    return NextResponse.redirect(new URL(`/${role}`, request.url));
+    return NextResponse.redirect(new URL(role === "fbo" ? "/fbo" : "/admin", request.url));
   }
   if (pathname.startsWith("/fbo") && role !== "fbo") {
-    return NextResponse.redirect(new URL(`/${role}`, request.url));
+    return NextResponse.redirect(new URL(role === "picker" ? "/picker" : "/admin", request.url));
   }
 
   return supabaseResponse;

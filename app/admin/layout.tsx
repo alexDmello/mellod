@@ -43,7 +43,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // User & Access Control State
-  const [userRole, setUserRole] = useState<"admin" | "sub_admin" | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoleName, setUserRoleName] = useState<string>("");
   const [allowedRoutes, setAllowedRoutes] = useState<string[]>([]);
   const [loadingUser, setLoadingUser] = useState(true);
   const [userName, setUserName] = useState<string>("");
@@ -71,19 +72,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           return;
         }
 
-        setUserRole(profile.role as any);
+        setUserRole(profile.role);
         setUserName(profile.full_name || "Admin");
 
         if (profile.role === "admin") {
+          setUserRoleName("Super Admin");
           setAllowedRoutes(ALL_NAV_ITEMS.map((item) => item.href));
         } else {
-          const { data: perm } = await supabase
-            .from("sub_admin_permissions")
-            .select("allowed_routes")
-            .eq("profile_id", user.id)
+          const { data: roleData } = await supabase
+            .from("custom_roles")
+            .select("role_name, default_routes")
+            .eq("role_key", profile.role)
             .maybeSingle();
 
-          const routes = perm?.allowed_routes || ["/admin"];
+          const formattedRoleName =
+            roleData?.role_name ||
+            profile.role
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+          setUserRoleName(formattedRoleName);
+
+          const routes = roleData?.default_routes || ["/admin"];
           setAllowedRoutes(routes);
 
           const isCurrentAllowed = routes.some((route: string) =>
@@ -157,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="text-slate-400 text-[11px] mt-1 font-medium flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
-            <span>{userRole === "sub_admin" ? "Sub-Admin Portal" : "Super-Admin Panel"}</span>
+            <span>{userRole === "admin" ? "Super-Admin Panel" : `${userRoleName || "Staff"} Portal`}</span>
           </div>
         </div>
         {mobile && (
@@ -173,8 +183,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* User Info Header at Top */}
       <div className="px-5 py-3 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
         <span className="font-semibold truncate max-w-[140px] text-slate-200">{userName}</span>
-        <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase px-2 py-0.5 rounded-full font-bold">
-          {userRole === "sub_admin" ? "Sub Admin" : "Super Admin"}
+        <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase px-2 py-0.5 rounded-full font-bold truncate max-w-[90px]">
+          {userRoleName || (userRole === "admin" ? "Super Admin" : "Staff")}
         </span>
       </div>
 
@@ -257,8 +267,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <img src="/icons/logo.png" alt="Mellod Logo" className="w-6 h-6 object-contain" />
             <span className="text-white font-bold text-sm">Mellod Biofuels</span>
           </div>
-          <span className="ml-auto bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase px-2 py-0.5 rounded-full font-bold">
-            {userRole === "sub_admin" ? "Sub Admin" : "Super Admin"}
+          <span className="ml-auto bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase px-2 py-0.5 rounded-full font-bold truncate max-w-[90px]">
+            {userRoleName || (userRole === "admin" ? "Super Admin" : "Staff")}
           </span>
         </header>
 

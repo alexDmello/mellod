@@ -15,7 +15,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS public.profiles (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name   TEXT NOT NULL,
-  role        TEXT NOT NULL CHECK (role IN ('admin', 'sub_admin', 'picker', 'fbo')),
+  role        TEXT NOT NULL,
   username    TEXT UNIQUE NOT NULL,
   phone       TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -122,14 +122,6 @@ CREATE TABLE IF NOT EXISTS public.route_stops (
   UNIQUE (route_definition_id, fbo_id)
 );
 
--- 10. SUB-ADMIN PERMISSIONS (Granular route access for sub-admins)
-CREATE TABLE IF NOT EXISTS public.sub_admin_permissions (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id     UUID UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  allowed_routes TEXT[] NOT NULL DEFAULT '{}',
-  created_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL
-);
 
 -- 11. FINANCIAL TRANSACTIONS (Financial Ledger)
 CREATE TABLE IF NOT EXISTS public.financial_transactions (
@@ -158,7 +150,6 @@ ALTER TABLE public.pickups                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_methods        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.route_definitions      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.route_stops            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sub_admin_permissions  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Grant permissions to authenticated and anon roles
@@ -179,7 +170,7 @@ CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('admin', 'sub_admin')
+    SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role NOT IN ('fbo', 'picker')
   );
 END;
 $$ LANGUAGE plpgsql;
@@ -333,16 +324,6 @@ CREATE POLICY "Authenticated users read route stops" ON public.route_stops
     true
   );
 
--- ── sub_admin_permissions ──────────────────────────────────────
-CREATE POLICY "Admins manage sub_admin_permissions" ON public.sub_admin_permissions
-  FOR ALL USING (
-    public.is_admin()
-  );
-
-CREATE POLICY "Sub admins read own permissions" ON public.sub_admin_permissions
-  FOR SELECT USING (
-    profile_id = auth.uid()
-  );
 
 -- ── financial_transactions ─────────────────────────────────────
 CREATE POLICY "Allow read access for authenticated users" ON public.financial_transactions
@@ -388,7 +369,6 @@ CREATE TRIGGER set_fbos_updated_at                  BEFORE UPDATE ON public.fbos
 CREATE TRIGGER set_pickers_updated_at               BEFORE UPDATE ON public.pickers               FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER set_payment_methods_updated_at       BEFORE UPDATE ON public.payment_methods       FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER set_route_definitions_updated_at     BEFORE UPDATE ON public.route_definitions     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER set_sub_admin_permissions_updated_at BEFORE UPDATE ON public.sub_admin_permissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
 -- STEP 7: STORAGE BUCKET & STORAGE POLICIES

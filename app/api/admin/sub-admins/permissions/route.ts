@@ -45,16 +45,16 @@ export async function GET() {
       }
     }
 
-    // Fetch custom route permissions
-    const { data: permissions } = await adminClient
-      .from("sub_admin_permissions")
-      .select("*");
+    // Fetch role templates mapping for default routes
+    const { data: customRoles } = await adminClient
+      .from("custom_roles")
+      .select("role_key, default_routes");
 
-    const permMap = new Map((permissions || []).map((p) => [p.profile_id, p.allowed_routes]));
+    const roleRouteMap = new Map((customRoles || []).map((r) => [r.role_key, r.default_routes]));
 
     const result = (staffProfiles || []).map((profile) => ({
       ...profile,
-      allowed_routes: permMap.get(profile.id) || ["/admin"],
+      allowed_routes: roleRouteMap.get(profile.role) || ["/admin"],
     }));
 
     return NextResponse.json({ subAdmins: result, staff: result });
@@ -63,7 +63,7 @@ export async function GET() {
   }
 }
 
-// POST: Update allowed routes for a specific staff/sub-admin profile
+// POST: Update staff role / permissions
 export async function POST(request: Request) {
   try {
     const userClient = await createClient();
@@ -85,27 +85,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { profileId, allowedRoutes } = body;
+    const { profileId, role } = body;
 
-    if (!profileId || !Array.isArray(allowedRoutes)) {
-      return NextResponse.json({ error: "Invalid payload: profileId and allowedRoutes array required" }, { status: 400 });
-    }
-
-    const adminClient = createAdminClient();
-
-    // Upsert into sub_admin_permissions
-    const { error: upsertError } = await adminClient
-      .from("sub_admin_permissions")
-      .upsert(
-        {
-          profile_id: profileId,
-          allowed_routes: allowedRoutes,
-        },
-        { onConflict: "profile_id" }
-      );
-
-    if (upsertError) {
-      return NextResponse.json({ error: "Failed to update permissions: " + upsertError.message }, { status: 500 });
+    if (profileId && role) {
+      const adminClient = createAdminClient();
+      await adminClient.from("profiles").update({ role }).eq("id", profileId);
     }
 
     return NextResponse.json({ success: true });
