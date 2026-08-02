@@ -208,9 +208,34 @@ export default function PickerDashboard() {
 
       <div className="px-4 mt-5 space-y-4">
         {loading ? (
-          <div className="bg-white rounded-2xl p-12 text-center flex flex-col items-center justify-center border border-gray-100 shadow-xl shadow-gray-200/80">
-            <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mb-3" />
-            <p className="text-xs font-bold text-gray-700">Loading assigned route stops...</p>
+          <div className="space-y-4 animate-fade-in">
+            {/* Loading Skeleton Header */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-md flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-300/40 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-slate-200 rounded-lg w-2/3 animate-pulse" />
+                <div className="h-3 bg-slate-100 rounded-lg w-1/2 animate-pulse" />
+              </div>
+            </div>
+
+            {/* Skeleton Cards List */}
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-2xl bg-slate-100 animate-pulse" />
+                    <div className="space-y-1.5">
+                      <div className="h-4 bg-slate-200 rounded-md w-36 animate-pulse" />
+                      <div className="h-3 bg-slate-100 rounded-md w-24 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="w-16 h-6 rounded-full bg-slate-100 animate-pulse" />
+                </div>
+                <div className="h-10 bg-slate-50 rounded-2xl border border-slate-100 animate-pulse" />
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-rose-100 shadow-xl text-rose-600">

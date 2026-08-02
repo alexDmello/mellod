@@ -274,9 +274,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
           {loadingUser ? (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-green-700" />
-              <p className="text-sm font-medium text-gray-500">Verifying access permissions...</p>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+              <div className="w-full max-w-sm p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-2xl flex flex-col items-center text-center space-y-5 animate-fade-in relative overflow-hidden">
+                <div className="absolute w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none -top-10 -right-10" />
+                
+                <div className="relative flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl border-2 border-emerald-500/20 border-t-emerald-400 border-r-teal-400 animate-spin" />
+                  <div className="absolute w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2">
+                    <img src="/icons/logo.png" alt="Mellod Logo" className="w-full h-full object-contain" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-white font-extrabold text-base tracking-tight">Verifying Credentials</h3>
+                  <p className="text-xs text-slate-400 font-medium">Checking sub-admin permission access &amp; session token...</p>
+                </div>
+
+                <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full animate-pulse w-2/3" />
+                </div>
+              </div>
             </div>
           ) : !isAuthorizedRoute() ? (
             <div className="card p-10 text-center max-w-lg mx-auto my-12 space-y-4 border-amber-200 bg-amber-50/50 shadow-md animate-fade-in">
