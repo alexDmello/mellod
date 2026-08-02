@@ -45,14 +45,7 @@ interface ZoneCardProps {
   data: RoutesData;
 }
 
-function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDate, isFutureDate, isPending, data }: ZoneCardProps) {
-  const [collectModalState, setCollectModalState] = useState<{ open: boolean; assignment: DailyRouteAssignment | null; fboName: string; liters: string }>({
-    open: false,
-    assignment: null,
-    fboName: "",
-    liters: "",
-  });
-
+function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDate, isPending, data }: ZoneCardProps) {
   const dispatchedByFbo = useMemo(() => {
     const stopFboIds = new Set(stops.map((s) => s.fbo_id));
     return new Map(dailyAssignments.filter((a) => stopFboIds.has(a.fbo_id)).map((a) => [a.fbo_id, a]));
@@ -60,6 +53,11 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
 
   const pendingStops = stops.filter((s) => !dispatchedByFbo.has(s.fbo_id));
   const dispatchedStops = stops.filter((s) => dispatchedByFbo.has(s.fbo_id));
+
+  const completedCount = useMemo(
+    () => dispatchedStops.filter((s) => dispatchedByFbo.get(s.fbo_id)?.status === "completed").length,
+    [dispatchedStops, dispatchedByFbo]
+  );
 
   const pendingResolved = pendingStops
     .map((s) => ({ stop: s, fbo: fbosById.get(s.fbo_id) }))
@@ -96,24 +94,6 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
   const clearKey = `clear-${def.id}`;
   const busy = isPending(dispatchKey);
 
-  function handleCollectSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!collectModalState.assignment) return;
-    const trimmed = collectModalState.liters.trim();
-    if (trimmed === "") {
-      data.markCollected(collectModalState.assignment, null);
-      setCollectModalState({ open: false, assignment: null, fboName: "", liters: "" });
-      return;
-    }
-    const val = Number(trimmed);
-    if (Number.isNaN(val) || val < 0) {
-      alert("Please enter a valid number of litres.");
-      return;
-    }
-    data.markCollected(collectModalState.assignment, val);
-    setCollectModalState({ open: false, assignment: null, fboName: "", liters: "" });
-  }
-
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group">
       {/* Zone Card Header Accent */}
@@ -128,17 +108,24 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
               {stops.length} restaurant{stops.length === 1 ? "" : "s"} in this zone
             </p>
           </div>
-          {pendingStops.length === 0 ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-300/50">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              All Clear
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 border border-amber-300/50 animate-pulse">
-              <Clock className="w-3.5 h-3.5" />
-              {pendingStops.length} Pending
-            </span>
-          )}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {dispatchedStops.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-500/10 text-emerald-700 border border-emerald-300/60 shadow-2xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                {completedCount} / {dispatchedStops.length} Pickups Done
+              </span>
+            )}
+            {pendingStops.length === 0 ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                All Dispatched
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 border border-amber-300/50 animate-pulse">
+                <Clock className="w-3.5 h-3.5" />
+                {pendingStops.length} Pending
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Pending / not-yet-dispatched stops list */}
@@ -211,8 +198,8 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
               <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
                 Dispatched for {formatDate(selectedDate)}
               </p>
-              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                {dispatchedStops.length} Dispatched
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {completedCount} / {dispatchedStops.length} Completed
               </span>
             </div>
             {dispatchedStops.map((stop) => {
@@ -220,63 +207,25 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
               const assignment = dispatchedByFbo.get(stop.fbo_id);
               if (!fbo || !assignment) return null;
               const status = getDueStatus(fbo, selectedDate);
-              const canAct = assignment.status === "assigned" && !isFutureDate;
+              const assignedPicker = pickers.find((p) => p.id === assignment.picker_id);
               return (
-                <div key={stop.id} className="rounded-2xl bg-slate-50 border border-slate-200/60 p-3 space-y-2 hover:bg-white hover:shadow-xs transition-all">
+                <div key={stop.id} className="rounded-2xl bg-slate-50 border border-slate-200/60 p-3 space-y-1.5 hover:bg-white hover:shadow-xs transition-all">
                   <div className="flex items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-800 truncate">{fbo.business_name}</span>
                     <DailyStatusPill status={assignment.status} liters={assignment.collected_liters} />
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <select
-                      className="bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-700 text-[11px] font-bold rounded-lg px-2 py-1 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                      value={assignment.picker_id}
-                      disabled={isPending(`stop-${stop.fbo_id}`)}
-                      onChange={(e) => data.singleStopReassign(stop.fbo_id, e.target.value)}
-                    >
-                      {pickers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.profile?.full_name}
-                        </option>
-                      ))}
-                    </select>
-                    {canAct && (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          title="Record collected litres"
-                          disabled={isPending(`collect-${assignment.id}`)}
-                          onClick={() =>
-                            setCollectModalState({
-                              open: true,
-                              assignment,
-                              fboName: fbo.business_name,
-                              liters: assignment.collected_liters ? String(assignment.collected_liters) : "",
-                            })
-                          }
-                          className="px-2.5 py-1 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-300/50 text-[11px] font-bold flex items-center gap-1 transition-all"
-                        >
-                          <Droplet className="w-3.5 h-3.5" />
-                          Log Litres
-                        </button>
-                        <button
-                          type="button"
-                          title="Mark skipped"
-                          disabled={isPending(`skip-${assignment.id}`)}
-                          onClick={() => {
-                            if (window.confirm(`Mark ${fbo.business_name} as skipped for this date?`)) {
-                              data.skipStop(assignment);
-                            }
-                          }}
-                          className="p-1 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-300/50 transition-all"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-slate-600 font-semibold bg-slate-200/60 px-2.5 py-1 rounded-lg">
+                      <Users className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="text-slate-400 font-medium">Assigned Picker:</span>
+                      <span className="text-slate-900 font-bold">{assignedPicker?.profile?.full_name ?? "Assigned"}</span>
+                      <span className="text-[9px] bg-slate-300/70 text-slate-700 px-1.5 py-0.2 rounded-md font-mono uppercase tracking-wider ml-1">
+                        Locked
+                      </span>
+                    </div>
                   </div>
                   {status.code === "early_requested" && (
-                    <p className="text-[10px] text-blue-600 font-medium flex items-center gap-1">
+                    <p className="text-[10px] text-blue-600 font-medium flex items-center gap-1 pt-0.5">
                       <Zap className="w-3 h-3 text-blue-500" /> Requested an early pickup
                     </p>
                   )}
@@ -336,55 +285,6 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Dispatch Selected ({selected.size})
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Collect Litres Modal */}
-      {collectModalState.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-bold">
-                <Droplet className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-slate-900 text-base">Record Collection</h4>
-                <p className="text-xs text-slate-500">{collectModalState.fboName}</p>
-              </div>
-            </div>
-            <form onSubmit={handleCollectSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
-                  Collected Litres (Optional)
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="e.g. 50"
-                  className="w-full text-sm font-bold bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                  value={collectModalState.liters}
-                  onChange={(e) => setCollectModalState((prev) => ({ ...prev, liters: e.target.value }))}
-                  autoFocus
-                />
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setCollectModalState({ open: false, assignment: null, fboName: "", liters: "" })}
-                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md transition-all"
-                >
-                  Save Collection
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
@@ -460,7 +360,7 @@ export default function DispatchBoard({ data }: { data: RoutesData }) {
       </div>
 
       {/* High Density Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Pickers</p>
@@ -469,6 +369,19 @@ export default function DispatchBoard({ data }: { data: RoutesData }) {
             </div>
           </div>
           <p className="text-3xl font-black text-slate-900 mt-2">{pickers.length}</p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pickups Progress</p>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-3xl font-black text-emerald-600 mt-2">
+            {dailyAssignments.filter((a) => a.status === "completed").length}{" "}
+            <span className="text-sm font-bold text-slate-400">/ {dailyAssignments.length}</span>
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">

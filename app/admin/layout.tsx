@@ -1,5 +1,5 @@
 "use client";
-export const dynamic = "force-dynamic";
+
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,6 +48,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [allowedRoutes, setAllowedRoutes] = useState<string[]>([]);
   const [loadingUser, setLoadingUser] = useState(true);
   const [userName, setUserName] = useState<string>("");
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   const supabase = createClient();
 
@@ -113,6 +114,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     loadUserPermissions();
+
+    // Fetch pending pickup review count
+    async function fetchPendingCount() {
+      try {
+        const { count } = await supabase
+          .from("pickups")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending");
+        setPendingReviewCount(count ?? 0);
+      } catch {}
+    }
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 60_000);
+    return () => clearInterval(interval);
   }, [pathname]);
 
   // Lock background body scroll when mobile sidebar is open
@@ -219,6 +234,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 )}
               />
               <span className="truncate">{label}</span>
+              {href === "/admin/pickers" && pendingReviewCount > 0 && (
+                <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-extrabold shadow-sm shadow-amber-500/40 animate-pulse">
+                  {pendingReviewCount > 99 ? "99+" : pendingReviewCount}
+                </span>
+              )}
             </Link>
           );
         })}
