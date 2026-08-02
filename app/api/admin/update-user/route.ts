@@ -65,17 +65,17 @@ export async function POST(request: Request) {
 
     const targetRole = targetProfile.role;
 
-    // Only Super Admin can modify or delete another Sub-Admin
-    if (targetRole === "sub_admin" && requesterRole !== "admin") {
-      return NextResponse.json({ error: "Forbidden: Only Super Admin can manage Sub-Admin accounts" }, { status: 403 });
+    // Only Super Admin can modify or delete staff/manager accounts
+    if (targetRole !== "fbo" && targetRole !== "picker" && targetRole !== "admin" && requesterRole !== "admin") {
+      return NextResponse.json({ error: "Forbidden: Only Super Admin can manage staff accounts" }, { status: 403 });
     }
 
     // 4. Execute requested action
 
-    // ACTION: Delete Sub-Admin
+    // ACTION: Delete Staff Account
     if (action === "delete") {
-      if (targetRole !== "sub_admin") {
-        return NextResponse.json({ error: "Delete action is currently only allowed for Sub-Admin accounts" }, { status: 400 });
+      if (targetRole === "fbo" || targetRole === "picker" || targetRole === "admin") {
+        return NextResponse.json({ error: "Delete action is currently only allowed for staff/sub-admin accounts" }, { status: 400 });
       }
 
       // Delete permissions
@@ -186,8 +186,8 @@ export async function POST(request: Request) {
         }
       }
 
-      // If username changed for sub_admin, sync Auth email
-      if (targetRole === "sub_admin" && username !== undefined) {
+      // If username changed for staff account, sync Auth email
+      if (targetRole !== "fbo" && targetRole !== "picker" && targetRole !== "admin" && username !== undefined) {
         const newUsername = username.trim().toLowerCase();
         const internalEmail = `${newUsername}@mellod.internal`;
         await adminClient.auth.admin.updateUserById(userId, {

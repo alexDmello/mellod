@@ -28,7 +28,7 @@ export default function LoginPage() {
 
           if (profile) {
             let dest = "/admin";
-            if (profile.role === "sub_admin") {
+            if (profile.role !== "admin" && profile.role !== "picker" && profile.role !== "fbo") {
               const { data: perm } = await supabase
                 .from("sub_admin_permissions")
                 .select("allowed_routes")
@@ -121,7 +121,7 @@ export default function LoginPage() {
     }
 
     let destination = "/admin";
-    if (profile.role === "sub_admin") {
+    if (profile.role !== "admin" && profile.role !== "picker" && profile.role !== "fbo") {
       const { data: perm } = await supabase
         .from("sub_admin_permissions")
         .select("allowed_routes")

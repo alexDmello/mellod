@@ -185,6 +185,21 @@ export default function SettingsPage() {
     }
   }
 
+  function openCreateStaffModal() {
+    const firstRole = rolesList[0];
+    if (firstRole) {
+      setSelectedRole(firstRole.role_key);
+      if (Array.isArray(firstRole.default_routes)) {
+        setSelectedRoutes(firstRole.default_routes);
+      }
+    } else {
+      setSelectedRole("sub_admin");
+      setSelectedRoutes(["/admin"]);
+    }
+    setStaffError(null);
+    setShowCreateModal(true);
+  }
+
   // When role selection changes during creation, auto-fill default routes for that role
   function handleRoleSelectChange(roleKey: string) {
     setSelectedRole(roleKey);
@@ -446,7 +461,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: editingStaffDetails.id,
-          action: "update_profile",
+          action: "update_details",
           fullName: editDetailForm.fullName.trim(),
           username: editDetailForm.username.trim(),
           phone: editDetailForm.phone.trim() || null,
@@ -457,6 +472,19 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to update user details.");
+      }
+
+      // Sync route permissions with the assigned role template
+      const matchedRole = rolesList.find((r) => r.role_key === editDetailForm.role);
+      if (matchedRole && Array.isArray(matchedRole.default_routes)) {
+        await fetch("/api/admin/sub-admins/permissions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profileId: editingStaffDetails.id,
+            allowedRoutes: matchedRole.default_routes,
+          }),
+        });
       }
 
       setEditingStaffDetails(null);
@@ -608,15 +636,15 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
                 <Users className="w-5 h-5 text-green-700" />
-                Staff Role Accounts & Granular Access
+                Staff Accounts & Role Credentials
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Assign custom roles (Manager, Staff, Sub-Admin, Finance, Dispatcher) and customize accessible sections for each individual.
+                Create staff credentials by assigning a defined Role Template. Access permissions for admin sections are automatically inherited from the selected role.
               </p>
             </div>
 
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={openCreateStaffModal}
               className="btn btn-primary text-xs py-2 px-4 font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
             >
               <UserPlus className="w-4 h-4" />
@@ -990,44 +1018,32 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Granular Section Access Checkboxes */}
-              <div className="border border-gray-200 p-4 rounded-xl bg-gray-50 space-y-2">
-                <div className="flex items-center justify-between border-b pb-2">
+              {/* Inherited Role Template Permissions Summary */}
+              <div className="border border-green-200 p-4 rounded-xl bg-green-50/50 space-y-2">
+                <div className="flex items-center justify-between border-b border-green-200/60 pb-2">
                   <div>
-                    <span className="font-bold text-gray-900 block">Custom Section Access Options</span>
-                    <span className="text-[11px] text-gray-500">Add or take away specific options for this staff member before creating account.</span>
+                    <span className="font-bold text-gray-900 block">Inherited Role Section Access</span>
+                    <span className="text-[11px] text-gray-500">Accessible sections are assigned directly from the selected Role Template.</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <button type="button" onClick={() => handleSelectAllRoutes("create")} className="text-green-700 font-bold hover:underline">
-                      Select All
-                    </button>
-                    <span>·</span>
-                    <button type="button" onClick={() => handleClearAllRoutes("create")} className="text-red-600 font-bold hover:underline">
-                      Clear All
-                    </button>
-                  </div>
+                  <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">
+                    {selectedRoutes.length} Accessible Sections
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="flex flex-wrap gap-1.5 pt-1">
                   {ADMIN_SECTIONS.map((sec) => {
-                    const checked = selectedRoutes.includes(sec.href);
+                    const isAllowed = selectedRoutes.includes(sec.href);
                     return (
-                      <label
+                      <span
                         key={sec.href}
-                        className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                          checked
-                            ? "bg-green-50 border-green-300 text-green-900 font-bold"
-                            : "bg-white border-gray-200 text-gray-600 hover:bg-gray-100"
+                        className={`text-[10px] px-2.5 py-1 rounded-md font-medium transition-all ${
+                          isAllowed
+                            ? "bg-green-700 text-white font-bold shadow-sm"
+                            : "bg-gray-200/70 text-gray-400 line-through opacity-50"
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleRouteSelection(sec.href, "create")}
-                          className="rounded text-green-700 focus:ring-green-700"
-                        />
-                        <span>{sec.label}</span>
-                      </label>
+                        {sec.label}
+                      </span>
                     );
                   })}
                 </div>
