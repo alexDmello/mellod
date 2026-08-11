@@ -57,7 +57,7 @@ export default function AdminPaymentsPage() {
   // Modals local state
   const [viewEntriesFbo, setViewEntriesFbo] = useState<FBOSummary | null>(null);
   const [payoutFbo, setPayoutFbo] = useState<FBOSummary | null>(null);
-  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<FBOPayment | null>(null);
 
   // Payment Form local state
   const [payMethod, setPayMethod] = useState<"bank" | "upi" | "cash">("bank");
@@ -391,7 +391,7 @@ export default function AdminPaymentsPage() {
                   <p className="text-xs text-gray-400 mt-1">Disbursed FBO payments will generate official settlement receipts listed here.</p>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xl shadow-gray-200/80">
+                <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto shadow-xl shadow-gray-200/80">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50 text-gray-600 text-xs border-b border-gray-200 font-bold uppercase tracking-wider">

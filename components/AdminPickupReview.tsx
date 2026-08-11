@@ -392,12 +392,13 @@ export default function AdminPickupReview() {
                           disabled={savingId === p.id}
                           className="btn btn-danger btn-sm !py-1.5 !px-2.5 text-xs"
                           title="Delete Pickup Log"
+                          aria-label="Delete Pickup Log"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
 
                         <button
-                          onClick={() => handleApprove(p.id, p.status === "pending" ? "completed" : "completed")}
+                          onClick={() => handleApprove(p.id, "completed")}
                           disabled={savingId === p.id}
                           className={`btn btn-sm !py-1.5 !px-3 text-xs flex items-center gap-1 font-semibold ${
                             p.status === "pending" ? "btn-primary" : "bg-blue-600 hover:bg-blue-700 text-white"

@@ -193,13 +193,21 @@ export default function AdminDashboard() {
   const waterProtectedLiters = Math.round(stats.totalLiters * 1000);
   const latestPickup = recentPickups[0];
 
+  const co2Pct = Math.min(100, Math.max(15, Math.round((co2SavedKg / 25000) * 100)));
+  const waterPct = Math.min(100, Math.max(15, Math.round((waterProtectedLiters / 10000000) * 100)));
+  const feedstockPct = Math.min(100, Math.max(15, Math.round((stats.totalLiters / 10000) * 100)));
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin text-green-700 mx-auto" />
-          <p className="text-sm text-gray-500 font-medium">Loading live dashboard...</p>
+      <div className="space-y-6 animate-pulse p-2">
+        <div className="h-32 bg-slate-200/60 rounded-[2rem] w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="h-28 bg-slate-200/60 rounded-2xl" />
+          <div className="h-28 bg-slate-200/60 rounded-2xl" />
+          <div className="h-28 bg-slate-200/60 rounded-2xl" />
+          <div className="h-28 bg-slate-200/60 rounded-2xl" />
         </div>
+        <div className="h-64 bg-slate-200/60 rounded-[2rem] w-full" />
       </div>
     );
   }
@@ -562,7 +570,7 @@ export default function AdminDashboard() {
             </div>
             {/* Animated progress fill bar */}
             <div className="w-full bg-emerald-100 h-2 rounded-full mt-3 overflow-hidden">
-              <div className="bg-emerald-500 h-full rounded-full w-[78%] animate-pulse" />
+              <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${co2Pct}%` }} />
             </div>
           </div>
 
@@ -576,7 +584,7 @@ export default function AdminDashboard() {
             </div>
             {/* Animated progress fill bar */}
             <div className="w-full bg-teal-100 h-2 rounded-full mt-3 overflow-hidden">
-              <div className="bg-teal-500 h-full rounded-full w-[85%] animate-pulse" />
+              <div className="bg-teal-500 h-full rounded-full transition-all duration-500" style={{ width: `${waterPct}%` }} />
             </div>
           </div>
 
@@ -590,7 +598,7 @@ export default function AdminDashboard() {
             </div>
             {/* Animated progress fill bar */}
             <div className="w-full bg-green-100 h-2 rounded-full mt-3 overflow-hidden">
-              <div className="bg-green-600 h-full rounded-full w-[92%] animate-pulse" />
+              <div className="bg-green-600 h-full rounded-full transition-all duration-500" style={{ width: `${feedstockPct}%` }} />
             </div>
           </div>
         </div>

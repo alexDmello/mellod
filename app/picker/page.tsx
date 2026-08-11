@@ -334,30 +334,7 @@ export default function PickerDashboard() {
 
                         {isExpanded && (
                           <div className="px-4.5 pb-4.5 pt-2 border-t border-gray-100 bg-gray-50/50 space-y-4">
-                            <div className="space-y-2 text-xs">
-                              {route.fbo.contact_person && (
-                                <div className="flex items-center gap-2 text-gray-700 font-medium">
-                                  <User className="w-3.5 h-3.5 text-gray-400" />
-                                  <span className="font-bold text-gray-900">Contact:</span> {route.fbo.contact_person}
-                                </div>
-                              )}
-                              {route.fbo.phone && (
-                                <div className="flex items-center gap-2 text-gray-700 font-medium">
-                                  <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                  <span className="font-bold text-gray-900">Phone:</span>{" "}
-                                  <a href={phoneHref!} className="text-emerald-700 font-bold hover:underline">
-                                    {route.fbo.phone}
-                                  </a>
-                                </div>
-                              )}
-                              <div className="flex items-start gap-2 text-gray-700 font-medium">
-                                <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <span className="font-bold text-gray-900">Full Address:</span>
-                                  <p className="text-gray-600 mt-0.5 leading-relaxed">{route.fbo.address}</p>
-                                </div>
-                              </div>
-                            </div>
+                            <FBODetailInfo fbo={route.fbo} />
 
                             <div className="flex gap-2">
                               {destination ? (
@@ -438,30 +415,7 @@ export default function PickerDashboard() {
 
                         {isExpanded && (
                           <div className="px-4.5 pb-4.5 pt-2 border-t border-gray-100 bg-gray-50/50 space-y-4">
-                            <div className="space-y-2 text-xs">
-                              {route.fbo.contact_person && (
-                                <div className="flex items-center gap-2 text-gray-700 font-medium">
-                                  <User className="w-3.5 h-3.5 text-gray-400" />
-                                  <span className="font-bold text-gray-900">Contact:</span> {route.fbo.contact_person}
-                                </div>
-                              )}
-                              {route.fbo.phone && (
-                                <div className="flex items-center gap-2 text-gray-700 font-medium">
-                                  <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                  <span className="font-bold text-gray-900">Phone:</span>{" "}
-                                  <a href={phoneHref!} className="text-emerald-700 font-bold hover:underline">
-                                    {route.fbo.phone}
-                                  </a>
-                                </div>
-                              )}
-                              <div className="flex items-start gap-2 text-gray-700 font-medium">
-                                <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <span className="font-bold text-gray-900">Address:</span>
-                                  <p className="text-gray-600 mt-0.5 leading-relaxed">{route.fbo.address}</p>
-                                </div>
-                              </div>
-                            </div>
+                            <FBODetailInfo fbo={route.fbo} />
 
                             <div className="p-3.5 bg-white rounded-2xl border border-gray-100 space-y-2.5">
                               <h4 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-1.5 flex items-center gap-1.5">
@@ -506,6 +460,36 @@ export default function PickerDashboard() {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function FBODetailInfo({ fbo }: { fbo: FBO }) {
+  const phoneHref = fbo.phone ? `tel:${fbo.phone.replace(/[^0-9+]/g, "")}` : null;
+  return (
+    <div className="space-y-2 text-xs">
+      {fbo.contact_person && (
+        <div className="flex items-center gap-2 text-gray-700 font-medium">
+          <User className="w-3.5 h-3.5 text-gray-400" />
+          <span className="font-bold text-gray-900">Contact:</span> {fbo.contact_person}
+        </div>
+      )}
+      {fbo.phone && (
+        <div className="flex items-center gap-2 text-gray-700 font-medium">
+          <Phone className="w-3.5 h-3.5 text-gray-400" />
+          <span className="font-bold text-gray-900">Phone:</span>{" "}
+          <a href={phoneHref!} className="text-emerald-700 font-bold hover:underline">
+            {fbo.phone}
+          </a>
+        </div>
+      )}
+      <div className="flex items-start gap-2 text-gray-700 font-medium">
+        <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+        <div>
+          <span className="font-bold text-gray-900">Full Address:</span>
+          <p className="text-gray-600 mt-0.5 leading-relaxed">{fbo.address}</p>
+        </div>
       </div>
     </div>
   );

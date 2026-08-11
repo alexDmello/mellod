@@ -22,7 +22,7 @@
       "url": "/picker"
     }
   },
-  "background_color": "#15803d",
+  "background_color": "#f9fafb",
   "theme_color": "#15803d",
   "orientation": "portrait",
   "categories": ["logistics", "business"],
