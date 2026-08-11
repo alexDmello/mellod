@@ -53,7 +53,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#022c22" />
         <meta name="background-color" content="#f9fafb" />
       </head>
-      <body className="min-h-screen bg-gray-50 antialiased selection:bg-emerald-600 selection:text-white">
+      <body
+        className="min-h-screen bg-gray-50 antialiased selection:bg-emerald-600 selection:text-white"
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <ServiceWorkerRegister />
         {children}
         <SpeedInsights />
