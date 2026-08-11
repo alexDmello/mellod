@@ -11,16 +11,14 @@ import { DueBadge } from "./route-badges";
 import { ZONE_CONFIG, ZONE_ORDER, type ZoneName } from "./zone-data";
 
 export default function RoutesTab({ data }: { data: RoutesData }) {
-  const { pickers, fbos, zones, subZones, routeDefinitions, routeStops, selectedDate, isPending } = data;
+  const { pickers, fbos, zones, routeDefinitions, routeStops, selectedDate, isPending } = data;
   const fbosById = useMemo(() => buildFbosById(fbos), [fbos]);
 
   const [filterZoneId, setFilterZoneId] = useState("");
-  const [filterSubZoneId, setFilterSubZoneId] = useState("");
   const [filterPickerId, setFilterPickerId] = useState("");
   const [newName, setNewName] = useState("");
   const [newPickerId, setNewPickerId] = useState("");
   const [newZoneId, setNewZoneId] = useState("");
-  const [newSubZoneId, setNewSubZoneId] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>("");
@@ -30,30 +28,26 @@ export default function RoutesTab({ data }: { data: RoutesData }) {
   const [moveTarget, setMoveTarget] = useState("");
 
   const zonesById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
-  const subZonesById = useMemo(() => new Map(subZones.map((sz) => [sz.id, sz])), [subZones]);
-  const subZonesForNew = useMemo(() => subZones.filter((sz) => sz.zone_id === newZoneId), [subZones, newZoneId]);
-  const filterSubZones = useMemo(() => subZones.filter((sz) => sz.zone_id === filterZoneId), [subZones, filterZoneId]);
 
   const visibleRoutes = useMemo(() =>
     routeDefinitions.filter((rd) => {
       if (filterZoneId && rd.zone_id !== filterZoneId) return false;
-      if (filterSubZoneId && rd.sub_zone_id !== filterSubZoneId) return false;
       if (filterPickerId && rd.default_picker_id !== filterPickerId) return false;
       return true;
-    }), [routeDefinitions, filterZoneId, filterSubZoneId, filterPickerId]);
+    }), [routeDefinitions, filterZoneId, filterPickerId]);
 
   const activeRoute = visibleRoutes.find((d) => d.id === selectedRouteId) ?? visibleRoutes[0] ?? null;
   const activeStops = [...routeStops.filter((s) => s.route_definition_id === activeRoute?.id)].sort((a, b) => a.sort_order - b.sort_order);
   const currentFboIds = new Set(activeStops.map((s) => s.fbo_id));
   const availableFbos = fbos.filter((f) => !currentFboIds.has(f.id) && f.business_name.toLowerCase().includes(fboSearch.toLowerCase()));
 
-  const hasFilters = filterZoneId || filterSubZoneId || filterPickerId;
+  const hasFilters = filterZoneId || filterPickerId;
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim()) return;
-    const created = await data.createTemplate(newName.trim(), newPickerId, newZoneId, newSubZoneId, newDesc);
-    setNewName(""); setNewPickerId(""); setNewZoneId(""); setNewSubZoneId(""); setNewDesc("");
+    const created = await data.createTemplate(newName.trim(), newPickerId, newZoneId, null, newDesc);
+    setNewName(""); setNewPickerId(""); setNewZoneId(""); setNewDesc("");
     setShowCreate(false);
     if (created) setSelectedRouteId(created.id);
   }
@@ -70,24 +64,17 @@ export default function RoutesTab({ data }: { data: RoutesData }) {
               <Filter className="w-3.5 h-3.5" /> Filters
             </span>
             {hasFilters && (
-              <button onClick={() => { setFilterZoneId(""); setFilterSubZoneId(""); setFilterPickerId(""); }}
+              <button onClick={() => { setFilterZoneId(""); setFilterPickerId(""); }}
                 className="text-[11px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1">
                 <X className="w-3 h-3" /> Clear
               </button>
             )}
           </div>
           <select className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
-            value={filterZoneId} onChange={(e) => { setFilterZoneId(e.target.value); setFilterSubZoneId(""); }}>
+            value={filterZoneId} onChange={(e) => setFilterZoneId(e.target.value)}>
             <option value="">All Zones</option>
             {ZONE_ORDER.map((zn) => { const z = zones.find((z) => z.name === zn); return z ? <option key={z.id} value={z.id}>{zn} Zone</option> : null; })}
           </select>
-          {filterZoneId && filterSubZones.length > 0 && (
-            <select className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
-              value={filterSubZoneId} onChange={(e) => setFilterSubZoneId(e.target.value)}>
-              <option value="">All Sub-Zones</option>
-              {filterSubZones.map((sz) => <option key={sz.id} value={sz.id}>{sz.name}</option>)}
-            </select>
-          )}
           <select className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
             value={filterPickerId} onChange={(e) => setFilterPickerId(e.target.value)}>
             <option value="">All Pickers</option>
@@ -108,17 +95,10 @@ export default function RoutesTab({ data }: { data: RoutesData }) {
                 className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 value={newName} onChange={(e) => setNewName(e.target.value)} />
               <select className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
-                value={newZoneId} onChange={(e) => { setNewZoneId(e.target.value); setNewSubZoneId(""); }}>
+                value={newZoneId} onChange={(e) => setNewZoneId(e.target.value)}>
                 <option value="">— Zone (optional) —</option>
                 {ZONE_ORDER.map((zn) => { const z = zones.find((z) => z.name === zn); return z ? <option key={z.id} value={z.id}>{zn}</option> : null; })}
               </select>
-              {newZoneId && subZonesForNew.length > 0 && (
-                <select className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
-                  value={newSubZoneId} onChange={(e) => setNewSubZoneId(e.target.value)}>
-                  <option value="">— Sub-Zone —</option>
-                  {subZonesForNew.map((sz) => <option key={sz.id} value={sz.id}>{sz.name}</option>)}
-                </select>
-              )}
               <select className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
                 value={newPickerId} onChange={(e) => setNewPickerId(e.target.value)}>
                 <option value="">— Default Picker —</option>
@@ -188,7 +168,6 @@ export default function RoutesTab({ data }: { data: RoutesData }) {
               {(() => {
                 const zone = activeRoute.zone_id ? zonesById.get(activeRoute.zone_id) : null;
                 const config = zone ? ZONE_CONFIG[zone.name as ZoneName] : null;
-                const sz = activeRoute.sub_zone_id ? subZonesById.get(activeRoute.sub_zone_id) : null;
                 return (
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
@@ -198,7 +177,7 @@ export default function RoutesTab({ data }: { data: RoutesData }) {
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0"
                             style={{ background: config.hex + "18", color: config.hex, borderColor: config.hex + "40" }}>
                             <span className="w-2 h-2 rounded-full" style={{ background: config.hex }} />
-                            {zone?.name}{sz ? ` · ${sz.name}` : ""}
+                            {zone?.name} Zone
                           </span>
                         )}
                       </div>

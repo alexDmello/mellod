@@ -16,7 +16,7 @@ type Tab = "dispatch" | "routes" | "zones" | "pickers";
 const TABS: { id: Tab; label: string; icon: typeof Shuffle }[] = [
   { id: "dispatch", label: "Today's Dispatch", icon: Shuffle },
   { id: "routes",   label: "Routes",           icon: FolderKanban },
-  { id: "zones",    label: "Zones & Sub-Zones", icon: Globe },
+  { id: "zones",    label: "Zones",            icon: Globe },
   { id: "pickers",  label: "Pickers",           icon: Users },
 ];
 

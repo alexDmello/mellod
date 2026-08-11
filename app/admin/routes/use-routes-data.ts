@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { todayISO } from "@/lib/utils";
-import type { Zone, SubZone, RouteSchedule } from "@/lib/types";
+import type { Zone, RouteSchedule } from "@/lib/types";
 import {
   DailyRouteAssignment,
   PickerWithCapacity,
@@ -29,7 +29,6 @@ export function useRoutesData() {
   const [dailyAssignments, setDailyAssignments] = useState<DailyRouteAssignment[]>([]);
   const [weekAssignments, setWeekAssignments] = useState<DailyRouteAssignment[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
-  const [subZones, setSubZones] = useState<SubZone[]>([]);
   const [schedules, setSchedules] = useState<RouteSchedule[]>([]);
 
   const [selectedDate, setSelectedDate] = useState(todayISO());
@@ -108,12 +107,6 @@ export function useRoutesData() {
     setZones((data as Zone[]) ?? []);
   }, [supabase]);
 
-  const fetchSubZones = useCallback(async () => {
-    const { data, error } = await supabase.from("sub_zones").select("*").order("name");
-    if (error) throw error;
-    setSubZones((data as SubZone[]) ?? []);
-  }, [supabase]);
-
   const fetchSchedules = useCallback(async () => {
     const { data, error } = await supabase
       .from("route_schedules")
@@ -126,13 +119,13 @@ export function useRoutesData() {
   const fetchBaseData = useCallback(async () => {
     setFetching(true);
     try {
-      await Promise.all([fetchPickers(), fetchFbos(), fetchRouteDefinitions(), fetchRouteStops(), fetchZones(), fetchSubZones(), fetchSchedules()]);
+      await Promise.all([fetchPickers(), fetchFbos(), fetchRouteDefinitions(), fetchRouteStops(), fetchZones(), fetchSchedules()]);
     } catch (e: any) {
       setErrorMessage(e?.message ?? "Error loading routes data.");
     } finally {
       setFetching(false);
     }
-  }, [fetchPickers, fetchFbos, fetchRouteDefinitions, fetchRouteStops, fetchZones, fetchSubZones, fetchSchedules]);
+  }, [fetchPickers, fetchFbos, fetchRouteDefinitions, fetchRouteStops, fetchZones, fetchSchedules]);
 
   const fetchDailyAssignments = useCallback(
     async (date: string) => {
@@ -174,7 +167,7 @@ export function useRoutesData() {
     name: string,
     defaultPickerId: string,
     zoneId?: string,
-    subZoneId?: string,
+    subZoneId?: string | null,
     description?: string
   ): Promise<RouteDefinition | null> {
     let created: RouteDefinition | null = null;
@@ -202,7 +195,7 @@ export function useRoutesData() {
     await withPending(`delete-template-${id}`, async () => {
       const { error } = await supabase.from("route_definitions").delete().eq("id", id);
       if (error) throw error;
-      triggerSuccess(`Zone "${name}" deleted.`);
+      triggerSuccess(`Route "${name}" deleted.`);
       await Promise.all([fetchRouteDefinitions(), fetchRouteStops()]);
     });
   }
@@ -216,7 +209,7 @@ export function useRoutesData() {
         sort_order: stopsInTemplate.length,
       });
       if (error) throw error;
-      triggerSuccess("Stop added to zone.");
+      triggerSuccess("Stop added to route.");
       await fetchRouteStops();
     });
   }
@@ -307,19 +300,9 @@ export function useRoutesData() {
         .single();
       if (!zoneData) throw new Error("Zone not found in database. Run the migration first.");
 
-      // Find sub-zone for this zone
-      const { data: subZoneData } = await supabase
-        .from("sub_zones")
-        .select("id")
-        .eq("zone_id", zoneData.id)
-        .single();
-
       const { error } = await supabase
         .from("fbos")
-        .update({
-          zone_id: zoneData.id,
-          sub_zone_id: subZoneData?.id ?? null,
-        })
+        .update({ zone_id: zoneData.id })
         .eq("id", fboId);
       if (error) throw error;
       triggerSuccess(`FBO assigned to ${detectedZoneName} zone.`);
@@ -328,11 +311,11 @@ export function useRoutesData() {
   }
 
   // Manually override an FBO's zone
-  async function overrideFboZone(fboId: string, zoneId: string, subZoneId: string) {
+  async function overrideFboZone(fboId: string, zoneId: string) {
     await withPending(`override-zone-${fboId}`, async () => {
       const { error } = await supabase
         .from("fbos")
-        .update({ zone_id: zoneId || null, sub_zone_id: subZoneId || null })
+        .update({ zone_id: zoneId || null })
         .eq("id", fboId);
       if (error) throw error;
       triggerSuccess("Zone assignment updated.");
@@ -344,11 +327,9 @@ export function useRoutesData() {
   async function bulkRedetectZones() {
     await withPending("bulk-redetect", async () => {
       const { data: zoneRecords } = await supabase.from("zones").select("id, name");
-      const { data: subZoneRecords } = await supabase.from("sub_zones").select("id, zone_id");
-      if (!zoneRecords || !subZoneRecords) throw new Error("Zone data not found.");
+      if (!zoneRecords) throw new Error("Zone data not found.");
 
       const zoneMap = new Map(zoneRecords.map((z) => [z.name, z.id]));
-      const subZoneMap = new Map(subZoneRecords.map((sz) => [sz.zone_id, sz.id]));
 
       const geoFbos = fbos.filter((f) => f.latitude != null && f.longitude != null);
       let updatedCount = 0;
@@ -357,9 +338,8 @@ export function useRoutesData() {
         geoFbos.map(async (fbo) => {
           const zoneName = detectZoneFromCoordsWithFallback(fbo.latitude!, fbo.longitude!);
           const zoneId = zoneMap.get(zoneName) ?? null;
-          const subZoneId = zoneId ? (subZoneMap.get(zoneId) ?? null) : null;
-          if (fbo.zone_id !== zoneId || fbo.sub_zone_id !== subZoneId) {
-            await supabase.from("fbos").update({ zone_id: zoneId, sub_zone_id: subZoneId }).eq("id", fbo.id);
+          if (fbo.zone_id !== zoneId) {
+            await supabase.from("fbos").update({ zone_id: zoneId }).eq("id", fbo.id);
             updatedCount++;
           }
         })
@@ -575,7 +555,6 @@ export function useRoutesData() {
     dailyAssignments,
     weekAssignments,
     zones,
-    subZones,
     selectedDate,
     setSelectedDate,
     fetching,

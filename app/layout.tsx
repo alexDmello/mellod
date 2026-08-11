@@ -37,6 +37,7 @@ export const viewport: Viewport = {
 };
 
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import DisableContextMenu from "@/components/DisableContextMenu";
 
 export default function RootLayout({
   children,
@@ -53,10 +54,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#022c22" />
         <meta name="background-color" content="#f9fafb" />
       </head>
-      <body
-        className="min-h-screen bg-gray-50 antialiased selection:bg-emerald-600 selection:text-white"
-        onContextMenu={(e) => e.preventDefault()}
-      >
+      <body className="min-h-screen bg-gray-50 antialiased selection:bg-emerald-600 selection:text-white">
+        <DisableContextMenu />
         <ServiceWorkerRegister />
         {children}
         <SpeedInsights />
