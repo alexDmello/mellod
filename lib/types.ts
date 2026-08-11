@@ -4,6 +4,24 @@
 // ============================================================
 
 export type Role = "admin" | "sub_admin" | "picker" | "fbo";
+
+// Zone & Sub-Zone types
+export interface Zone {
+  id: string;
+  name: "North" | "South" | "East" | "West" | "Central";
+  color: string;
+  created_at: string;
+}
+
+export interface SubZone {
+  id: string;
+  zone_id: string;
+  name: string;
+  slug: string;
+  areas: string | null;
+  boundary: Array<{ lat: number; lng: number }> | null;
+  created_at: string;
+}
 export type PickupStatus = "pending" | "completed" | "disputed";
 export type PaymentMethodType = "bank" | "upi" | "cash";
 
@@ -96,6 +114,8 @@ export interface FBO {
   latitude: number | null;
   longitude: number | null;
   fssai_license?: string | null;
+  zone_id: string | null;
+  sub_zone_id: string | null;
   created_at: string;
   updated_at: string;
 }

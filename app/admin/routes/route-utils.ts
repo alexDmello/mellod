@@ -25,6 +25,9 @@ export interface RouteDefinition {
   id: string;
   name: string;
   default_picker_id: string | null;
+  zone_id: string | null;
+  sub_zone_id: string | null;
+  description: string | null;
 }
 
 export interface RouteStop {
