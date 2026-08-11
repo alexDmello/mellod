@@ -258,7 +258,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-slate-50/80 bg-canvas-grid text-slate-900 selection:bg-emerald-500 selection:text-white relative">
       <Sidebar />
 
       {/* Mobile overlay */}
@@ -273,7 +273,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Subtle ambient workstation background glow */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
+        <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-teal-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
+
         {/* Mobile top bar */}
         <header className="lg:hidden bg-slate-950 border-b border-slate-800 px-4 py-3 flex items-center gap-3 sticky top-0 z-30 shadow-md">
           <button

@@ -517,24 +517,27 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Top Banner Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+      <div className="mesh-gradient-emerald p-6 rounded-[2rem] border border-emerald-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-500/10 border border-emerald-300/50 px-3 py-1 rounded-full">
+              SETTINGS // SYS.ROLES
+            </span>
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Settings className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-              Roles & System Settings
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Roles &amp; System Settings
             </h1>
           </div>
-          <p className="text-xs text-gray-500 font-medium">
+          <p className="text-xs text-slate-500 font-mono mt-1">
             Manage custom role templates, staff user accounts, and baseline market UCO procurement rates.
           </p>
         </div>
 
         <button
           onClick={fetchStaffAndRoles}
-          className="p-2.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 self-start sm:self-auto"
+          className="p-2.5 px-4 rounded-full bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-bold font-mono transition-all shadow-2xs flex items-center gap-2 self-start sm:self-auto"
         >
           <RefreshCw className={`w-4 h-4 ${fetchingStaff ? "animate-spin text-emerald-600" : ""}`} />
           <span>Refresh</span>
@@ -542,47 +545,47 @@ export default function SettingsPage() {
       </div>
 
       {staffSuccess && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl text-sm flex items-center gap-2 font-semibold">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-sm flex items-center gap-2 font-mono font-semibold">
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           {staffSuccess}
         </div>
       )}
 
-      {/* Tabs Bar */}
-      <div className="flex border-b border-gray-200 gap-2">
+      {/* Pill Tabs Bar */}
+      <div className="flex p-1.5 rounded-full bg-slate-200/60 backdrop-blur-md border border-slate-300/60 self-start flex-wrap shadow-inner gap-1">
         <button
           type="button"
           onClick={() => setActiveTab("staff")}
-          className={`pb-3 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-all duration-200 flex items-center gap-2 ${
             activeTab === "staff"
-              ? "border-green-700 text-green-800"
-              : "border-transparent text-gray-500 hover:text-gray-800"
+              ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           <Users className="w-4 h-4" />
-          Staff & User Accounts ({staffList.length})
+          Staff &amp; User Accounts ({staffList.length})
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("roles")}
-          className={`pb-3 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-all duration-200 flex items-center gap-2 ${
             activeTab === "roles"
-              ? "border-green-700 text-green-800"
-              : "border-transparent text-gray-500 hover:text-gray-800"
+              ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           <Shield className="w-4 h-4" />
-          Role Templates & Presets ({rolesList.length})
+          Role Templates &amp; Presets ({rolesList.length})
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("marketprice")}
-          className={`pb-3 px-4 font-bold text-xs border-b-2 transition-all flex items-center gap-2 ${
+          className={`px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-all duration-200 flex items-center gap-2 ${
             activeTab === "marketprice"
-              ? "border-green-700 text-green-800"
-              : "border-transparent text-gray-500 hover:text-gray-800"
+              ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           <TrendingUp className="w-4 h-4" />
@@ -593,20 +596,23 @@ export default function SettingsPage() {
       {/* TAB 1: STAFF & USER ACCOUNTS */}
       {activeTab === "staff" && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-5 rounded-[2rem] border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
             <div>
-              <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
-                <Users className="w-5 h-5 text-green-700" />
-                Staff Accounts & Roles
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold text-slate-400">01/03</span>
+                <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-700" />
+                  Staff Accounts &amp; Roles
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 font-mono mt-1">
                 Create staff credentials by assigning a defined Role Template. Section access permissions are automatically inherited from the selected role.
               </p>
             </div>
 
             <button
               onClick={openCreateStaffModal}
-              className="btn btn-primary text-xs py-2 px-4 font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
+              className="btn btn-primary text-xs py-2.5 px-5 font-bold font-mono rounded-full flex items-center gap-2 shadow-sm self-start sm:self-auto"
             >
               <UserPlus className="w-4 h-4" />
               + Create Staff Account
