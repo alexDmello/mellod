@@ -29,3 +29,4 @@ CREATE POLICY "Authenticated read route_schedules"
 
 CREATE POLICY "Admins manage route_schedules"
   ON public.route_schedules FOR ALL USING (public.is_admin());
+  
