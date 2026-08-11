@@ -3,61 +3,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatDate } from "@/lib/utils";
 import {
-  CalendarDays,
-  Layers,
-  Droplet,
-  XCircle,
-  Users,
-  AlertTriangle,
-  Zap,
-  Loader2,
-  MapPin,
-  CheckCircle2,
-  Clock,
-  ArrowRight,
-  Send,
-  Trash2,
-  Sparkles,
+  CalendarDays, Droplet, XCircle, Users, AlertTriangle,
+  Zap, Loader2, MapPin, CheckCircle2, Clock, Send, Trash2,
 } from "lucide-react";
 import type { RoutesData } from "./use-routes-data";
 import {
-  DailyRouteAssignment,
-  RouteDefinition,
-  RouteStop,
-  ScheduledFBO,
-  buildFbosById,
-  computePickerWorkload,
-  getDueStatus,
-  shouldAutoInclude,
-  sortStopsByUrgency,
+  DailyRouteAssignment, RouteDefinition, RouteStop, ScheduledFBO,
+  buildFbosById, computePickerWorkload, getDueStatus,
+  shouldAutoInclude, sortStopsByUrgency,
 } from "./route-utils";
 import { DueBadge, DailyStatusPill } from "./route-badges";
+import { ZONE_CONFIG, type ZoneName } from "./zone-data";
 
-interface ZoneCardProps {
+/* ── Route Card ─────────────────────────────────────────────────────────────── */
+interface RouteCardProps {
   def: RouteDefinition;
   stops: RouteStop[];
   fbosById: Map<string, ScheduledFBO>;
   pickers: RoutesData["pickers"];
+  zonesById: Map<string, { name: string; color: string }>;
   dailyAssignments: DailyRouteAssignment[];
   selectedDate: string;
-  isFutureDate: boolean;
   isPending: (key: string) => boolean;
   data: RoutesData;
 }
 
-function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDate, isPending, data }: ZoneCardProps) {
+function RouteCard({ def, stops, fbosById, pickers, zonesById, dailyAssignments, selectedDate, isPending, data }: RouteCardProps) {
   const dispatchedByFbo = useMemo(() => {
-    const stopFboIds = new Set(stops.map((s) => s.fbo_id));
-    return new Map(dailyAssignments.filter((a) => stopFboIds.has(a.fbo_id)).map((a) => [a.fbo_id, a]));
+    const ids = new Set(stops.map((s) => s.fbo_id));
+    return new Map(dailyAssignments.filter((a) => ids.has(a.fbo_id)).map((a) => [a.fbo_id, a]));
   }, [dailyAssignments, stops]);
 
-  const pendingStops = stops.filter((s) => !dispatchedByFbo.has(s.fbo_id));
-  const dispatchedStops = stops.filter((s) => dispatchedByFbo.has(s.fbo_id));
-
-  const completedCount = useMemo(
-    () => dispatchedStops.filter((s) => dispatchedByFbo.get(s.fbo_id)?.status === "completed").length,
-    [dispatchedStops, dispatchedByFbo]
-  );
+  const pendingStops   = stops.filter((s) => !dispatchedByFbo.has(s.fbo_id));
+  const dispatchedStops = stops.filter((s) =>  dispatchedByFbo.has(s.fbo_id));
+  const completedCount = dispatchedStops.filter((s) => dispatchedByFbo.get(s.fbo_id)?.status === "completed").length;
 
   const pendingResolved = pendingStops
     .map((s) => ({ stop: s, fbo: fbosById.get(s.fbo_id) }))
@@ -65,96 +44,81 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
   const pendingSorted = sortStopsByUrgency(pendingResolved, selectedDate);
 
   const autoSelectedIds = useMemo(
-    () =>
-      new Set(
-        pendingResolved
-          .filter(({ fbo }) => shouldAutoInclude(getDueStatus(fbo, selectedDate).code))
-          .map(({ stop }) => stop.fbo_id)
-      ),
+    () => new Set(pendingResolved.filter(({ fbo }) => shouldAutoInclude(getDueStatus(fbo, selectedDate).code)).map(({ stop }) => stop.fbo_id)),
     [pendingResolved.map((p) => p.stop.fbo_id).join(","), selectedDate]
   );
 
   const [pickerId, setPickerId] = useState(def.default_picker_id ?? "");
   const [selected, setSelected] = useState<Set<string>>(autoSelectedIds);
 
-  useEffect(() => {
-    setSelected(new Set(autoSelectedIds));
-  }, [autoSelectedIds]);
+  useEffect(() => { setSelected(new Set(autoSelectedIds)); }, [autoSelectedIds]);
 
-  function toggle(fboId: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(fboId)) next.delete(fboId);
-      else next.add(fboId);
-      return next;
-    });
-  }
-
-  const dispatchKey = `dispatch-${def.id}`;
-  const clearKey = `clear-${def.id}`;
-  const busy = isPending(dispatchKey);
+  const zone = def.zone_id ? zonesById.get(def.zone_id) : null;
+  const config = zone ? ZONE_CONFIG[zone.name as ZoneName] : null;
+  const busy = isPending(`dispatch-${def.id}`);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group">
-      {/* Zone Card Header Accent */}
-      <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-900/5 via-slate-50 to-emerald-500/5">
-        <div className="flex items-start justify-between gap-4">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 hover:border-gray-200 hover:shadow-gray-300/50 transition-all flex flex-col overflow-hidden">
+      {/* Zone color accent */}
+      {config && <div className="h-1 w-full" style={{ background: config.hex }} />}
+
+      <div className="p-5 flex-1">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h3 className="font-extrabold text-slate-900 text-lg leading-tight truncate group-hover:text-emerald-700 transition-colors">
-              {def.name}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-              {stops.length} restaurant{stops.length === 1 ? "" : "s"} in this zone
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <h3 className="font-black text-gray-900 text-base truncate">{def.name}</h3>
+              {config && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0"
+                  style={{ background: config.hex + "18", color: config.hex, borderColor: config.hex + "40" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: config.hex }} />
+                  {zone?.name}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-400 font-medium flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> {stops.length} stop{stops.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap justify-end flex-shrink-0">
             {dispatchedStops.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-emerald-500/10 text-emerald-700 border border-emerald-300/60 shadow-2xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                {completedCount} / {dispatchedStops.length} Pickups Done
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-3 h-3" /> {completedCount}/{dispatchedStops.length}
               </span>
             )}
-            {pendingStops.length === 0 ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                All Dispatched
+            {pendingStops.length > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                <Clock className="w-3 h-3" /> {pendingStops.length} Pending
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 border border-amber-300/50 animate-pulse">
-                <Clock className="w-3.5 h-3.5" />
-                {pendingStops.length} Pending
-              </span>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">All Dispatched</span>
             )}
           </div>
         </div>
 
-        {/* Pending / not-yet-dispatched stops list */}
+        {/* Pending stops to select */}
         {pendingSorted.length > 0 && (
-          <div className="mt-5 space-y-2 max-h-56 overflow-y-auto pr-1">
+          <div className="space-y-1.5 max-h-52 overflow-y-auto mb-3">
             {pendingSorted.map(({ stop, fbo }) => {
               const status = getDueStatus(fbo, selectedDate);
-              const isChecked = selected.has(stop.fbo_id);
+              const checked = selected.has(stop.fbo_id);
               return (
-                <label
-                  key={stop.id}
-                  className={`flex items-center justify-between gap-3 text-xs p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                    isChecked
-                      ? "bg-emerald-500/5 border-emerald-300/80 shadow-2xs"
-                      : "bg-slate-50/80 hover:bg-slate-100/80 border-slate-200/60"
+                <label key={stop.id}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer transition-all ${
+                    checked ? "bg-emerald-50 border-emerald-200" : "bg-gray-50 border-gray-100 hover:bg-gray-100"
                   }`}
                 >
-                  <span className="flex items-center gap-2.5 min-w-0">
-                    <input
-                      type="checkbox"
-                      className="rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
-                      checked={isChecked}
-                      onChange={() => toggle(stop.fbo_id)}
+                  <span className="flex items-center gap-2 min-w-0">
+                    <input type="checkbox"
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                      checked={checked}
+                      onChange={() => setSelected((prev) => { const n = new Set(prev); checked ? n.delete(stop.fbo_id) : n.add(stop.fbo_id); return n; })}
                     />
-                    {status.code === "early_requested" && <Zap className="w-4 h-4 text-blue-500 flex-shrink-0 animate-bounce" />}
-                    {(status.code === "overdue" || status.code === "never") && (
-                      <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                    )}
-                    <span className="font-semibold text-slate-800 truncate">{fbo.business_name}</span>
+                    {status.code === "early_requested" && <Zap className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
+                    {(status.code === "overdue" || status.code === "never") && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
+                    <span className="font-semibold text-gray-800 truncate">{fbo.business_name}</span>
                   </span>
                   <DueBadge status={status} />
                 </label>
@@ -163,72 +127,35 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
           </div>
         )}
 
+        {/* Selection shortcuts */}
         {pendingStops.length > 0 && (
-          <div className="mt-3 flex items-center gap-3 text-[11px] font-bold text-slate-500">
-            <button
-              type="button"
-              className="hover:text-emerald-600 transition-colors"
-              onClick={() => setSelected(new Set(pendingStops.map((s) => s.fbo_id)))}
-            >
-              Select all
-            </button>
-            <span className="text-slate-300">•</span>
-            <button
-              type="button"
-              className="hover:text-emerald-600 transition-colors"
-              onClick={() => setSelected(new Set(autoSelectedIds))}
-            >
-              Select due only
-            </button>
-            <span className="text-slate-300">•</span>
-            <button
-              type="button"
-              className="hover:text-emerald-600 transition-colors"
-              onClick={() => setSelected(new Set())}
-            >
-              Clear selection
-            </button>
+          <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 mb-3">
+            <button onClick={() => setSelected(new Set(pendingStops.map((s) => s.fbo_id)))} className="hover:text-emerald-600 transition-colors">All</button>
+            <span className="text-gray-200">•</span>
+            <button onClick={() => setSelected(new Set(autoSelectedIds))} className="hover:text-emerald-600 transition-colors">Due only</button>
+            <span className="text-gray-200">•</span>
+            <button onClick={() => setSelected(new Set())} className="hover:text-emerald-600 transition-colors">Clear</button>
           </div>
         )}
 
-        {/* Already Dispatched List */}
+        {/* Dispatched section */}
         {dispatchedStops.length > 0 && (
-          <div className="mt-5 pt-5 border-t border-slate-200/80 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-                Dispatched for {formatDate(selectedDate)}
-              </p>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                {completedCount} / {dispatchedStops.length} Completed
-              </span>
-            </div>
+          <div className="border-t border-gray-100 pt-3 mt-1 space-y-1.5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Dispatched · {formatDate(selectedDate)}
+            </p>
             {dispatchedStops.map((stop) => {
               const fbo = fbosById.get(stop.fbo_id);
-              const assignment = dispatchedByFbo.get(stop.fbo_id);
-              if (!fbo || !assignment) return null;
-              const status = getDueStatus(fbo, selectedDate);
-              const assignedPicker = pickers.find((p) => p.id === assignment.picker_id);
+              const a = dispatchedByFbo.get(stop.fbo_id);
+              if (!fbo || !a) return null;
+              const picker = pickers.find((p) => p.id === a.picker_id);
               return (
-                <div key={stop.id} className="rounded-2xl bg-slate-50 border border-slate-200/60 p-3 space-y-1.5 hover:bg-white hover:shadow-xs transition-all">
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-bold text-slate-800 truncate">{fbo.business_name}</span>
-                    <DailyStatusPill status={assignment.status} liters={assignment.collected_liters} />
+                <div key={stop.id} className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-800 truncate">{fbo.business_name}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] text-gray-400 font-medium">{picker?.profile?.full_name ?? "—"}</span>
+                    <DailyStatusPill status={a.status} liters={a.collected_liters} />
                   </div>
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-[11px]">
-                    <div className="flex items-center gap-1.5 text-slate-600 font-semibold bg-slate-200/60 px-2.5 py-1 rounded-lg">
-                      <Users className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="text-slate-400 font-medium">Assigned Picker:</span>
-                      <span className="text-slate-900 font-bold">{assignedPicker?.profile?.full_name ?? "Assigned"}</span>
-                      <span className="text-[9px] bg-slate-300/70 text-slate-700 px-1.5 py-0.2 rounded-md font-mono uppercase tracking-wider ml-1">
-                        Locked
-                      </span>
-                    </div>
-                  </div>
-                  {status.code === "early_requested" && (
-                    <p className="text-[10px] text-blue-600 font-medium flex items-center gap-1 pt-0.5">
-                      <Zap className="w-3 h-3 text-blue-500" /> Requested an early pickup
-                    </p>
-                  )}
                 </div>
               );
             })}
@@ -236,54 +163,42 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
         )}
 
         {stops.length === 0 && (
-          <p className="mt-4 text-xs text-slate-400 italic text-center py-6">
-            No restaurants added to this zone yet. Go to Zones &amp; Schedules tab to configure stops.
-          </p>
+          <p className="text-xs text-gray-400 italic text-center py-8">No FBOs in this route yet. Add stops in the Routes tab.</p>
         )}
       </div>
 
-      {/* Footer controls */}
+      {/* Footer Action Bar */}
       {stops.length > 0 && (
-        <div className="p-4 bg-slate-900 text-white flex flex-wrap gap-3 justify-between items-center">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <Users className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+        <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+            <Users className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             <select
-              className="w-full text-xs font-bold bg-slate-800 border border-slate-700 text-white rounded-xl py-2 px-3 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              className="flex-1 text-xs font-semibold bg-white border border-gray-200 text-gray-800 rounded-lg py-1.5 px-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
               value={pickerId}
               onChange={(e) => setPickerId(e.target.value)}
             >
-              <option value="" disabled>
-                -- Assign Picker --
-              </option>
-              {pickers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.profile?.full_name}
-                </option>
-              ))}
+              <option value="" disabled>— Assign Picker —</option>
+              {pickers.map((p) => <option key={p.id} value={p.id}>{p.profile?.full_name}</option>)}
             </select>
           </div>
-
           <div className="flex items-center gap-2">
             {dispatchedStops.length > 0 && (
               <button
-                type="button"
                 onClick={() => data.clearDispatch(def, stops.map((s) => s.fbo_id))}
-                disabled={isPending(clearKey)}
-                className="px-3 py-2 rounded-xl text-xs font-bold text-red-300 hover:bg-red-500/20 border border-red-500/30 transition-all flex items-center gap-1.5"
-                title="Remove all of today's dispatch for this zone"
+                disabled={isPending(`clear-${def.id}`)}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all flex items-center gap-1.5 disabled:opacity-40"
               >
-                {isPending(clearKey) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                {isPending(`clear-${def.id}`) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                 Clear
               </button>
             )}
             <button
-              type="button"
               onClick={() => data.dispatchZone(def, pickerId, Array.from(selected))}
               disabled={busy || !pickerId || selected.size === 0}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-600/30 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-2"
+              className="px-4 py-1.5 rounded-lg text-xs font-extrabold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 shadow-md shadow-emerald-600/20 disabled:opacity-40 transition-all flex items-center gap-1.5"
             >
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Dispatch Selected ({selected.size})
+              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Dispatch ({selected.size})
             </button>
           </div>
         </div>
@@ -292,163 +207,114 @@ function ZoneCard({ def, stops, fbosById, pickers, dailyAssignments, selectedDat
   );
 }
 
+/* ── DispatchBoard ───────────────────────────────────────────────────────────── */
 export default function DispatchBoard({ data }: { data: RoutesData }) {
-  const { pickers, fbos, routeDefinitions, routeStops, dailyAssignments, weekAssignments, selectedDate, setSelectedDate, isPending } = data;
+  const { pickers, fbos, routeDefinitions, routeStops, zones, dailyAssignments, weekAssignments, selectedDate, setSelectedDate, isPending } = data;
 
-  const fbosById = useMemo(() => buildFbosById(fbos), [fbos]);
+  const fbosById  = useMemo(() => buildFbosById(fbos), [fbos]);
+  const zonesById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
   const todayReal = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const isFutureDate = selectedDate > todayReal;
 
-  const workloads = useMemo(
-    () => pickers.map((p) => computePickerWorkload(p, dailyAssignments, weekAssignments)),
-    [pickers, dailyAssignments, weekAssignments]
-  );
+  const workloads = useMemo(() => pickers.map((p) => computePickerWorkload(p, dailyAssignments, weekAssignments)), [pickers, dailyAssignments, weekAssignments]);
 
   const dueSummary = useMemo(() => {
-    let overdue = 0;
-    let dueSoonOrToday = 0;
-    let requested = 0;
+    let overdue = 0, dueSoon = 0, requested = 0;
     routeStops.forEach((s) => {
-      const fbo = fbosById.get(s.fbo_id);
-      if (!fbo) return;
-      const status = getDueStatus(fbo, selectedDate);
-      if (status.code === "overdue" || status.code === "never") overdue++;
-      else if (status.code === "due_today" || status.code === "due_soon") dueSoonOrToday++;
-      if (status.code === "early_requested") requested++;
+      const fbo = fbosById.get(s.fbo_id); if (!fbo) return;
+      const { code } = getDueStatus(fbo, selectedDate);
+      if (code === "overdue" || code === "never") overdue++;
+      if (code === "due_today" || code === "due_soon") dueSoon++;
+      if (code === "early_requested") requested++;
     });
-    return { overdue, dueSoonOrToday, requested };
+    return { overdue, dueSoon, requested };
   }, [routeStops, fbosById, selectedDate]);
+
+  const kpis = [
+    { label: "Active Pickers",     value: pickers.length,                                                                      color: "text-slate-900",   bg: "bg-gray-50",    border: "border-gray-100", icon: Users },
+    { label: "Pickups Today",      value: `${dailyAssignments.filter((a) => a.status === "completed").length} / ${dailyAssignments.length}`, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-100", icon: CheckCircle2 },
+    { label: "Overdue",            value: dueSummary.overdue,                                                                  color: "text-red-600",     bg: "bg-red-50",     border: "border-red-100",  icon: AlertTriangle },
+    { label: "Due Today / Soon",   value: dueSummary.dueSoon,                                                                  color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-100", icon: Clock },
+    { label: "Early Requested",    value: dueSummary.requested,                                                                color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-100",  icon: Zap },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Date Control Banner */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-            <CalendarDays className="w-6 h-6" />
-          </div>
+
+      {/* Date Control + KPI ribbon */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-xl shadow-gray-200/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div>
-            <h2 className="font-extrabold text-slate-900 text-lg">Dispatch Calendar</h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Currently dispatching for: <span className="font-bold text-emerald-700">{formatDate(selectedDate)}</span>
+            <h2 className="text-base font-black text-gray-900 flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-emerald-600" />
+              Dispatch Board
+            </h2>
+            <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+              Dispatching for <span className="font-bold text-gray-700">{formatDate(selectedDate)}</span>
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedDate(todayReal)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                selectedDate === todayReal ? "bg-slate-900 text-white shadow-sm" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+              }`}
+            >Today</button>
+            <div className="relative">
+              <input type="date"
+                className="text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+              <CalendarDays className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            type="button"
-            onClick={() => setSelectedDate(todayReal)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-              selectedDate === todayReal
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-            }`}
-          >
-            Today
-          </button>
-          <div className="relative flex-1 md:w-auto">
-            <input
-              type="date"
-              className="w-full text-xs font-bold bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-slate-900 focus:ring-2 focus:ring-emerald-500"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          </div>
+        {/* KPI Ribbon */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {kpis.map(({ label, value, color, bg, border, icon: Icon }) => (
+            <div key={label} className={`rounded-xl ${bg} border ${border} p-3.5`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wider leading-tight">{label}</p>
+                <Icon className={`w-3.5 h-3.5 ${color}`} />
+              </div>
+              <p className={`text-2xl font-black tracking-tight font-mono ${color}`}>{value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* High Density Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Pickers</p>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-slate-900 mt-2">{pickers.length}</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pickups Progress</p>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-emerald-600 mt-2">
-            {dailyAssignments.filter((a) => a.status === "completed").length}{" "}
-            <span className="text-sm font-bold text-slate-400">/ {dailyAssignments.length}</span>
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Overdue</p>
-            <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-600">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-red-600 mt-2">{dueSummary.overdue}</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Due Today / Soon</p>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-amber-600 mt-2">{dueSummary.dueSoonOrToday}</p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Early Requested</p>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
-              <Zap className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-3xl font-black text-blue-600 mt-2">{dueSummary.requested}</p>
-        </div>
-      </div>
-
+      {/* Capacity Warning */}
       {workloads.some((w) => w.nearCapacity) && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-900 rounded-2xl text-xs font-semibold flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-          <span>
-            <strong>Capacity Warning:</strong>{" "}
-            {workloads
-              .filter((w) => w.nearCapacity)
-              .map((w) => w.picker.profile?.full_name)
-              .join(", ")}{" "}
-            {workloads.filter((w) => w.nearCapacity).length === 1 ? "is" : "are"} at or near daily capacity today.
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex items-center gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span className="font-semibold">
+            Capacity Warning: {workloads.filter((w) => w.nearCapacity).map((w) => w.picker.profile?.full_name).join(", ")} at or near daily capacity.
           </span>
         </div>
       )}
 
+      {/* Route Cards Grid */}
       {routeDefinitions.length === 0 ? (
-        <div className="bg-white rounded-3xl p-16 text-center border border-slate-200/80 shadow-sm">
-          <Layers className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="font-extrabold text-slate-800 text-lg">No Zones Created Yet</h3>
-          <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-            Switch to the <strong>Zones &amp; Schedules</strong> tab to set up pickup zones (e.g. Koramangala) and assign restaurants before dispatching routes.
+        <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-xl shadow-gray-200/50">
+          <Droplet className="w-14 h-14 text-gray-200 mx-auto mb-4" />
+          <h3 className="font-black text-gray-700 text-lg">No Routes Created</h3>
+          <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto font-medium">
+            Switch to the <strong>Routes</strong> tab to create route clusters and assign restaurants before dispatching.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {routeDefinitions.map((def) => (
-            <ZoneCard
+            <RouteCard
               key={def.id}
               def={def}
               stops={routeStops.filter((s) => s.route_definition_id === def.id)}
               fbosById={fbosById}
               pickers={pickers}
+              zonesById={zonesById}
               dailyAssignments={dailyAssignments}
               selectedDate={selectedDate}
-              isFutureDate={isFutureDate}
               isPending={isPending}
               data={data}
             />
