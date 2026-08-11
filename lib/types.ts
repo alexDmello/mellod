@@ -22,6 +22,19 @@ export interface SubZone {
   boundary: Array<{ lat: number; lng: number }> | null;
   created_at: string;
 }
+
+export interface RouteSchedule {
+  id: string;
+  route_definition_id: string;
+  scheduled_date: string;       // ISO date "YYYY-MM-DD"
+  picker_id: string | null;
+  fbo_ids: string[];            // ordered list of FBO UUIDs
+  is_executed: boolean;
+  executed_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 export type PickupStatus = "pending" | "completed" | "disputed";
 export type PaymentMethodType = "bank" | "upi" | "cash";
 

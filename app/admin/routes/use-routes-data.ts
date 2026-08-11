@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { todayISO } from "@/lib/utils";
-import type { Zone, SubZone } from "@/lib/types";
+import type { Zone, SubZone, RouteSchedule } from "@/lib/types";
 import {
   DailyRouteAssignment,
   PickerWithCapacity,
@@ -30,6 +30,7 @@ export function useRoutesData() {
   const [weekAssignments, setWeekAssignments] = useState<DailyRouteAssignment[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [subZones, setSubZones] = useState<SubZone[]>([]);
+  const [schedules, setSchedules] = useState<RouteSchedule[]>([]);
 
   const [selectedDate, setSelectedDate] = useState(todayISO());
 
@@ -113,16 +114,25 @@ export function useRoutesData() {
     setSubZones((data as SubZone[]) ?? []);
   }, [supabase]);
 
+  const fetchSchedules = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("route_schedules")
+      .select("*")
+      .order("scheduled_date");
+    if (error) throw error;
+    setSchedules((data as RouteSchedule[]) ?? []);
+  }, [supabase]);
+
   const fetchBaseData = useCallback(async () => {
     setFetching(true);
     try {
-      await Promise.all([fetchPickers(), fetchFbos(), fetchRouteDefinitions(), fetchRouteStops(), fetchZones(), fetchSubZones()]);
+      await Promise.all([fetchPickers(), fetchFbos(), fetchRouteDefinitions(), fetchRouteStops(), fetchZones(), fetchSubZones(), fetchSchedules()]);
     } catch (e: any) {
       setErrorMessage(e?.message ?? "Error loading routes data.");
     } finally {
       setFetching(false);
     }
-  }, [fetchPickers, fetchFbos, fetchRouteDefinitions, fetchRouteStops, fetchZones, fetchSubZones]);
+  }, [fetchPickers, fetchFbos, fetchRouteDefinitions, fetchRouteStops, fetchZones, fetchSubZones, fetchSchedules]);
 
   const fetchDailyAssignments = useCallback(
     async (date: string) => {
@@ -476,6 +486,87 @@ export function useRoutesData() {
     });
   }
 
+  // ── Schedule Functions ──────────────────────────────────────────────────
+
+  async function createSchedule(
+    routeDefinitionId: string,
+    scheduledDate: string,
+    pickerId: string,
+    fboIds: string[],
+    notes?: string
+  ) {
+    await withPending(`create-schedule-${routeDefinitionId}-${scheduledDate}`, async () => {
+      const { error } = await supabase.from("route_schedules").upsert(
+        {
+          route_definition_id: routeDefinitionId,
+          scheduled_date: scheduledDate,
+          picker_id: pickerId || null,
+          fbo_ids: fboIds,
+          notes: notes?.trim() || null,
+          is_executed: false,
+          executed_at: null,
+        },
+        { onConflict: "route_definition_id,scheduled_date" }
+      );
+      if (error) throw error;
+      triggerSuccess(`Route scheduled for ${scheduledDate}.`);
+      await fetchSchedules();
+    });
+  }
+
+  async function deleteSchedule(scheduleId: string) {
+    await withPending(`delete-schedule-${scheduleId}`, async () => {
+      const { error } = await supabase.from("route_schedules").delete().eq("id", scheduleId);
+      if (error) throw error;
+      triggerSuccess("Schedule removed.");
+      await fetchSchedules();
+    });
+  }
+
+  // Execute all unexecuted schedules for a given date (called on page load / date change)
+  async function executeSchedulesForDate(date: string) {
+    const pending = schedules.filter((s) => s.scheduled_date === date && !s.is_executed);
+    if (pending.length === 0) return 0;
+
+    let executed = 0;
+    for (const schedule of pending) {
+      if (!schedule.picker_id || schedule.fbo_ids.length === 0) continue;
+      try {
+        // Remove any existing routes for these FBOs on this date to avoid duplicates
+        await supabase.from("routes").delete().eq("route_date", date).in("fbo_id", schedule.fbo_ids);
+
+        // Insert the dispatch rows
+        const inserts = schedule.fbo_ids.map((fboId, index) => ({
+          picker_id: schedule.picker_id,
+          fbo_id: fboId,
+          route_date: date,
+          sort_order: index,
+          status: "assigned" as const,
+          collected_liters: null,
+          completed_at: null,
+        }));
+        const { error } = await supabase.from("routes").insert(inserts);
+        if (error) throw error;
+
+        // Mark as executed
+        await supabase
+          .from("route_schedules")
+          .update({ is_executed: true, executed_at: new Date().toISOString() })
+          .eq("id", schedule.id);
+
+        executed++;
+      } catch (e: any) {
+        setErrorMessage(`Auto-dispatch failed for schedule: ${e?.message}`);
+      }
+    }
+
+    if (executed > 0) {
+      triggerSuccess(`Auto-dispatched ${executed} scheduled route${executed === 1 ? "" : "s"} for ${date}.`);
+      await Promise.all([fetchSchedules(), fetchDailyAssignments(date)]);
+    }
+    return executed;
+  }
+
   return {
     pickers,
     fbos,
@@ -503,6 +594,10 @@ export function useRoutesData() {
     autoAssignFboZone,
     overrideFboZone,
     bulkRedetectZones,
+    schedules,
+    createSchedule,
+    deleteSchedule,
+    executeSchedulesForDate,
     dispatchZone,
     singleStopReassign,
     clearDispatch,

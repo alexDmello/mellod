@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatDate } from "@/lib/utils";
 import {
-  CalendarDays, Droplet, XCircle, Users, AlertTriangle,
-  Zap, Loader2, MapPin, CheckCircle2, Clock, Send, Trash2,
+  CalendarDays, Droplet, Users, AlertTriangle,
+  Zap, Loader2, MapPin, CheckCircle2, Clock, Send, Trash2, AlarmClock,
 } from "lucide-react";
 import type { RoutesData } from "./use-routes-data";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./route-utils";
 import { DueBadge, DailyStatusPill } from "./route-badges";
 import { ZONE_CONFIG, type ZoneName } from "./zone-data";
+import ScheduleModal from "./ScheduleModal";
 
 /* ── Route Card ─────────────────────────────────────────────────────────────── */
 interface RouteCardProps {
@@ -26,9 +27,10 @@ interface RouteCardProps {
   selectedDate: string;
   isPending: (key: string) => boolean;
   data: RoutesData;
+  onSchedule: (def: RouteDefinition) => void;
 }
 
-function RouteCard({ def, stops, fbosById, pickers, zonesById, dailyAssignments, selectedDate, isPending, data }: RouteCardProps) {
+function RouteCard({ def, stops, fbosById, pickers, zonesById, dailyAssignments, selectedDate, isPending, data, onSchedule }: RouteCardProps) {
   const dispatchedByFbo = useMemo(() => {
     const ids = new Set(stops.map((s) => s.fbo_id));
     return new Map(dailyAssignments.filter((a) => ids.has(a.fbo_id)).map((a) => [a.fbo_id, a]));
@@ -83,6 +85,13 @@ function RouteCard({ def, stops, fbosById, pickers, zonesById, dailyAssignments,
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end flex-shrink-0">
+            <button
+              onClick={() => onSchedule(def)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 border border-gray-200 hover:border-emerald-200 transition-all"
+              title="Schedule this route for a future date"
+            >
+              <AlarmClock className="w-3 h-3" /> Schedule
+            </button>
             {dispatchedStops.length > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="w-3 h-3" /> {completedCount}/{dispatchedStops.length}
@@ -209,7 +218,16 @@ function RouteCard({ def, stops, fbosById, pickers, zonesById, dailyAssignments,
 
 /* ── DispatchBoard ───────────────────────────────────────────────────────────── */
 export default function DispatchBoard({ data }: { data: RoutesData }) {
-  const { pickers, fbos, routeDefinitions, routeStops, zones, dailyAssignments, weekAssignments, selectedDate, setSelectedDate, isPending } = data;
+  const { pickers, fbos, routeDefinitions, routeStops, zones, dailyAssignments, weekAssignments, selectedDate, setSelectedDate, isPending, schedules, executeSchedulesForDate } = data;
+
+  const [schedulingRoute, setSchedulingRoute] = useState<RouteDefinition | null>(null);
+
+  // Auto-execute pending schedules for selected date
+  useEffect(() => {
+    if (selectedDate && schedules.length > 0) {
+      executeSchedulesForDate(selectedDate);
+    }
+  }, [selectedDate, schedules.length]);
 
   const fbosById  = useMemo(() => buildFbosById(fbos), [fbos]);
   const zonesById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
@@ -317,9 +335,20 @@ export default function DispatchBoard({ data }: { data: RoutesData }) {
               selectedDate={selectedDate}
               isPending={isPending}
               data={data}
+              onSchedule={(defToSchedule) => setSchedulingRoute(defToSchedule)}
             />
           ))}
         </div>
+      )}
+
+      {/* Schedule Modal */}
+      {schedulingRoute && (
+        <ScheduleModal
+          def={schedulingRoute}
+          stops={routeStops.filter((s) => s.route_definition_id === schedulingRoute.id)}
+          data={data}
+          onClose={() => setSchedulingRoute(null)}
+        />
       )}
     </div>
   );
