@@ -3,7 +3,7 @@
 // These mirror the Supabase database schema.
 // ============================================================
 
-export type Role = "admin" | "sub_admin" | "picker" | "fbo";
+export type Role = "admin" | "sub_admin" | "staff" | "picker" | "fbo";
 
 // Zone & Sub-Zone types
 export interface Zone {
@@ -43,6 +43,8 @@ export const ADMIN_SECTIONS = [
   { href: "/admin/analytics", label: "Analytics", description: "Volume trends & performance metrics" },
   { href: "/admin/financials", label: "Financials", description: "Monthly P&L simulator & OpEx tracking" },
   { href: "/admin/payments", label: "Payments", description: "Disburse FBO payments & issue monthly statements" },
+  { href: "/admin/attendance", label: "Attendance", description: "Staff & Picker geofenced attendance & leaves" },
+  { href: "/admin/check-in", label: "Daily Check-In", description: "Daily employee profile check-in workstation" },
   { href: "/admin/pickers", label: "Pickup Reviews", description: "Review and verify picker collection logs" },
   { href: "/admin/routes", label: "Routes", description: "Daily route scheduling & templates" },
   { href: "/admin/map", label: "Map", description: "Live GPS pickup tracking map" },
@@ -111,7 +113,9 @@ export interface Profile {
   full_name: string;
   role: Role;
   username: string;
+  email?: string | null;
   phone: string | null;
+  is_attendance_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -234,3 +238,96 @@ export interface FBOPayment {
   created_at: string;
   fbo?: FBO;
 }
+
+// ---------------------------------------------------------------
+// Attendance & Leave Management Types
+// ---------------------------------------------------------------
+export interface OfficeLocation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  allowed_radius_meters: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LeaveQuota {
+  id: string;
+  role: "staff" | "picker";
+  category: "CL" | "SL" | "EL" | "PUBLIC";
+  annual_quota: number;
+  created_at: string;
+}
+
+export interface StaffSchedule {
+  id: string;
+  profile_id: string;
+  monday_mode: "wfo" | "wfh";
+  tuesday_mode: "wfo" | "wfh";
+  wednesday_mode: "wfo" | "wfh";
+  thursday_mode: "wfo" | "wfh";
+  friday_mode: "wfo" | "wfh";
+  saturday_mode: "wfo" | "wfh";
+  sunday_mode: "wfo" | "wfh";
+  is_attendance_enabled?: boolean;
+  created_at: string;
+}
+
+export type WorkMode = "wfo" | "wfh" | "holiday" | "leave" | "absent";
+export type ApprovalStatus = "approved" | "pending" | "rejected";
+export type LeaveType = "pre_approved" | "emergency";
+export type LeaveCategory = "CL" | "SL" | "EL" | "PUBLIC";
+
+export interface AttendanceRecord {
+  id: string;
+  profile_id: string;
+  attendance_date: string; // YYYY-MM-DD
+  work_mode: WorkMode;
+  check_in_at: string | null;
+  check_out_at: string | null;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
+  check_out_lat: number | null;
+  check_out_lng: number | null;
+  office_location_id: string | null;
+  distance_meters: number | null;
+  is_flagged: boolean;
+  flagged_reason: string | null;
+  approval_status: ApprovalStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface LeaveRequest {
+  id: string;
+  profile_id: string;
+  request_type: LeaveType;
+  leave_category: LeaveCategory;
+  start_date: string; // YYYY-MM-DD
+  end_date: string;   // YYYY-MM-DD
+  days_count: number;
+  reason: string | null;
+  status: ApprovalStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface WorkModeSwitchRequest {
+  id: string;
+  profile_id: string;
+  switch_date: string; // YYYY-MM-DD
+  requested_mode: "wfo" | "wfh";
+  reason: string | null;
+  status: ApprovalStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  profile?: Profile;
+}
+

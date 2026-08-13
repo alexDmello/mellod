@@ -10,35 +10,53 @@ import { RouteDefinition, RouteStop, ScheduledFBO, buildFbosById, getDueStatus }
 import { todayISO } from "@/lib/utils";
 
 interface ScheduleModalProps {
-  def: RouteDefinition;
-  stops: RouteStop[];
+  def?: RouteDefinition | null;
+  stops?: RouteStop[];
   data: RoutesData;
   onClose: () => void;
 }
 
-export default function ScheduleModal({ def, stops, data, onClose }: ScheduleModalProps) {
-  const { pickers, fbos, schedules, isPending, createSchedule, deleteSchedule } = data;
+export default function ScheduleModal({ def: propDef, stops: propStops, data, onClose }: ScheduleModalProps) {
+  const { pickers, fbos, routeDefinitions, routeStops, schedules, isPending, createSchedule, deleteSchedule } = data;
   const fbosById = useMemo(() => buildFbosById(fbos), [fbos]);
+
+  // If propDef is not provided, allow selecting route from routeDefinitions
+  const [selectedRouteId, setSelectedRouteId] = useState<string>(propDef?.id ?? routeDefinitions[0]?.id ?? "");
+
+  const activeDef = useMemo(
+    () => propDef ?? routeDefinitions.find((r) => r.id === selectedRouteId) ?? null,
+    [propDef, routeDefinitions, selectedRouteId]
+  );
+
+  const activeStops = useMemo(
+    () => propStops ?? routeStops.filter((s) => s.route_definition_id === activeDef?.id),
+    [propStops, routeStops, activeDef?.id]
+  );
 
   // Schedules that belong to this route, sorted by date
   const routeSchedules = useMemo(
-    () => schedules.filter((s) => s.route_definition_id === def.id).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)),
-    [schedules, def.id]
+    () => (activeDef ? schedules.filter((s) => s.route_definition_id === activeDef.id).sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)) : []),
+    [schedules, activeDef?.id]
   );
 
   // Form state
   const [date, setDate] = useState("");
-  const [pickerId, setPickerId] = useState(def.default_picker_id ?? "");
+  const [pickerId, setPickerId] = useState(activeDef?.default_picker_id ?? "");
   const [notes, setNotes] = useState("");
-  const [selectedFboIds, setSelectedFboIds] = useState<Set<string>>(new Set(stops.map((s) => s.fbo_id)));
+  const [selectedFboIds, setSelectedFboIds] = useState<Set<string>>(new Set(activeStops.map((s) => s.fbo_id)));
 
-  // Sync picker default when def changes
-  useEffect(() => { setPickerId(def.default_picker_id ?? ""); }, [def.default_picker_id]);
+  // Sync picker default and stops when activeDef changes
+  useEffect(() => {
+    if (activeDef) {
+      setPickerId(activeDef.default_picker_id ?? "");
+      setSelectedFboIds(new Set(activeStops.map((s) => s.fbo_id)));
+    }
+  }, [activeDef?.id, activeStops.length]);
 
   const today = todayISO();
-  const isCreatePending = isPending(`create-schedule-${def.id}-${date}`);
+  const isCreatePending = activeDef ? isPending(`create-schedule-${activeDef.id}-${date}`) : false;
 
-  const orderedStops = [...stops].sort((a, b) => a.sort_order - b.sort_order);
+  const orderedStops = useMemo(() => [...activeStops].sort((a, b) => a.sort_order - b.sort_order), [activeStops]);
 
   function toggleFbo(fboId: string) {
     setSelectedFboIds((prev) => {
@@ -50,10 +68,10 @@ export default function ScheduleModal({ def, stops, data, onClose }: ScheduleMod
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!date || !pickerId || selectedFboIds.size === 0) return;
+    if (!activeDef || !date || !pickerId || selectedFboIds.size === 0) return;
     // Preserve the stop order from route_stops sort_order
     const orderedFboIds = orderedStops.map((s) => s.fbo_id).filter((id) => selectedFboIds.has(id));
-    await createSchedule(def.id, date, pickerId, orderedFboIds, notes);
+    await createSchedule(activeDef.id, date, pickerId, orderedFboIds, notes);
     setDate(""); setNotes("");
   }
 
@@ -72,8 +90,8 @@ export default function ScheduleModal({ def, stops, data, onClose }: ScheduleMod
               <AlarmClock className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-black text-gray-900 text-base">Schedule Route</h2>
-              <p className="text-[11px] text-gray-400 font-medium mt-0.5">{def.name}</p>
+              <h2 className="font-black text-gray-900 text-base">Schedule Route Dispatch</h2>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">{activeDef?.name ?? "Select a route to assign"}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
@@ -86,7 +104,7 @@ export default function ScheduleModal({ def, stops, data, onClose }: ScheduleMod
           {routeSchedules.length > 0 && (
             <div className="p-5 border-b border-gray-100">
               <h3 className="text-[11px] font-bold font-mono text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5" /> Upcoming Schedules
+                <CalendarDays className="w-3.5 h-3.5" /> Upcoming Schedules for {activeDef?.name}
               </h3>
               <div className="space-y-2">
                 {routeSchedules.map((s) => {
@@ -143,6 +161,23 @@ export default function ScheduleModal({ def, stops, data, onClose }: ScheduleMod
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Route Selector (if not fixed by propDef) */}
+              {!propDef && (
+                <div>
+                  <label className="text-[11px] font-bold text-gray-600 mb-1.5 block">Select Route *</label>
+                  <select
+                    required
+                    value={selectedRouteId}
+                    onChange={(e) => setSelectedRouteId(e.target.value)}
+                    className="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+                  >
+                    <option value="" disabled>— Choose Route Definition —</option>
+                    {routeDefinitions.map((rd) => (
+                      <option key={rd.id} value={rd.id}>{rd.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {/* Date + Picker row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -176,9 +211,9 @@ export default function ScheduleModal({ def, stops, data, onClose }: ScheduleMod
               {/* FBO Selection */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[11px] font-bold text-gray-600">Select Stops ({selectedFboIds.size}/{stops.length})</label>
+                  <label className="text-[11px] font-bold text-gray-600">Select Stops ({selectedFboIds.size}/{activeStops.length})</label>
                   <div className="flex gap-3 text-[11px] font-bold text-gray-400">
-                    <button type="button" onClick={() => setSelectedFboIds(new Set(stops.map((s) => s.fbo_id)))} className="hover:text-emerald-600 transition-colors">All</button>
+                    <button type="button" onClick={() => setSelectedFboIds(new Set(activeStops.map((s) => s.fbo_id)))} className="hover:text-emerald-600 transition-colors">All</button>
                     <span className="text-gray-200">•</span>
                     <button type="button" onClick={() => setSelectedFboIds(new Set())} className="hover:text-emerald-600 transition-colors">None</button>
                   </div>

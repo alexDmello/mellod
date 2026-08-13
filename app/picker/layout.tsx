@@ -3,13 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, History } from "lucide-react";
+import { Home, History, CalendarDays, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 import PwaLaunchManager from "@/components/PwaLaunchManager";
 
 const navItems = [
   { href: "/picker", label: "Home Route", icon: Home },
+  { href: "/check-in", label: "Check-In", icon: MapPin },
+  { href: "/attendance", label: "Attendance", icon: CalendarDays },
   { href: "/picker/history", label: "Collection History", icon: History },
 ];
 

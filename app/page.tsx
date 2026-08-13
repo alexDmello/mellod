@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [consentAgreed, setConsentAgreed] = useState(false);
 
   useEffect(() => {
     async function checkExistingSession() {
@@ -258,6 +259,22 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* DPDP Act 2023 Explicit Consent Checkbox (No pre-ticked box) */}
+            <div className="pt-1 pb-1 space-y-2">
+              <label className="flex items-start gap-2.5 cursor-pointer text-[11px] text-gray-600 font-medium">
+                <input
+                  type="checkbox"
+                  required
+                  checked={consentAgreed}
+                  onChange={(e) => setConsentAgreed(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
+                />
+                <span>
+                  I give explicit consent for processing my credentials and pickup records in accordance with India&apos;s DPDP Act, 2023.
+                </span>
+              </label>
+            </div>
+
             {error && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-bold flex items-center gap-2 shadow-sm animate-fade-in">
                 <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
@@ -268,8 +285,8 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !username || !password}
-              className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 mt-2"
+              disabled={loading || !username || !password || !consentAgreed}
+              className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl shadow-emerald-700/25 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
             >
               {loading ? (
                 <>

@@ -6,6 +6,7 @@ import {
   CalendarDays, Droplet, Users, AlertTriangle,
   Zap, Loader2, MapPin, CheckCircle2, Clock, Send, Trash2, AlarmClock,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { RoutesData } from "./use-routes-data";
 import {
   DailyRouteAssignment, RouteDefinition, RouteStop, ScheduledFBO,
@@ -255,8 +256,66 @@ export default function DispatchBoard({ data }: { data: RoutesData }) {
     { label: "Early Requested",    value: dueSummary.requested,                                                                color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-100",  icon: Zap },
   ];
 
+  // Fetch driver attendance / holiday status for selectedDate
+  const [absentPickers, setAbsentPickers] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    async function checkDriverHolidays() {
+      const supabase = createClient();
+      const { data: recs } = await supabase
+        .from("attendance_records")
+        .select("profile_id, work_mode, profiles(full_name)")
+        .eq("attendance_date", selectedDate)
+        .in("work_mode", ["holiday", "leave"]);
+
+      const { data: approvedLeaves } = await supabase
+        .from("leave_requests")
+        .select("profile_id, profiles(full_name)")
+        .lte("start_date", selectedDate)
+        .gte("end_date", selectedDate)
+        .eq("status", "approved");
+
+      const map = new Map<string, string>();
+      recs?.forEach((r: any) => {
+        if (r.profile_id) map.set(r.profile_id, r.profiles?.full_name || "Picker");
+      });
+      approvedLeaves?.forEach((l: any) => {
+        if (l.profile_id) map.set(l.profile_id, l.profiles?.full_name || "Picker");
+      });
+
+      const list = Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+      setAbsentPickers(list);
+    }
+    checkDriverHolidays();
+  }, [selectedDate]);
+
   return (
     <div className="space-y-6">
+
+      {/* Driver On Leave / Holiday Alert Banner */}
+      {absentPickers.length > 0 && (
+        <div className="p-4 bg-red-50 border-2 border-red-200 text-red-900 rounded-2xl shadow-sm flex items-start gap-3 animate-fade-in">
+          <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="font-black text-sm text-red-900 flex items-center gap-2">
+              🚨 Driver Holiday Alert — Reassignment Required
+            </h4>
+            <p className="text-xs text-red-800 font-medium">
+              The following driver(s) are on approved Holiday / Leave on <strong>{formatDate(selectedDate)}</strong>:
+            </p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {absentPickers.map((p) => (
+                <span key={p.id} className="px-2.5 py-1 rounded-lg text-xs font-black bg-red-600 text-white shadow-sm">
+                  {p.name} (On Leave)
+                </span>
+              ))}
+            </div>
+            <p className="text-[11px] text-red-700 font-medium pt-1">
+              Please re-assign their daily routes to available active pickers below.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Date Control + KPI ribbon */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-xl shadow-gray-200/50">

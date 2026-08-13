@@ -20,15 +20,18 @@ import {
   Loader2,
   UserCog,
   CreditCard,
+  CalendarDays,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn, todayISO } from "@/lib/utils";
 
 const ALL_NAV_ITEMS = [
+  { href: "/admin/check-in", label: "My Profile & Workspace", icon: UserCog },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/financials", label: "Financials", icon: Wallet },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/attendance", label: "Attendance", icon: CalendarDays },
   { href: "/admin/pickers", label: "Pickup Reviews", icon: Truck },
   { href: "/admin/routes", label: "Routes", icon: Navigation },
   { href: "/admin/map", label: "Map", icon: MapPin },
@@ -49,6 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loadingUser, setLoadingUser] = useState(true);
   const [userName, setUserName] = useState<string>("");
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  const [isAttendanceGateLocked, setIsAttendanceGateLocked] = useState(false);
 
   const supabase = createClient();
 
@@ -64,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, full_name")
+          .select("role, full_name, is_attendance_enabled")
           .eq("id", user.id)
           .single();
 
@@ -75,6 +79,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         setUserRole(profile.role);
         setUserName(profile.full_name || "Admin");
+
+        // Check if attendance check-in is mandatory for this profile today
+        const isSuperAdmin = profile.role === "admin";
+        const isExempt = profile.is_attendance_enabled === false;
+
+        if (!isSuperAdmin && !isExempt) {
+          const today = todayISO();
+          const { data: todayAtt } = await supabase
+            .from("attendance_records")
+            .select("check_in_at, work_mode")
+            .eq("profile_id", user.id)
+            .eq("attendance_date", today)
+            .maybeSingle();
+
+          const isCheckedIn = !!todayAtt?.check_in_at || todayAtt?.work_mode === "leave" || todayAtt?.work_mode === "holiday";
+          if (!isCheckedIn) {
+            setIsAttendanceGateLocked(true);
+            if (pathname !== "/admin/check-in") {
+              router.replace("/admin/check-in");
+            }
+          } else {
+            setIsAttendanceGateLocked(false);
+          }
+        } else {
+          setIsAttendanceGateLocked(false);
+        }
 
         if (profile.role === "admin") {
           setUserRoleName("Super Admin");
@@ -94,16 +124,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           setUserRoleName(formattedRoleName);
 
-          const routes = roleData?.default_routes || ["/admin"];
-          setAllowedRoutes(routes);
+          const routes = roleData?.default_routes && roleData.default_routes.length > 0
+            ? roleData.default_routes
+            : ["/admin/check-in", "/admin", "/admin/attendance"];
 
-          const isCurrentAllowed = routes.some((route: string) =>
-            route === "/admin" ? pathname === "/admin" : pathname.startsWith(route)
-          );
+          const mergedRoutes = Array.from(new Set([...routes, "/admin/check-in", "/admin/attendance"]));
+          setAllowedRoutes(mergedRoutes);
 
-          if (!isCurrentAllowed && routes.length > 0) {
-            router.replace(routes[0]);
-            return;
+          if (!isAttendanceGateLocked) {
+            const isCurrentAllowed = mergedRoutes.some((route: string) =>
+              route === "/admin" ? pathname === "/admin" : pathname.startsWith(route)
+            );
+
+            if (!isCurrentAllowed && mergedRoutes.length > 0) {
+              router.replace(mergedRoutes[0]);
+              return;
+            }
           }
         }
       } catch (err) {
@@ -148,11 +184,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.refresh();
   }
 
-  // Filter navigation items based on allowed_routes
-  const visibleNavItems = ALL_NAV_ITEMS.filter((item) => {
-    if (userRole === "admin") return true;
-    return allowedRoutes.includes(item.href);
-  });
+  // Filter navigation items based on allowed_routes and attendance lock gate
+  const visibleNavItems = isAttendanceGateLocked
+    ? ALL_NAV_ITEMS.filter((item) => item.href === "/admin/check-in")
+    : ALL_NAV_ITEMS.filter((item) => {
+        if (userRole === "admin") return true;
+        return allowedRoutes.includes(item.href);
+      });
 
   const isAuthorizedRoute = () => {
     if (loadingUser) return true;

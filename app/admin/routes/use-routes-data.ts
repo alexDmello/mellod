@@ -167,7 +167,6 @@ export function useRoutesData() {
     name: string,
     defaultPickerId: string,
     zoneId?: string,
-    subZoneId?: string | null,
     description?: string
   ): Promise<RouteDefinition | null> {
     let created: RouteDefinition | null = null;
@@ -178,7 +177,6 @@ export function useRoutesData() {
           name: name.trim(),
           default_picker_id: defaultPickerId || null,
           zone_id: zoneId || null,
-          sub_zone_id: subZoneId || null,
           description: description?.trim() || null,
         })
         .select()

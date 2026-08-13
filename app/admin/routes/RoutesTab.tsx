@@ -46,7 +46,7 @@ export default function RoutesTab({ data }: { data: RoutesData }) {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim()) return;
-    const created = await data.createTemplate(newName.trim(), newPickerId, newZoneId, null, newDesc);
+    const created = await data.createTemplate(newName.trim(), newPickerId, newZoneId, newDesc);
     setNewName(""); setNewPickerId(""); setNewZoneId(""); setNewDesc("");
     setShowCreate(false);
     if (created) setSelectedRouteId(created.id);

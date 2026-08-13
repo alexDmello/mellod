@@ -3,21 +3,23 @@
 import { useState } from "react";
 import {
   Loader2, CheckCircle2, AlertTriangle, Shuffle,
-  FolderKanban, Users, Globe, Compass, RefreshCw,
+  FolderKanban, Users, Globe, Compass, CalendarDays,
 } from "lucide-react";
 import { useRoutesData } from "./use-routes-data";
 import DispatchBoard from "./DispatchBoard";
+import SchedulesTab from "./SchedulesTab";
 import RoutesTab from "./RoutesTab";
 import ZonesOverviewTab from "./ZonesOverviewTab";
 import PickersTab from "./PickersTab";
 
-type Tab = "dispatch" | "routes" | "zones" | "pickers";
+type Tab = "dispatch" | "schedules" | "routes" | "zones" | "pickers";
 
 const TABS: { id: Tab; label: string; icon: typeof Shuffle }[] = [
-  { id: "dispatch", label: "Today's Dispatch", icon: Shuffle },
-  { id: "routes",   label: "Routes",           icon: FolderKanban },
-  { id: "zones",    label: "Zones",            icon: Globe },
-  { id: "pickers",  label: "Pickers",           icon: Users },
+  { id: "dispatch",  label: "Today's Dispatch", icon: Shuffle },
+  { id: "schedules", label: "Schedules",        icon: CalendarDays },
+  { id: "routes",    label: "Routes",           icon: FolderKanban },
+  { id: "zones",     label: "Zones",            icon: Globe },
+  { id: "pickers",   label: "Pickers",           icon: Users },
 ];
 
 export function RoutesManagementTab() {
@@ -89,10 +91,11 @@ export function RoutesManagementTab() {
         </div>
       ) : (
         <div>
-          {activeTab === "dispatch" && <DispatchBoard data={data} />}
-          {activeTab === "routes"   && <RoutesTab data={data} />}
-          {activeTab === "zones"    && <ZonesOverviewTab data={data} />}
-          {activeTab === "pickers"  && <PickersTab data={data} />}
+          {activeTab === "dispatch"  && <DispatchBoard data={data} />}
+          {activeTab === "schedules" && <SchedulesTab data={data} />}
+          {activeTab === "routes"    && <RoutesTab data={data} />}
+          {activeTab === "zones"     && <ZonesOverviewTab data={data} />}
+          {activeTab === "pickers"   && <PickersTab data={data} />}
         </div>
       )}
     </div>
