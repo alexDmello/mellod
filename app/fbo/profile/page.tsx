@@ -328,7 +328,7 @@ export default function FBOProfilePage() {
           </div>
         </div>
 
-        {/* ── SECTION 2: Payment & Payout Options ────────────────────────── */}
+        {/* ── SECTION 2: Payment & Payout Options (Read Only) ────────────────────────── */}
         <div className="bg-white rounded-2xl p-5 space-y-4 border border-gray-100 shadow-xl shadow-gray-200/80">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
@@ -336,19 +336,15 @@ export default function FBOProfilePage() {
                 <CreditCard className="w-4 h-4 text-emerald-700" />
                 Payout Payment Methods
               </h2>
-              <p className="text-[11px] text-gray-500 font-medium">Configure how you receive your UCO earnings</p>
+              <p className="text-[11px] text-gray-500 font-medium">Bank details and UPI accounts configured for receiving earnings</p>
             </div>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] uppercase font-extrabold tracking-wider">
+              Admin Managed
+            </span>
           </div>
 
-          {paymentSuccess && (
-            <div className="p-3 flex items-center gap-2 border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              Payment method saved successfully!
-            </div>
-          )}
-
-          {/* Existing payment methods list */}
-          {paymentMethods.length > 0 && (
+          {/* Existing payment methods list (Read-Only) */}
+          {paymentMethods.length > 0 ? (
             <div className="space-y-3">
               {paymentMethods.map((method) => (
                 <div key={method.id} className="p-3.5 border border-gray-100 rounded-xl bg-gray-50/50">
@@ -379,111 +375,20 @@ export default function FBOProfilePage() {
                         </div>
                       )}
                       {method.method_type === "upi" && (
-                        <p className="text-xs text-gray-600 mt-1 font-mono font-bold">{method.upi_id}</p>
+                        <p className="text-xs text-gray-700 mt-1 font-mono font-bold">{method.upi_id}</p>
                       )}
-                    </div>
-
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {!method.is_primary && (
-                        <button
-                          onClick={() => setPrimary(method.id)}
-                          className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                          title="Set as primary"
-                        >
-                          <Star className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => deleteMethod(method.id)}
-                        className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                        title="Remove"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-
-          {paymentMethods.length === 0 && !showForm && (
+          ) : (
             <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200 space-y-2">
               <CreditCard className="w-8 h-8 text-gray-300 mx-auto" />
-              <p className="text-xs text-gray-700 font-bold">No payment methods added yet</p>
-              <p className="text-[11px] text-gray-400 font-medium">Add a bank account or UPI ID to receive payouts.</p>
-            </div>
-          )}
-
-          {/* Add Form Toggle */}
-          {!showForm ? (
-            <button
-              onClick={() => setShowForm(true)}
-              className="w-full py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-800 transition-all shadow-sm"
-            >
-              <Plus className="w-4 h-4 text-emerald-700" /> Add Payout Method
-            </button>
-          ) : (
-            <div className="p-4 border rounded-2xl bg-gray-50/80 space-y-4">
-              <h3 className="font-bold text-gray-900 text-xs">Add New Method</h3>
-
-              <div className="flex rounded-xl bg-gray-200/80 p-1">
-                {(["upi", "bank"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      activeTab === tab ? "bg-white text-emerald-900 shadow-sm" : "text-gray-600"
-                    }`}
-                  >
-                    {tab === "upi" ? "UPI ID" : "Bank Account"}
-                  </button>
-                ))}
-              </div>
-
-              {activeTab === "upi" && (
-                <form onSubmit={upiForm.handleSubmit(submitUPI)} className="space-y-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-700 block mb-1">UPI ID</label>
-                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" placeholder="restaurant@upi" {...upiForm.register("upi_id")} />
-                    {upiForm.formState.errors.upi_id && <p className="text-[10px] text-rose-500 mt-0.5">{upiForm.formState.errors.upi_id.message}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setShowForm(false)} className="px-3 py-2 text-xs text-gray-600 font-bold rounded-xl hover:bg-gray-200 flex-1">Cancel</button>
-                    <button type="submit" disabled={loading} className="py-2 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex-1 shadow-md shadow-emerald-700/20">
-                      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : "Save UPI"}
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {activeTab === "bank" && (
-                <form onSubmit={bankForm.handleSubmit(submitBank)} className="space-y-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-700 block mb-1">Account Holder Name</label>
-                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" placeholder="Full name on account" {...bankForm.register("account_holder")} />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-700 block mb-1">Bank Name</label>
-                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" placeholder="State Bank of India" {...bankForm.register("bank_name")} />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-700 block mb-1">Account Number</label>
-                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium" type="text" placeholder="Account number" {...bankForm.register("account_number")} />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-gray-700 block mb-1">IFSC Code</label>
-                    <input className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono uppercase font-medium" placeholder="SBIN0001234" {...bankForm.register("ifsc_code")} />
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setShowForm(false)} className="px-3 py-2 text-xs text-gray-600 font-bold rounded-xl hover:bg-gray-200 flex-1">Cancel</button>
-                    <button type="submit" disabled={loading} className="py-2 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex-1 shadow-md shadow-emerald-700/20">
-                      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : "Save Bank"}
-                    </button>
-                  </div>
-                </form>
-              )}
+              <p className="text-xs text-gray-700 font-bold">No payout method assigned yet</p>
+              <p className="text-[11px] text-gray-400 font-medium max-w-sm mx-auto">
+                Payout payment methods are managed centrally by your administrator. Contact support if you need to update your payout account.
+              </p>
             </div>
           )}
         </div>

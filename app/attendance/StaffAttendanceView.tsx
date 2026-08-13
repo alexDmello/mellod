@@ -10,6 +10,7 @@ import {
 import type { AttendanceData } from "./use-attendance-data";
 import { formatDate } from "@/lib/utils";
 import type { LeaveCategory, LeaveType, WorkMode } from "@/lib/types";
+import StaffCalendarInspector from "@/components/attendance/StaffCalendarInspector";
 
 export default function StaffAttendanceView({ data }: { data: AttendanceData }) {
   const {
@@ -22,6 +23,10 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
     userSwitchRequests,
     leaveBalances,
     staffSchedule,
+    allProfiles,
+    teamAttendanceHistory,
+    allLeaveRequests,
+    leaveQuotas,
     actionPending,
     checkIn,
     checkOut,
@@ -29,6 +34,7 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
     submitModeSwitchRequest,
   } = data;
 
+  const [activeTab, setActiveTab] = useState<"workspace" | "calendar">("workspace");
   const [selectedMode, setSelectedMode] = useState<WorkMode>(expectedModeToday);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -131,17 +137,17 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
       <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">My Profile &amp; Workspace</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Staff Attendance Portal</h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
               {currentUser?.role === "sub_admin" ? "Sub-Admin" : currentUser?.role || "Staff"}
             </span>
           </div>
           <p className="text-xs text-gray-500">
-            Manage daily check-ins, view leave balance quotas, and request work mode schedules.
+            Manage daily check-ins, switch work mode schedules, and inspect staff attendance calendar.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowSwitchModal(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 border bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm"
@@ -160,9 +166,8 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
         </div>
       </div>
 
-      {/* ── Top Executive KPI Cards Row ───────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+      {/* ── Top Executive KPI Cards Row (Small Containers) ──────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* KPI 1: Today's Shift Status */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
@@ -207,21 +212,7 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
           </p>
         </div>
 
-        {/* KPI 3: Remaining Leave Quota */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-1">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
-            <span>Available Leave Quotas</span>
-            <Award className="w-4 h-4 text-emerald-600" />
-          </div>
-          <p className="text-lg font-bold text-gray-900">
-            {totalRemainingLeaveDays} Days
-          </p>
-          <p className="text-[11px] text-gray-400">
-            Across CL, SL, EL &amp; Public Holidays
-          </p>
-        </div>
-
-        {/* KPI 4: Office Location Base */}
+        {/* KPI 3: Office Location Base Station */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
             <span>Office Base Station</span>
@@ -235,6 +226,38 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
           </p>
         </div>
       </div>
+
+      {/* ── Main Tab Navigation Bar (Simple Analytics Style, Below Small KPI Containers) ── */}
+      <div className="border-b border-gray-200 flex items-center gap-6 md:gap-8 px-2 text-sm font-bold text-gray-500 overflow-x-auto">
+        {[
+          { id: "workspace", label: "My Workspace & Check-In" },
+          { id: "calendar", label: "Staff Calendar & Quotas" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as "workspace" | "calendar")}
+            className={`pb-3 transition-all relative whitespace-nowrap ${
+              activeTab === tab.id
+                ? "text-emerald-600 font-extrabold border-b-2 border-emerald-600"
+                : "hover:text-gray-900"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "calendar" ? (
+        <StaffCalendarInspector
+          allProfiles={allProfiles}
+          teamAttendanceHistory={teamAttendanceHistory}
+          allLeaveRequests={allLeaveRequests}
+          leaveQuotas={leaveQuotas}
+          currentUser={currentUser}
+          initialSelectedUserId={currentUser?.id}
+        />
+      ) : (
+        <>
 
       {/* ── Main Layout Grid (8 Cols Left / 4 Cols Right) ─────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -488,39 +511,6 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
         {/* ── RIGHT SIDEBAR WIDGETS (4 Cols) ─────────────────────────── */}
         <div className="lg:col-span-4 space-y-6">
 
-          {/* 1. Leave Quota Balances Widget */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                <Award className="w-4 h-4 text-emerald-600" />
-                Leave Balances ({new Date().getFullYear()})
-              </h3>
-              <span className="text-[10px] font-semibold text-gray-500">Annual Quota</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              {leaveBalances.map((b) => (
-                <div key={b.category} className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-gray-700">{b.category}</span>
-                    <span className="text-[10px] text-gray-400">{b.used}/{b.annual}d</span>
-                  </div>
-
-                  <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-600 h-full rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (b.used / b.annual) * 100)}%` }}
-                    />
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-emerald-700">{b.remaining}d left</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* 2. Weekly Work Routine */}
           {staffSchedule && (
             <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-3">
@@ -580,6 +570,8 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
 
         </div>
       </div>
+      </>
+      )}
 
       {/* ── Request Leave Modal ───────────────────────────────────────── */}
       {showLeaveModal && (

@@ -215,6 +215,98 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Failed to update FBO details: " + fboErr.message }, { status: 500 });
           }
         }
+
+        // Handle UPI ID update in payment_methods
+        if (body.upiId !== undefined) {
+          const { data: fboRow } = await adminClient
+            .from("fbos")
+            .select("id")
+            .eq("profile_id", userId)
+            .single();
+
+          if (fboRow?.id) {
+            const cleanUpi = body.upiId ? String(body.upiId).trim() : null;
+
+            const { data: existingMethods } = await adminClient
+              .from("payment_methods")
+              .select("id, method_type")
+              .eq("fbo_id", fboRow.id);
+
+            const upiMethod = (existingMethods || []).find((m: any) => m.method_type === "upi");
+
+            if (cleanUpi) {
+              if (upiMethod) {
+                await adminClient
+                  .from("payment_methods")
+                  .update({ upi_id: cleanUpi })
+                  .eq("id", upiMethod.id);
+              } else {
+                await adminClient.from("payment_methods").insert({
+                  fbo_id: fboRow.id,
+                  method_type: "upi",
+                  upi_id: cleanUpi,
+                  is_primary: true,
+                });
+              }
+            } else if (upiMethod) {
+              await adminClient.from("payment_methods").delete().eq("id", upiMethod.id);
+            }
+          }
+        }
+
+        // Handle Bank Details update in payment_methods
+        if (
+          body.accountHolder !== undefined ||
+          body.bankName !== undefined ||
+          body.accountNumber !== undefined ||
+          body.ifscCode !== undefined
+        ) {
+          const { data: fboRow } = await adminClient
+            .from("fbos")
+            .select("id")
+            .eq("profile_id", userId)
+            .single();
+
+          if (fboRow?.id) {
+            const cleanHolder = body.accountHolder ? String(body.accountHolder).trim() : null;
+            const cleanBank = body.bankName ? String(body.bankName).trim() : null;
+            const cleanAcc = body.accountNumber ? String(body.accountNumber).trim() : null;
+            const cleanIfsc = body.ifscCode ? String(body.ifscCode).trim().toUpperCase() : null;
+
+            const { data: existingMethods } = await adminClient
+              .from("payment_methods")
+              .select("id, method_type")
+              .eq("fbo_id", fboRow.id);
+
+            const bankMethod = (existingMethods || []).find((m: any) => m.method_type === "bank");
+
+            if (cleanAcc || cleanHolder || cleanBank || cleanIfsc) {
+              if (bankMethod) {
+                await adminClient
+                  .from("payment_methods")
+                  .update({
+                    account_holder: cleanHolder,
+                    bank_name: cleanBank,
+                    account_number: cleanAcc,
+                    ifsc_code: cleanIfsc,
+                  })
+                  .eq("id", bankMethod.id);
+              } else {
+                await adminClient.from("payment_methods").insert({
+                  fbo_id: fboRow.id,
+                  method_type: "bank",
+                  account_holder: cleanHolder,
+                  bank_name: cleanBank,
+                  account_number: cleanAcc,
+                  ifsc_code: cleanIfsc,
+                  is_primary: false,
+                });
+              }
+            } else if (bankMethod) {
+              await adminClient.from("payment_methods").delete().eq("id", bankMethod.id);
+            }
+          }
+        }
       } else if (targetRole === "picker") {
         const pickerUpdates: Record<string, any> = {};
         if (vehicleInfo !== undefined) pickerUpdates.vehicle_info = vehicleInfo ? vehicleInfo.trim() : null;

@@ -27,6 +27,7 @@ const fboSchema = z.object({
   pincode: z.string().regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits"),
   phone: z.string().optional(),
   fssai_license: z.string().optional(),
+  upi_id: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
@@ -174,6 +175,7 @@ export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedA
           latitude: selectedCoords.lat,
           longitude: selectedCoords.lng,
           fssaiLicense: data.fssai_license?.trim() || null,
+          upiId: data.upi_id?.trim() || null,
         }),
       });
 
@@ -215,6 +217,10 @@ export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedA
         <div>
           <label className="form-label">FSSAI License No. <span className="text-gray-400 font-normal">(Optional)</span></label>
           <input className="form-input font-mono text-xs uppercase" placeholder="e.g. 12224999000123" {...register("fssai_license")} />
+        </div>
+        <div className="md:col-span-2">
+          <label className="form-label font-bold text-gray-700">FBO UPI ID <span className="text-gray-400 font-normal">(Admin Managed Payout ID)</span></label>
+          <input className="form-input font-mono text-xs" placeholder="e.g. merchant@upi or 9876543210@paytm" {...register("upi_id")} />
         </div>
       </div>
 
@@ -348,6 +354,7 @@ export interface DirectoryUser {
   contact_person?: string;
   address?: string;
   fssai_license?: string;
+  upi_id?: string;
   vehicle_info?: string;
   is_active?: boolean;
   latitude?: number | null;
@@ -373,6 +380,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
     contactPerson: "",
     address: "",
     fssaiLicense: "",
+    upiId: "",
     vehicleInfo: "",
     latitude: 12.9716,
     longitude: 77.5946,
@@ -398,7 +406,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
         username,
         phone,
         generated_password,
-        fbos ( business_name, contact_person, address, fssai_license, is_active, latitude, longitude ),
+        fbos ( business_name, contact_person, address, fssai_license, is_active, latitude, longitude, payment_methods ( upi_id, method_type ) ),
         pickers ( vehicle_info, is_active )
       `)
       .in("role", roleFilter ? [roleFilter] : ["fbo", "picker"])
@@ -409,6 +417,8 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
         const fboObj = Array.isArray(p.fbos) ? p.fbos[0] : p.fbos;
         const pickerObj = Array.isArray(p.pickers) ? p.pickers[0] : p.pickers;
         const isActive = p.role === "fbo" ? fboObj?.is_active ?? true : pickerObj?.is_active ?? true;
+        const pmList = fboObj?.payment_methods || [];
+        const upiObj = (Array.isArray(pmList) ? pmList : [pmList]).find((m: any) => m?.method_type === "upi") || pmList?.[0];
 
         return {
           id: p.id,
@@ -421,6 +431,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
           contact_person: fboObj?.contact_person,
           address: fboObj?.address,
           fssai_license: fboObj?.fssai_license,
+          upi_id: upiObj?.upi_id || undefined,
           latitude: fboObj?.latitude,
           longitude: fboObj?.longitude,
           vehicle_info: pickerObj?.vehicle_info,
@@ -449,6 +460,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
       contactPerson: user.contact_person || user.full_name || "",
       address: user.address || "",
       fssaiLicense: user.fssai_license || "",
+      upiId: user.upi_id || "",
       vehicleInfo: user.vehicle_info || "",
       latitude: user.latitude ? Number(user.latitude) : 12.9716,
       longitude: user.longitude ? Number(user.longitude) : 77.5946,
@@ -475,6 +487,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
           contactPerson: editForm.contactPerson,
           address: editForm.address,
           fssaiLicense: editForm.fssaiLicense,
+          upiId: editForm.upiId,
           vehicleInfo: editForm.vehicleInfo,
           latitude: editForm.latitude,
           longitude: editForm.longitude,
@@ -670,6 +683,7 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
                   <td className="px-4 py-3 text-xs text-gray-500">
                     {user.phone && <p>📞 {user.phone}</p>}
                     {user.fssai_license && <p>FSSAI: {user.fssai_license}</p>}
+                    {user.upi_id && <p className="font-mono text-emerald-700">UPI: {user.upi_id}</p>}
                     {user.vehicle_info && <p>🚛 {user.vehicle_info}</p>}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -787,6 +801,17 @@ export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" })
                       placeholder="e.g. 12224999000123"
                       value={editForm.fssaiLicense}
                       onChange={(e) => setEditForm({ ...editForm, fssaiLicense: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label font-semibold">FBO UPI ID <span className="text-gray-400 font-normal">(Payout UPI)</span></label>
+                    <input
+                      type="text"
+                      className="form-input font-mono text-xs"
+                      placeholder="e.g. merchant@upi"
+                      value={editForm.upiId}
+                      onChange={(e) => setEditForm({ ...editForm, upiId: e.target.value })}
                     />
                   </div>
 

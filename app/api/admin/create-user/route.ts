@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     // 2. Parse request parameters
     const body = await request.json();
-    const { type, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense, allowedRoutes } = body;
+    const { type, password, username, fullName, phone, vehicleInfo, businessName, address, latitude, longitude, fssaiLicense, upiId, allowedRoutes } = body;
 
     if (!password || !username || !fullName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
 
     // 6. Insert role-specific record
     if (type === "FBO") {
-      const { error: fboError } = await adminClient.from("fbos").insert({
+      const { data: createdFbo, error: fboError } = await adminClient.from("fbos").insert({
         profile_id: userId,
         business_name: businessName || fullName,
         contact_person: fullName,
@@ -98,11 +98,20 @@ export async function POST(request: Request) {
         latitude: latitude || null,
         longitude: longitude || null,
         fssai_license: fssaiLicense || null,
-      });
+      }).select().single();
 
       if (fboError) {
         await adminClient.auth.admin.deleteUser(userId);
         return NextResponse.json({ error: "Failed to create FBO record: " + fboError.message }, { status: 500 });
+      }
+
+      if (upiId && createdFbo?.id) {
+        await adminClient.from("payment_methods").insert({
+          fbo_id: createdFbo.id,
+          method_type: "upi",
+          upi_id: String(upiId).trim(),
+          is_primary: true,
+        });
       }
     } else if (type === "Picker") {
       const { error: pickerError } = await adminClient.from("pickers").insert({

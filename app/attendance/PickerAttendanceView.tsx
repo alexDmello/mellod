@@ -9,6 +9,7 @@ import type { AttendanceData } from "./use-attendance-data";
 import { formatDistance } from "@/lib/geo-utils";
 import { formatDate } from "@/lib/utils";
 import type { LeaveCategory, LeaveType } from "@/lib/types";
+import StaffCalendarInspector from "@/components/attendance/StaffCalendarInspector";
 
 export default function PickerAttendanceView({ data }: { data: AttendanceData }) {
   const {
@@ -19,11 +20,17 @@ export default function PickerAttendanceView({ data }: { data: AttendanceData })
     userAttendanceHistory,
     userLeaveRequests,
     leaveBalances,
+    allProfiles,
+    teamAttendanceHistory,
+    allLeaveRequests,
+    leaveQuotas,
     actionPending,
     checkIn,
     checkOut,
     submitLeaveRequest,
   } = data;
+
+  const [activeTab, setActiveTab] = useState<"checkin" | "calendar">("checkin");
 
   const activeOffice = officeLocations.find((o) => o.is_active) || officeLocations[0];
 
@@ -102,26 +109,56 @@ export default function PickerAttendanceView({ data }: { data: AttendanceData })
   const isCheckedOut = !!todayAttendance?.check_out_at;
 
   return (
-    <div className="space-y-5 pb-16 max-w-md mx-auto animate-fade-in">
+    <div className="space-y-5 pb-16 max-w-2xl mx-auto animate-fade-in font-sans">
       {/* ── 1. USER PROFILE CARD ───────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xl shadow-gray-200/50 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-black text-lg flex items-center justify-center shadow-md shadow-emerald-600/20 uppercase">
-              {currentUser?.full_name ? currentUser.full_name.charAt(0) : "P"}
+      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-black text-lg flex items-center justify-center shadow-md shadow-emerald-600/20 uppercase">
+            {currentUser?.full_name ? currentUser.full_name.charAt(0) : "P"}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-base font-black text-gray-900">{currentUser?.full_name || "Picker Profile"}</h2>
+              <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800">
+                Picker
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-base font-black text-gray-900">{currentUser?.full_name || "Picker Profile"}</h2>
-                <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800">
-                  Picker
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-500 font-medium">@{currentUser?.username || "driver"}</p>
-            </div>
+            <p className="text-[11px] text-gray-500 font-medium">@{currentUser?.username || "driver"}</p>
           </div>
         </div>
       </div>
+
+      {/* ── Main Tab Navigation Bar (Simple Analytics Style, Below Top Profile Container) ── */}
+      <div className="border-b border-gray-200 flex items-center gap-6 px-2 text-sm font-bold text-gray-500 overflow-x-auto">
+        {[
+          { id: "checkin", label: "Field Check-In" },
+          { id: "calendar", label: "Calendar & Quotas" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as "checkin" | "calendar")}
+            className={`pb-3 transition-all relative whitespace-nowrap ${
+              activeTab === tab.id
+                ? "text-emerald-600 font-extrabold border-b-2 border-emerald-600"
+                : "hover:text-gray-900"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "calendar" ? (
+        <StaffCalendarInspector
+          allProfiles={allProfiles}
+          teamAttendanceHistory={teamAttendanceHistory}
+          allLeaveRequests={allLeaveRequests}
+          leaveQuotas={leaveQuotas}
+          currentUser={currentUser}
+          initialSelectedUserId={currentUser?.id}
+        />
+      ) : (
+        <>
 
       {/* ── 2. Mobile Page Header ─────────────────────────────────────────── */}
       <div className={`rounded-3xl p-6 shadow-2xl relative overflow-hidden transition-all ${
@@ -276,26 +313,6 @@ export default function PickerAttendanceView({ data }: { data: AttendanceData })
         )}
       </div>
 
-      {/* ── Holiday Quota Balances ─────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xl shadow-gray-200/50 space-y-3">
-        <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-          <Award className="w-4 h-4 text-emerald-600" />
-          Holiday Balance Quotas ({new Date().getFullYear()})
-        </h3>
-
-        <div className="grid grid-cols-3 gap-2">
-          {leaveBalances.filter((b) => b.category !== "PUBLIC").map((b) => (
-            <div key={b.category} className="bg-gray-50 border border-gray-200/70 p-3 rounded-2xl text-center">
-              <span className="text-[10px] font-extrabold text-gray-400 block uppercase">
-                {b.category === "CL" ? "Casual" : b.category === "SL" ? "Sick" : "Earned"} ({b.category})
-              </span>
-              <p className="text-lg font-black text-gray-900 font-mono mt-0.5">{b.remaining}</p>
-              <span className="text-[10px] text-gray-500 font-medium">{b.used} used / {b.annual}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ── Recent Attendance & Holiday Requests ──────────────────────── */}
       <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-xl shadow-gray-200/50 space-y-3">
         <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
@@ -333,6 +350,8 @@ export default function PickerAttendanceView({ data }: { data: AttendanceData })
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ── Request Holiday Modal ─────────────────────────────────────── */}
       {showHolidayModal && (

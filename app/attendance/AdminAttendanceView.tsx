@@ -10,10 +10,12 @@ import type { AttendanceData } from "./use-attendance-data";
 import { formatDate } from "@/lib/utils";
 import { formatDistance } from "@/lib/geo-utils";
 import type { OfficeLocation, StaffSchedule, LeaveCategory, LeaveQuota } from "@/lib/types";
+import StaffCalendarInspector from "@/components/attendance/StaffCalendarInspector";
 
 export default function AdminAttendanceView({ data }: { data: AttendanceData }) {
   const {
     today,
+    currentUser,
     allProfiles,
     teamTodayAttendance,
     allLeaveRequests,
@@ -41,7 +43,7 @@ export default function AdminAttendanceView({ data }: { data: AttendanceData }) 
     setRefreshing(false);
   }
 
-  const [activeTab, setActiveTab] = useState<"overview" | "history" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "history" | "calendar" | "settings">("overview");
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -150,36 +152,7 @@ export default function AdminAttendanceView({ data }: { data: AttendanceData }) 
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Tab Switchers */}
-          <div className="flex items-center gap-1 p-1 bg-gray-100/80 rounded-xl">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeTab === "overview" ? "bg-slate-900 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200/80"
-              }`}
-            >
-              Overview &amp; Queue ({totalPendingCount})
-            </button>
-            <button
-              onClick={() => setActiveTab("history")}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeTab === "history" ? "bg-slate-900 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200/80"
-              }`}
-            >
-              Attendance Logs
-            </button>
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                activeTab === "settings" ? "bg-slate-900 text-white shadow-sm" : "text-gray-600 hover:bg-gray-200/80"
-              }`}
-            >
-              <Settings className="w-3.5 h-3.5 inline mr-1" />
-              Settings
-            </button>
-          </div>
-
+        <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -199,7 +172,7 @@ export default function AdminAttendanceView({ data }: { data: AttendanceData }) 
         </div>
       </div>
 
-      {/* ── KPI Ribbon ─────────────────────────────────────────────────── */}
+      {/* ── KPI Ribbon (Six Small Containers) ──────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Team</span>
@@ -236,6 +209,28 @@ export default function AdminAttendanceView({ data }: { data: AttendanceData }) 
           <p className="text-2xl font-black text-gray-800 font-mono mt-1">{stats.unmarked}</p>
           <span className="text-[10px] text-gray-400 font-medium">Pending check-in</span>
         </div>
+      </div>
+
+      {/* ── Main Navigation Tab Bar (Simple Analytics Style, Below Small KPI Containers) ── */}
+      <div className="border-b border-gray-200 flex items-center gap-6 md:gap-8 px-2 text-sm font-bold text-gray-500 overflow-x-auto">
+        {[
+          { id: "overview", label: `Overview & Queue (${totalPendingCount})` },
+          { id: "history", label: "Attendance Logs" },
+          { id: "calendar", label: "Staff Calendar & Quotas" },
+          { id: "settings", label: "Settings" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as "overview" | "history" | "calendar" | "settings")}
+            className={`pb-3 transition-all relative whitespace-nowrap ${
+              activeTab === tab.id
+                ? "text-emerald-600 font-extrabold border-b-2 border-emerald-600"
+                : "hover:text-gray-900"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* ── TAB 1: OVERVIEW & PENDING APPROVALS QUEUE ──────────────────── */}
@@ -531,7 +526,18 @@ export default function AdminAttendanceView({ data }: { data: AttendanceData }) 
         </div>
       )}
 
-      {/* ── TAB 3: SYSTEM SETTINGS PANEL ────────────────────────────────── */}
+      {/* ── TAB 3: STAFF CALENDAR & LEAVE QUOTAS INSPECTOR ──────────────── */}
+      {activeTab === "calendar" && (
+        <StaffCalendarInspector
+          allProfiles={allProfiles}
+          teamAttendanceHistory={teamAttendanceHistory}
+          allLeaveRequests={allLeaveRequests}
+          leaveQuotas={leaveQuotas}
+          currentUser={currentUser}
+        />
+      )}
+
+      {/* ── TAB 4: SYSTEM SETTINGS PANEL ────────────────────────────────── */}
       {activeTab === "settings" && (
         <div className="space-y-6">
           {/* Employee Attendance Access Controls */}
