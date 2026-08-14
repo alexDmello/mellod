@@ -523,12 +523,8 @@ export default function PickerDashboard() {
                         : null;
 
                       return (
-                        <motion.div
+                        <div
                           key={route.id}
-                          layout
-                          initial={{ opacity: 0, y: 15 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: idx * 0.04 }}
                           className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-lg shadow-slate-200/50 transition-all hover:shadow-xl"
                         >
                           <button
@@ -555,12 +551,7 @@ export default function PickerDashboard() {
                           </button>
 
                           {isExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/50 space-y-4"
-                            >
+                            <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/50 space-y-4 animate-fade-in">
                               <FBODetailInfo fbo={route.fbo} />
 
                               <div className="flex flex-wrap sm:flex-nowrap gap-2">
@@ -600,9 +591,9 @@ export default function PickerDashboard() {
                                   Log Pickup 🛢️
                                 </Link>
                               </div>
-                            </motion.div>
+                            </div>
                           )}
-                        </motion.div>
+                        </div>
                       );
                     })
                   )}
@@ -626,12 +617,8 @@ export default function PickerDashboard() {
                       const pickup = route.pickup!;
 
                       return (
-                        <motion.div
+                        <div
                           key={route.id}
-                          layout
-                          initial={{ opacity: 0, y: 15 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: idx * 0.04 }}
                           className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-lg shadow-slate-200/50 transition-all"
                         >
                           <button
@@ -660,12 +647,7 @@ export default function PickerDashboard() {
                           </button>
 
                           {isExpanded && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/50 space-y-4"
-                            >
+                            <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50/50 space-y-4 animate-fade-in">
                               <FBODetailInfo fbo={route.fbo} />
 
                               <div className="p-3.5 bg-white rounded-2xl border border-slate-100 space-y-2.5">
@@ -701,9 +683,9 @@ export default function PickerDashboard() {
                                   </div>
                                 )}
                               </div>
-                            </motion.div>
+                            </div>
                           )}
-                        </motion.div>
+                        </div>
                       );
                     })
                   )}
