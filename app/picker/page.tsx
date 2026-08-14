@@ -110,17 +110,66 @@ export default function PickerDashboard() {
         .eq("route_date", today)
         .order("sort_order");
 
-      const { data: pickupsData } = await supabase
-        .from("pickups")
-        .select("*")
-        .eq("picker_id", picker.id)
-        .gte("picked_up_at", `${today}T00:00:00`)
-        .lt("picked_up_at", `${today}T23:59:59`);
+      const fboIds = (routesData ?? []).map((r: any) => r.fbo_id);
 
-      const pickupsByFBO = (pickupsData ?? []).reduce((acc, p) => {
-        acc[p.fbo_id] = p;
-        return acc;
-      }, {} as Record<string, Pickup>);
+      // Start window 36 hours lookback from start of local today to prevent timezone boundary clipping
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const lookbackWindowISO = new Date(startOfToday.getTime() - 36 * 60 * 60 * 1000).toISOString();
+
+      let pickupsData: any[] = [];
+      let exceptionsData: any[] = [];
+
+      if (fboIds.length > 0) {
+        const [pickupsRes, exceptionsRes] = await Promise.all([
+          supabase
+            .from("pickups")
+            .select("*")
+            .eq("picker_id", picker.id)
+            .in("fbo_id", fboIds)
+            .gte("picked_up_at", lookbackWindowISO)
+            .order("picked_up_at", { ascending: false }),
+          supabase
+            .from("pickup_exceptions")
+            .select("*")
+            .eq("picker_id", picker.id)
+            .in("fbo_id", fboIds)
+            .gte("created_at", lookbackWindowISO)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        pickupsData = pickupsRes.data ?? [];
+        exceptionsData = exceptionsRes.data ?? [];
+      }
+
+      const pickupsByFBO: Record<string, Pickup> = {};
+
+      // 1. Fill from pickups table (latest record per FBO)
+      pickupsData.forEach((p: any) => {
+        if (!pickupsByFBO[p.fbo_id]) {
+          pickupsByFBO[p.fbo_id] = p;
+        }
+      });
+
+      // 2. Fill from exceptions table if pickups table did not contain entry
+      exceptionsData.forEach((exc: any) => {
+        if (!pickupsByFBO[exc.fbo_id]) {
+          pickupsByFBO[exc.fbo_id] = {
+            id: exc.id,
+            picker_id: picker.id,
+            fbo_id: exc.fbo_id,
+            route_id: null,
+            liters: 0,
+            price_per_liter: 0,
+            total_amount: 0,
+            photo_url: exc.photo_url || null,
+            notes: `[ATTEMPTED_CLOSED] ${exc.reason}`,
+            status: "disputed",
+            picked_up_at: exc.created_at,
+            created_at: exc.created_at,
+          };
+        }
+      });
 
       const enrichedRoutes: RouteWithDetails[] = (routesData ?? []).map((r: any) => ({
         ...r,

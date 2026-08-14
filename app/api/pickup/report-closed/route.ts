@@ -96,8 +96,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Log into pickup_exceptions table (or pickups table with status attempted_closed)
-    const { data: exceptionRecord, error: exceptionErr } = await adminSupabase
+    // 3. Log into pickup_exceptions table AND pickups table so driver state persists across refreshes
+    const { data: exceptionRecord, error: excErr } = await adminSupabase
       .from("pickup_exceptions")
       .insert({
         fbo_id: fboId,
@@ -112,25 +112,37 @@ export async function POST(request: Request) {
       .select("*")
       .maybeSingle();
 
-    if (exceptionErr) {
-      console.warn("pickup_exceptions insert fallback:", exceptionErr.message);
-      // Fallback: log inside pickups table as zero-volume attempted entry
-      await adminSupabase.from("pickups").insert({
+    if (excErr) {
+      console.error("Error logging pickup exception:", excErr.message);
+    }
+
+    // Insert into pickups table as zero-volume attempted entry
+    const { data: pickupRecord, error: pickupErr } = await adminSupabase
+      .from("pickups")
+      .insert({
         fbo_id: fboId,
         picker_id: pickerId,
         route_id: routeId,
         liters: 0,
+        price_per_liter: 0,
         total_amount: 0,
         notes: `[ATTEMPTED_CLOSED] Reason: ${reason}. Notes: ${notes}`,
         photo_url: photoUrl,
-        status: "attempted_closed",
-      });
+        status: "disputed",
+        picked_up_at: new Date().toISOString(),
+      })
+      .select("*")
+      .maybeSingle();
+
+    if (pickupErr) {
+      console.error("Error logging attempted pickup in pickups table:", pickupErr.message);
     }
 
     return NextResponse.json({
       success: true,
       message: "Outlet closed status logged successfully. FBO notified for rescheduling.",
       exception: exceptionRecord || null,
+      pickup: pickupRecord || null,
       photo_url: photoUrl,
     });
   } catch (error: any) {
