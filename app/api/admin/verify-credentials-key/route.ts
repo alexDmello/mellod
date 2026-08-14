@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { parseAndSanitizeJson } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { masterKey } = body;
+    const rawText = await request.text();
+    const parseResult = parseAndSanitizeJson<{ masterKey?: string }>(rawText);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error }, { status: parseResult.status });
+    }
+
+    const { masterKey } = parseResult.data;
 
     if (!masterKey || typeof masterKey !== "string") {
       return NextResponse.json({ error: "Master key input is required" }, { status: 400 });

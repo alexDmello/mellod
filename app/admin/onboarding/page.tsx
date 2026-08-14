@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/client";
 import { createBrowserClient } from "@supabase/ssr";
 import { generateCredentials } from "@/lib/utils";
-import Link from "next/link";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import {
   UserPlus, Copy, Check, Eye, EyeOff, Loader2,
-  Building2, Truck, Search, Key, Lock, MapPin, Edit3, X, Save
+  Building2, Truck, Search, Key, Lock, MapPin, Edit3, X, Save,
+  Sparkles, ShieldCheck, Share2, Phone, AlertCircle, CheckCircle2,
+  Landmark, ArrowRight, UserCheck, UserX, FileText, BadgeCheck
 } from "lucide-react";
 import { LocationPicker } from "@/components/LocationPicker";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 const fboSchema = z.object({
@@ -57,23 +57,17 @@ export interface DirectoryUser {
   phone: string | null;
   generated_password: string | null;
   business_name?: string;
+  contact_person?: string;
+  address?: string;
+  fssai_license?: string;
+  upi_id?: string;
+  vehicle_info?: string;
+  is_active?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
-function createNonPersistingClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
-}
-
-// ── Credential Result Card ───────────────────────────────────────────────────
+// ── Credential Result Security Card ──────────────────────────────────────────
 export function CredentialCard({ account }: { account: GeneratedAccount }) {
   const [copiedUser, setCopiedUser] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
@@ -87,58 +81,92 @@ export function CredentialCard({ account }: { account: GeneratedAccount }) {
     if (type === "all") { setCopiedAll(true); setTimeout(() => setCopiedAll(false), 2000); }
   };
 
-  const allDetails = `Name: ${account.name}\nRole: ${account.type}\nUsername: ${account.username}\nPassword: ${account.password}`;
+  const shareText = `Welcome to Mellod! Your ${account.type} portal login details:\nUsername: ${account.username}\nPassword: ${account.password}\nLogin at: ${typeof window !== "undefined" ? window.location.origin : ""}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (
-    <div className="card border border-green-200 bg-green-50/50 p-5 space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="badge badge-green text-xs font-semibold">{account.type}</span>
-          <h3 className="font-bold text-gray-900">{account.name}</h3>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      className="bg-gradient-to-br from-emerald-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 shadow-2xl border border-emerald-500/30 space-y-4 relative overflow-hidden"
+    >
+      {/* Decorative Glow */}
+      <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+
+      <div className="flex items-center justify-between relative z-10 border-b border-emerald-500/20 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300">
+            {account.type === "FBO" ? <Building2 className="w-4 h-4" /> : <Truck className="w-4 h-4" />}
+          </div>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
+              {account.type} Account Created
+            </span>
+            <h3 className="font-extrabold text-white text-base leading-tight">{account.name}</h3>
+          </div>
         </div>
-        <button
-          onClick={() => copy(allDetails, "all")}
-          className="btn btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 bg-white hover:bg-gray-50 border border-gray-200"
-        >
-          {copiedAll ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-          {copiedAll ? "Copied All" : "Copy Credentials"}
-        </button>
+
+        <div className="flex items-center gap-2">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+            title="Share via WhatsApp"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Share</span>
+          </a>
+          <button
+            onClick={() => copy(`Username: ${account.username}\nPassword: ${account.password}`, "all")}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            {copiedAll ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedAll ? "Copied All" : "Copy Credentials"}</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border border-green-100 font-mono text-sm">
-        <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10 font-mono text-xs">
+        <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase font-sans font-bold text-gray-400">Username</p>
-            <p className="text-gray-900 font-semibold">{account.username}</p>
+            <p className="text-[10px] uppercase font-sans font-extrabold text-slate-400">Portal Username</p>
+            <p className="text-emerald-300 font-bold text-sm mt-0.5">{account.username}</p>
           </div>
-          <button onClick={() => copy(account.username, "user")} className="text-gray-400 hover:text-green-700 p-1">
-            {copiedUser ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+          <button
+            onClick={() => copy(account.username, "user")}
+            className="text-slate-400 hover:text-emerald-300 p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer"
+          >
+            {copiedUser ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
           </button>
         </div>
 
-        <div className="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+        <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase font-sans font-bold text-gray-400">Password</p>
-            <p className="text-gray-900 font-semibold">
+            <p className="text-[10px] uppercase font-sans font-extrabold text-slate-400">Generated Password</p>
+            <p className="text-emerald-300 font-bold text-sm mt-0.5">
               {showPass ? account.password : "••••••••••••"}
             </p>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-700 p-1">
+            <button
+              onClick={() => setShowPass(!showPass)}
+              className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer"
+            >
               {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
-            <button onClick={() => copy(account.password, "pass")} className="text-gray-400 hover:text-green-700 p-1">
-              {copiedPass ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+            <button
+              onClick={() => copy(account.password, "pass")}
+              className="text-slate-400 hover:text-emerald-300 p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer"
+            >
+              {copiedPass ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
-
-// ── Interactive Location Picker ──────────────────────────────────────────────
-
 
 // ── FBO Registration Form ─────────────────────────────────────────────────────
 export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedAccount) => void }) {
@@ -198,70 +226,175 @@ export function FBORegistrationForm({ onSuccess }: { onSuccess: (acc: GeneratedA
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="form-label">Business Name *</label>
-          <input className="form-input" placeholder="e.g. Green Bites Restaurant" {...register("business_name")} />
-          {errors.business_name && <p className="form-error">{errors.business_name.message}</p>}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Section 1: Business Profile */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
+          <Building2 className="w-4 h-4 text-emerald-600" />
+          1. Business & Contact Information
         </div>
-        <div>
-          <label className="form-label">Contact Person *</label>
-          <input className="form-input" placeholder="Owner/Manager name" {...register("contact_person")} />
-          {errors.contact_person && <p className="form-error">{errors.contact_person.message}</p>}
-        </div>
-        <div>
-          <label className="form-label">Phone Number</label>
-          <input className="form-input" type="tel" placeholder="+91 98765 43210" {...register("phone")} />
-        </div>
-        <div>
-          <label className="form-label">FSSAI License No. <span className="text-gray-400 font-normal">(Optional)</span></label>
-          <input className="form-input font-mono text-xs uppercase" placeholder="e.g. 12224999000123" {...register("fssai_license")} />
-        </div>
-        <div className="md:col-span-2">
-          <label className="form-label font-bold text-gray-700">FBO UPI ID <span className="text-gray-400 font-normal">(Admin Managed Payout ID)</span></label>
-          <input className="form-input font-mono text-xs" placeholder="e.g. merchant@upi or 9876543210@paytm" {...register("upi_id")} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Business Name *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="e.g. Green Bites Restaurant"
+              {...register("business_name")}
+            />
+            {errors.business_name && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.business_name.message}</p>}
+          </div>
+
+          <div>
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Contact Person *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="Owner or Manager Full Name"
+              {...register("contact_person")}
+            />
+            {errors.contact_person && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.contact_person.message}</p>}
+          </div>
+
+          <div>
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="+91 98765 43210"
+              {...register("phone")}
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              FSSAI License No. <span className="text-slate-400 font-normal lowercase">(optional)</span>
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none font-mono uppercase"
+              placeholder="e.g. 12224999000123"
+              {...register("fssai_license")}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              FBO Payout UPI ID <span className="text-emerald-600 font-bold lowercase">(for digital payment settlements)</span>
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none font-mono"
+              placeholder="e.g. merchant@upi or 9876543210@paytm"
+              {...register("upi_id")}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-100 pt-4 space-y-4">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">Address Details</h4>
+      {/* Section 2: Address Details */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
+          <MapPin className="w-4 h-4 text-emerald-600" />
+          2. Address & Geolocation Pinpoint
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="form-label">Street / Building / Door No. *</label>
-            <input className="form-input" placeholder="e.g. #42, 1st Main Road, Indiranagar" {...register("street")} />
-            {errors.street && <p className="form-error">{errors.street.message}</p>}
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Street Address / Building No. *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="e.g. #42, 1st Main Road, Indiranagar"
+              {...register("street")}
+            />
+            {errors.street && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.street.message}</p>}
           </div>
+
           <div>
-            <label className="form-label">Area / Locality *</label>
-            <input className="form-input" placeholder="e.g. Indiranagar 1st Stage" {...register("area")} />
-            {errors.area && <p className="form-error">{errors.area.message}</p>}
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Area / Locality *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="e.g. Indiranagar 1st Stage"
+              {...register("area")}
+            />
+            {errors.area && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.area.message}</p>}
           </div>
+
           <div>
-            <label className="form-label">City *</label>
-            <input className="form-input" placeholder="e.g. Bengaluru" {...register("city")} />
-            {errors.city && <p className="form-error">{errors.city.message}</p>}
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              City *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="e.g. Bengaluru"
+              {...register("city")}
+            />
+            {errors.city && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.city.message}</p>}
           </div>
+
           <div>
-            <label className="form-label">State *</label>
-            <input className="form-input" placeholder="e.g. Karnataka" {...register("state")} />
-            {errors.state && <p className="form-error">{errors.state.message}</p>}
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              State *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="e.g. Karnataka"
+              {...register("state")}
+            />
+            {errors.state && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.state.message}</p>}
           </div>
+
           <div>
-            <label className="form-label">Pincode *</label>
-            <input className="form-input" placeholder="e.g. 560038" maxLength={6} {...register("pincode")} />
-            {errors.pincode && <p className="form-error">{errors.pincode.message}</p>}
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Pincode *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none font-mono"
+              placeholder="560038"
+              maxLength={6}
+              {...register("pincode")}
+            />
+            {errors.pincode && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.pincode.message}</p>}
           </div>
         </div>
 
-        <LocationPicker coords={selectedCoords} onChange={setSelectedCoords} />
+        <div className="pt-2">
+          <LocationPicker coords={selectedCoords} onChange={setSelectedCoords} label="Pinpoint FBO Location on Map" />
+        </div>
       </div>
 
-      {error && <p className="form-error bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-bold flex items-center gap-2 shadow-xs">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <button type="submit" disabled={loading} className="btn btn-primary">
-        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Registering...</> : <><UserPlus className="w-4 h-4" /> Register FBO</>}
-      </button>
+      <motion.button
+        type="submit"
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        disabled={loading}
+        className="w-full py-4 px-5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+            Creating FBO Account...
+          </>
+        ) : (
+          <>
+            <UserPlus className="w-4 h-4" /> Complete FBO Registration
+          </>
+        )}
+      </motion.button>
     </form>
   );
 }
@@ -317,727 +450,105 @@ export function PickerRegistrationForm({ onSuccess }: { onSuccess: (acc: Generat
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="form-label">Full Name *</label>
-          <input className="form-input" placeholder="Driver's full name" {...register("full_name")} />
-          {errors.full_name && <p className="form-error">{errors.full_name.message}</p>}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800 border-b border-slate-100 pb-2">
+          <Truck className="w-4 h-4 text-emerald-600" />
+          Field Agent Details
         </div>
-        <div>
-          <label className="form-label">Phone Number</label>
-          <input className="form-input" type="tel" placeholder="+91 98765 43210" {...register("phone")} />
-        </div>
-        <div className="md:col-span-2">
-          <label className="form-label">Vehicle Info</label>
-          <input className="form-input" placeholder="e.g. White Tempo, MH12 AB 1234" {...register("vehicle_info")} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Full Name *
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="Driver's Full Name"
+              {...register("full_name")}
+            />
+            {errors.full_name && <p className="text-[11px] font-bold text-rose-600 mt-1">{errors.full_name.message}</p>}
+          </div>
+
+          <div>
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="+91 98765 43210"
+              {...register("phone")}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1">
+              Vehicle & Transport Info
+            </label>
+            <input
+              className="w-full px-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+              placeholder="e.g. White Mahindra Tempo, KA-01-AB-1234"
+              {...register("vehicle_info")}
+            />
+          </div>
         </div>
       </div>
 
-      {error && <p className="form-error bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-bold flex items-center gap-2 shadow-xs">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <button type="submit" disabled={loading} className="btn btn-primary">
-        {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Registering...</> : <><UserPlus className="w-4 h-4" /> Register Picker</>}
-      </button>
+      <motion.button
+        type="submit"
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        disabled={loading}
+        className="w-full py-4 px-5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+            Registering Agent...
+          </>
+        ) : (
+          <>
+            <UserPlus className="w-4 h-4" /> Register Picker Agent
+          </>
+        )}
+      </motion.button>
     </form>
   );
 }
 
-export interface DirectoryUser {
-  id: string;
-  full_name: string;
-  role: "fbo" | "picker" | "admin";
-  username: string;
-  phone: string | null;
-  generated_password: string | null;
-  business_name?: string;
-  contact_person?: string;
-  address?: string;
-  fssai_license?: string;
-  upi_id?: string;
-  vehicle_info?: string;
-  is_active?: boolean;
-  latitude?: number | null;
-  longitude?: number | null;
-}
-
-// ── Shared Directory Component ────────────────────────────────────────────────
-export function DirectoryList({ roleFilter }: { roleFilter?: "fbo" | "picker" }) {
-  const [directory, setDirectory] = useState<DirectoryUser[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loadingDirectory, setLoadingDirectory] = useState(true);
-  const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
-
-  // Action states
-  const [editingUser, setEditingUser] = useState<DirectoryUser | null>(null);
-  const [passwordUser, setPasswordUser] = useState<DirectoryUser | null>(null);
-  const [offboardUser, setOffboardUser] = useState<DirectoryUser | null>(null);
-
-  const [editForm, setEditForm] = useState({
-    fullName: "",
-    phone: "",
-    businessName: "",
-    contactPerson: "",
-    address: "",
-    fssaiLicense: "",
-    upiId: "",
-    vehicleInfo: "",
-    latitude: 12.9716,
-    longitude: 77.5946,
-  });
-  const [newPassword, setNewPassword] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  const supabase = createClient();
-
-  useEffect(() => {
-    fetchDirectory();
-  }, []);
-
-  async function fetchDirectory() {
-    setLoadingDirectory(true);
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        role,
-        username,
-        phone,
-        generated_password,
-        fbos ( business_name, contact_person, address, fssai_license, is_active, latitude, longitude, payment_methods ( upi_id, method_type ) ),
-        pickers ( vehicle_info, is_active )
-      `)
-      .in("role", roleFilter ? [roleFilter] : ["fbo", "picker"])
-      .order("created_at", { ascending: false });
-
-    if (!error && profiles) {
-      const formatted: DirectoryUser[] = profiles.map((p: any) => {
-        const fboObj = Array.isArray(p.fbos) ? p.fbos[0] : p.fbos;
-        const pickerObj = Array.isArray(p.pickers) ? p.pickers[0] : p.pickers;
-        const isActive = p.role === "fbo" ? fboObj?.is_active ?? true : pickerObj?.is_active ?? true;
-        const pmList = fboObj?.payment_methods || [];
-        const upiObj = (Array.isArray(pmList) ? pmList : [pmList]).find((m: any) => m?.method_type === "upi") || pmList?.[0];
-
-        return {
-          id: p.id,
-          full_name: p.full_name,
-          role: p.role,
-          username: p.username,
-          phone: p.phone,
-          generated_password: p.generated_password,
-          business_name: fboObj?.business_name,
-          contact_person: fboObj?.contact_person,
-          address: fboObj?.address,
-          fssai_license: fboObj?.fssai_license,
-          upi_id: upiObj?.upi_id || undefined,
-          latitude: fboObj?.latitude,
-          longitude: fboObj?.longitude,
-          vehicle_info: pickerObj?.vehicle_info,
-          is_active: isActive,
-        };
-      });
-      setDirectory(formatted);
-    }
-    setLoadingDirectory(false);
-  }
-
-  const togglePasswordVisibility = (id: string) => {
-    setShowPasswordMap((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-  };
-
-  const openEditModal = (user: DirectoryUser) => {
-    setEditingUser(user);
-    setEditForm({
-      fullName: user.full_name || "",
-      phone: user.phone || "",
-      businessName: user.business_name || "",
-      contactPerson: user.contact_person || user.full_name || "",
-      address: user.address || "",
-      fssaiLicense: user.fssai_license || "",
-      upiId: user.upi_id || "",
-      vehicleInfo: user.vehicle_info || "",
-      latitude: user.latitude ? Number(user.latitude) : 12.9716,
-      longitude: user.longitude ? Number(user.longitude) : 77.5946,
-    });
-    setActionMessage(null);
-  };
-
-  const handleSaveDetails = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUser) return;
-    setActionLoading(true);
-    setActionMessage(null);
-
-    try {
-      const res = await fetch("/api/admin/update-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: editingUser.id,
-          action: "update_details",
-          fullName: editForm.fullName,
-          phone: editForm.phone,
-          businessName: editForm.businessName,
-          contactPerson: editForm.contactPerson,
-          address: editForm.address,
-          fssaiLicense: editForm.fssaiLicense,
-          upiId: editForm.upiId,
-          vehicleInfo: editForm.vehicleInfo,
-          latitude: editForm.latitude,
-          longitude: editForm.longitude,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update details");
-
-      setActionMessage({ type: "success", text: data.message || "Details updated" });
-      await fetchDirectory();
-      setTimeout(() => setEditingUser(null), 1200);
-    } catch (err: any) {
-      setActionMessage({ type: "error", text: err.message || "An error occurred" });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openPasswordModal = (user: DirectoryUser) => {
-    setPasswordUser(user);
-    setNewPassword("");
-    setActionMessage(null);
-  };
-
-  const handleSavePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passwordUser) return;
-    if (!newPassword || newPassword.length < 6) {
-      setActionMessage({ type: "error", text: "Password must be at least 6 characters" });
-      return;
-    }
-
-    setActionLoading(true);
-    setActionMessage(null);
-
-    try {
-      const res = await fetch("/api/admin/update-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: passwordUser.id,
-          action: "change_password",
-          password: newPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update password");
-
-      setActionMessage({ type: "success", text: data.message || "Password updated" });
-      await fetchDirectory();
-      setTimeout(() => setPasswordUser(null), 1200);
-    } catch (err: any) {
-      setActionMessage({ type: "error", text: err.message || "An error occurred" });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleToggleOffboardStatus = async (user: DirectoryUser) => {
-    setActionLoading(true);
-    const nextAction = user.is_active ? "offboard" : "activate";
-
-    try {
-      const res = await fetch("/api/admin/update-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          action: nextAction,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Failed to ${nextAction} user`);
-
-      setOffboardUser(null);
-      await fetchDirectory();
-    } catch (err: any) {
-      alert(err.message || "An error occurred");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const filteredDirectory = directory.filter((user) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      user.full_name.toLowerCase().includes(searchLower) ||
-      user.username.toLowerCase().includes(searchLower) ||
-      (user.business_name?.toLowerCase() || "").includes(searchLower) ||
-      (user.address?.toLowerCase() || "").includes(searchLower)
-    );
-  });
-
-  return (
-    <div className="card p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-            <Key className="w-5 h-5 text-green-700" />
-            {roleFilter === "fbo" ? "FBO Accounts Directory" : roleFilter === "picker" ? "Picker Accounts Directory" : "Credentials Directory"}
-          </h2>
-          <p className="text-xs text-gray-500">
-            View active credentials, offboard/reactivate users, change passwords, and update partner details.
-          </p>
-        </div>
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search credentials..."
-            className="form-input !pl-9 text-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {loadingDirectory ? (
-        <div className="flex items-center justify-center py-8 text-gray-500">
-          <Loader2 className="w-6 h-6 animate-spin text-green-700 mr-2" />
-          Loading accounts directory...
-        </div>
-      ) : filteredDirectory.length === 0 ? (
-        <div className="text-center py-8 text-gray-400 text-sm">
-          No accounts found.
-        </div>
-      ) : (
-        <div className="overflow-x-auto border border-gray-100 rounded-xl">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 font-semibold">
-                <th className="px-4 py-3">User/Business</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Username</th>
-                <th className="px-4 py-3">Generated Password</th>
-                <th className="px-4 py-3">Contact/Info</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50 text-gray-700">
-              {filteredDirectory.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-gray-900">{user.full_name}</p>
-                    {user.business_name && (
-                      <p className="text-xs text-green-700 font-medium">{user.business_name}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`badge ${user.role === "fbo" ? "badge-green" : "bg-blue-50 text-blue-800"}`}>
-                      {user.role.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {user.is_active ? (
-                      <span className="badge badge-green text-xs font-semibold">Active</span>
-                    ) : (
-                      <span className="badge bg-red-50 text-red-700 border-red-200 text-xs font-semibold">Offboarded</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs">{user.username}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs">
-                        {showPasswordMap[user.id] ? user.generated_password || "N/A" : "••••••••"}
-                      </span>
-                      {user.generated_password && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(user.id)}
-                            className="text-gray-400 hover:text-gray-600"
-                            title="Show/Hide"
-                          >
-                            {showPasswordMap[user.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(user.generated_password || "")}
-                            className="text-gray-400 hover:text-green-600"
-                            title="Copy Password"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
-                    {user.phone && <p>📞 {user.phone}</p>}
-                    {user.fssai_license && <p>FSSAI: {user.fssai_license}</p>}
-                    {user.upi_id && <p className="font-mono text-emerald-700">UPI: {user.upi_id}</p>}
-                    {user.vehicle_info && <p>🚛 {user.vehicle_info}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(user)}
-                        className="px-2 py-1 text-xs border rounded bg-white hover:bg-gray-50 text-gray-700"
-                        title="Edit Details"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openPasswordModal(user)}
-                        className="px-2 py-1 text-xs border rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
-                        title="Change Password"
-                      >
-                        Key
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOffboardUser(user)}
-                        className={`px-2 py-1 text-xs border rounded ${
-                          user.is_active ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200" : "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                        }`}
-                        title={user.is_active ? "Offboard" : "Reactivate"}
-                      >
-                        {user.is_active ? "Offboard" : "Activate"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ── MODAL 1: Edit User Details ───────────────────────────────────────── */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-green-700" />
-                <h3 className="font-bold text-gray-900 text-lg">Update Account Details</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingUser(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveDetails} className="space-y-4">
-              <div className="p-3 bg-gray-50 rounded-xl text-xs space-y-1 font-mono border border-gray-100">
-                <p className="text-gray-500">
-                  Account: <span className="font-bold text-gray-900">{editingUser.username}</span> ({editingUser.role.toUpperCase()})
-                </p>
-              </div>
-
-              {editingUser.role === "fbo" && (
-                <div>
-                  <label className="form-label font-semibold">Business Name *</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={editForm.businessName}
-                    onChange={(e) => setEditForm({ ...editForm, businessName: e.target.value })}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label font-semibold">
-                    {editingUser.role === "fbo" ? "Contact Person Name *" : "Full Name *"}
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={editingUser.role === "fbo" ? editForm.contactPerson : editForm.fullName}
-                    onChange={(e) =>
-                      editingUser.role === "fbo"
-                        ? setEditForm({ ...editForm, contactPerson: e.target.value, fullName: e.target.value })
-                        : setEditForm({ ...editForm, fullName: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label font-semibold">Phone Number</label>
-                  <input
-                    type="tel"
-                    className="form-input"
-                    placeholder="+91 98765 43210"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {editingUser.role === "fbo" && (
-                <>
-                  <div>
-                    <label className="form-label font-semibold">FSSAI License No.</label>
-                    <input
-                      type="text"
-                      className="form-input font-mono text-xs uppercase"
-                      placeholder="e.g. 12224999000123"
-                      value={editForm.fssaiLicense}
-                      onChange={(e) => setEditForm({ ...editForm, fssaiLicense: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label font-semibold">FBO UPI ID <span className="text-gray-400 font-normal">(Payout UPI)</span></label>
-                    <input
-                      type="text"
-                      className="form-input font-mono text-xs"
-                      placeholder="e.g. merchant@upi"
-                      value={editForm.upiId}
-                      onChange={(e) => setEditForm({ ...editForm, upiId: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="form-label font-semibold">Full Address</label>
-                    <textarea
-                      rows={3}
-                      className="form-input text-xs"
-                      placeholder="Street, area, city, pincode..."
-                      value={editForm.address}
-                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-100">
-                    <LocationPicker
-                      coords={{ lat: editForm.latitude, lng: editForm.longitude }}
-                      onChange={(coords) =>
-                        setEditForm((prev) => ({
-                          ...prev,
-                          latitude: coords.lat,
-                          longitude: coords.lng,
-                        }))
-                      }
-                      label="Update FBO Location on Map"
-                    />
-                  </div>
-                </>
-              )}
-
-              {editingUser.role === "picker" && (
-                <div>
-                  <label className="form-label font-semibold">Vehicle Info</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. White Tempo, KA 01 AB 1234"
-                    value={editForm.vehicleInfo}
-                    onChange={(e) => setEditForm({ ...editForm, vehicleInfo: e.target.value })}
-                  />
-                </div>
-              )}
-
-              {actionMessage && (
-                <div
-                  className={`p-3 rounded-xl text-xs ${
-                    actionMessage.type === "success"
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-red-50 text-red-700 border border-red-200"
-                  }`}
-                >
-                  {actionMessage.text}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="btn btn-secondary text-xs"
-                >
-                  Cancel
-                </button>
-                <button type="submit" disabled={actionLoading} className="btn btn-primary text-xs py-2 px-4">
-                  {actionLoading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-3.5 h-3.5" /> Save Details
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 2: Change Password ───────────────────────────────────────── */}
-      {passwordUser && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Key className="w-5 h-5 text-amber-600" />
-                <h3 className="font-bold text-gray-900 text-lg">Change User Password</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPasswordUser(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSavePassword} className="space-y-4">
-              <div className="p-3 bg-amber-50/50 rounded-xl text-xs space-y-1 border border-amber-100">
-                <p className="font-semibold text-amber-900">
-                  Target Account: {passwordUser.full_name} ({passwordUser.username})
-                </p>
-                <p className="text-amber-700">
-                  This will instantly update the user&apos;s password in Auth and directory.
-                </p>
-              </div>
-
-              <div>
-                <label className="form-label font-semibold">New Password *</label>
-                <input
-                  type="password"
-                  className="form-input font-mono text-sm"
-                  placeholder="Enter new password (min 6 chars)..."
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {actionMessage && (
-                <div
-                  className={`p-3 rounded-xl text-xs ${
-                    actionMessage.type === "success"
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-red-50 text-red-700 border border-red-200"
-                  }`}
-                >
-                  {actionMessage.text}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setPasswordUser(null)}
-                  className="btn btn-secondary text-xs"
-                >
-                  Cancel
-                </button>
-                <button type="submit" disabled={actionLoading} className="btn btn-primary text-xs py-2 px-4">
-                  {actionLoading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
-                    </>
-                  ) : (
-                    "Update Password"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL 3: Offboard / Reactivate Confirmation ─────────────────────── */}
-      {offboardUser && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <h3 className="font-bold text-gray-900 text-lg">
-              {offboardUser.is_active ? "Offboard Account?" : "Reactivate Account?"}
-            </h3>
-            <p className="text-xs text-gray-600">
-              {offboardUser.is_active
-                ? `Are you sure you want to offboard ${offboardUser.full_name} (${offboardUser.username})? They will be blocked from logging in.`
-                : `Reactivate ${offboardUser.full_name} (${offboardUser.username}) to restore platform access.`}
-            </p>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setOffboardUser(null)}
-                className="btn btn-secondary text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={actionLoading}
-                onClick={() => handleToggleOffboardStatus(offboardUser)}
-                className={`btn text-xs py-2 px-4 ${
-                  offboardUser.is_active
-                    ? "bg-red-600 hover:bg-red-700 text-white"
-                    : "bg-green-700 hover:bg-green-800 text-white"
-                }`}
-              >
-                {actionLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : offboardUser.is_active ? (
-                  "Offboard Account"
-                ) : (
-                  "Reactivate Account"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Dedicated FBO Onboarding Tab Component ───────────────────────────────────
+// ── Tab 1: FBO Registration Tab ──────────────────────────────────────────────
 export function FBOOnboardingTab() {
   const [generatedAccounts, setGeneratedAccounts] = useState<GeneratedAccount[]>([]);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="card p-6 bg-white border border-gray-100">
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Register New FBO</h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Create credentials and detailed location profile for a Food & Beverage Operator collection point.
+    <div className="space-y-6">
+      <div className="bg-white/95 backdrop-blur-2xl rounded-3xl p-7 border border-slate-200/90 shadow-xl shadow-slate-200/50 space-y-6">
+        <div>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">Register Food & Beverage Operator (FBO)</h2>
+          <p className="text-xs text-slate-500 font-semibold mt-1">
+            Generate credentials and profile data for collection points and restaurant partners
           </p>
         </div>
+
         <FBORegistrationForm onSuccess={(acc) => setGeneratedAccounts((prev) => [acc, ...prev])} />
       </div>
 
       {generatedAccounts.length > 0 && (
         <div className="space-y-4">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-5 h-5 bg-green-700 text-white rounded-full text-xs">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
+            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
               {generatedAccounts.length}
             </span>
-            Credentials Generated This Session
-          </h2>
+            Newly Generated FBO Credentials
+          </div>
           {generatedAccounts.map((acc, i) => (
             <CredentialCard key={i} account={acc} />
           ))}
@@ -1047,30 +558,31 @@ export function FBOOnboardingTab() {
   );
 }
 
-// ── Dedicated Picker Onboarding Tab Component ────────────────────────────────
+// ── Tab 2: Picker Registration Tab ───────────────────────────────────────────
 export function PickerOnboardingTab() {
   const [generatedAccounts, setGeneratedAccounts] = useState<GeneratedAccount[]>([]);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="card p-6 bg-white border border-gray-100">
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Register New Picker</h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Create login credentials and details for a collection driver or field agent.
+    <div className="space-y-6">
+      <div className="bg-white/95 backdrop-blur-2xl rounded-3xl p-7 border border-slate-200/90 shadow-xl shadow-slate-200/50 space-y-6">
+        <div>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">Register Collection Driver (Picker)</h2>
+          <p className="text-xs text-slate-500 font-semibold mt-1">
+            Create field agent login accounts with vehicle assignment info
           </p>
         </div>
+
         <PickerRegistrationForm onSuccess={(acc) => setGeneratedAccounts((prev) => [acc, ...prev])} />
       </div>
 
       {generatedAccounts.length > 0 && (
         <div className="space-y-4">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-5 h-5 bg-green-700 text-white rounded-full text-xs">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
+            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
               {generatedAccounts.length}
             </span>
-            Credentials Generated This Session
-          </h2>
+            Newly Generated Picker Credentials
+          </div>
           {generatedAccounts.map((acc, i) => (
             <CredentialCard key={i} account={acc} />
           ))}
@@ -1080,55 +592,70 @@ export function PickerOnboardingTab() {
   );
 }
 
-// ── Fallback Full Onboarding Page ────────────────────────────────────────────
+// ── Main Page Export ─────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const [activeSectionId, setActiveSectionId] = useState<"fbo" | "picker">("fbo");
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80">
+    <div className="space-y-6 animate-fade-in pb-12 font-sans safe-top safe-bottom">
+      {/* Top Banner Header */}
+      <div className="bg-white/95 backdrop-blur-2xl p-6 rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-700 text-white flex items-center justify-center shadow-lg shadow-emerald-700/20">
               <UserPlus className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-              Onboarding & Partner Registration
-            </h1>
+            <div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                Partner & Field Onboarding
+              </h1>
+              <p className="text-xs text-slate-500 font-semibold">
+                Register collection points (FBOs) and field drivers (Pickers) with auto-generated passwords
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 font-medium">
-            Register new collection partners (FBOs) and field drivers (Pickers) with auto-generated login credentials.
-          </p>
         </div>
 
-        <div className="flex rounded-xl bg-gray-100/80 p-1 border border-gray-200/60 self-start sm:self-center">
+        {/* Tab Switcher Pills */}
+        <div className="flex rounded-2xl bg-slate-100 p-1 border border-slate-200/80 self-start sm:self-center">
           <button
             type="button"
             onClick={() => setActiveSectionId("fbo")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
               activeSectionId === "fbo"
-                ? "bg-white text-emerald-700 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white text-emerald-800 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Building2 className="w-4 h-4" /> FBO Onboarding
+            <Building2 className="w-4 h-4" /> FBO Registration
           </button>
           <button
             type="button"
             onClick={() => setActiveSectionId("picker")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
               activeSectionId === "picker"
-                ? "bg-white text-emerald-700 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white text-emerald-800 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Truck className="w-4 h-4" /> Picker Onboarding
+            <Truck className="w-4 h-4" /> Picker Registration
           </button>
         </div>
       </div>
 
-      {activeSectionId === "fbo" ? <FBOOnboardingTab /> : <PickerOnboardingTab />}
+      {/* Dynamic Content Views */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeSectionId}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.3 }}
+        >
+          {activeSectionId === "fbo" && <FBOOnboardingTab />}
+          {activeSectionId === "picker" && <PickerOnboardingTab />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

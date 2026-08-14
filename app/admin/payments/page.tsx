@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { FBOPayment } from "@/lib/types";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FBOSummary {
   fbo: {
@@ -240,31 +241,45 @@ export default function AdminPaymentsPage() {
 
       {/* Tabs & Search Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/80">
           <button
             type="button"
             onClick={() => setActiveTab("pending")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "pending"
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+            className={`relative z-10 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === "pending" ? "text-white" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Zap className="w-4 h-4" />
-            Pending FBO Payouts ({pendingSummaries.length})
+            {activeTab === "pending" && (
+              <motion.div
+                layoutId="paymentsTabActivePill"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute inset-0 bg-emerald-600 rounded-xl shadow-md shadow-emerald-600/20"
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              Pending FBO Payouts ({pendingSummaries.length})
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("history")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-              activeTab === "history"
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+            className={`relative z-10 px-4 py-2.5 rounded-xl text-xs font-extrabold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === "history" ? "text-white" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <FileText className="w-4 h-4" />
-            Settlement Receipts & History ({receipts.length})
+            {activeTab === "history" && (
+              <motion.div
+                layoutId="paymentsTabActivePill"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute inset-0 bg-emerald-600 rounded-xl shadow-md shadow-emerald-600/20"
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Settlement Receipts & History ({receipts.length})
+            </span>
           </button>
         </div>
 
@@ -287,170 +302,178 @@ export default function AdminPaymentsPage() {
           <span className="text-sm font-medium">Calculating FBO payment balances...</span>
         </div>
       ) : (
-        <>
-          {/* TAB 1: PENDING FBO PAYOUTS */}
-          {activeTab === "pending" && (
-            <div className="space-y-4">
-              {filteredPending.length === 0 ? (
-                <div className="rounded-2xl p-12 text-center text-gray-400 bg-white border border-gray-100 shadow-sm">
-                  <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                  <p className="font-bold text-gray-800 text-base">All verified pickups are fully settled!</p>
-                  <p className="text-xs text-gray-400 mt-1">There are no pending balances awaiting payout to FBOs.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {filteredPending.map((item) => (
-                    <div key={item.fbo.id} className="rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl transition-all duration-300 space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold flex-shrink-0">
-                            <Building2 className="w-5 h-5" />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {/* TAB 1: PENDING FBO PAYOUTS */}
+            {activeTab === "pending" && (
+              <div className="space-y-4">
+                {filteredPending.length === 0 ? (
+                  <div className="rounded-2xl p-12 text-center text-gray-400 bg-white border border-gray-100 shadow-sm">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+                    <p className="font-bold text-gray-800 text-base">All verified pickups are fully settled!</p>
+                    <p className="text-xs text-gray-400 mt-1">There are no pending balances awaiting payout to FBOs.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {filteredPending.map((item) => (
+                      <div key={item.fbo.id} className="rounded-2xl p-5 bg-white border border-gray-100 shadow-xl shadow-gray-200/80 hover:shadow-2xl transition-all duration-300 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold flex-shrink-0">
+                              <Building2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-gray-900 text-base">{item.fbo.business_name}</h3>
+                              <p className="text-xs text-gray-500">{item.fbo.address || "Address not listed"}</p>
+                              {item.fbo.contact_person && (
+                                <p className="text-[11px] text-gray-400 mt-0.5">Contact: {item.fbo.contact_person} ({item.fbo.phone || "No phone"})</p>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-base">{item.fbo.business_name}</h3>
-                            <p className="text-xs text-gray-500">{item.fbo.address || "Address not listed"}</p>
-                            {item.fbo.contact_person && (
-                              <p className="text-[11px] text-gray-400 mt-0.5">Contact: {item.fbo.contact_person} ({item.fbo.phone || "No phone"})</p>
-                            )}
+
+                          {/* Financial summary for this FBO */}
+                          <div className="flex items-center gap-4 bg-amber-50/90 px-4 py-2.5 rounded-xl border border-amber-100">
+                            <div>
+                              <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Total Amount Due</span>
+                              <span className="text-lg font-black text-amber-950">{formatCurrency(item.unpaidAmount)}</span>
+                            </div>
+                            <div className="h-8 w-px bg-amber-200" />
+                            <div>
+                              <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Volume</span>
+                              <span className="text-sm font-extrabold text-amber-950">{formatLiters(item.unpaidLiters)}</span>
+                            </div>
+                            <div className="h-8 w-px bg-amber-200" />
+                            <div>
+                              <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Pickups</span>
+                              <span className="text-sm font-extrabold text-amber-950">{item.unpaidPickups.length} entries</span>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Financial summary for this FBO */}
-                        <div className="flex items-center gap-4 bg-amber-50/90 px-4 py-2.5 rounded-xl border border-amber-100">
+                        {/* Payment Bank / UPI Info Badge */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-gray-50 p-3 rounded-xl border border-gray-100">
                           <div>
-                            <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Total Amount Due</span>
-                            <span className="text-lg font-black text-amber-950">{formatCurrency(item.unpaidAmount)}</span>
-                          </div>
-                          <div className="h-8 w-px bg-amber-200" />
-                          <div>
-                            <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Volume</span>
-                            <span className="text-sm font-extrabold text-amber-950">{formatLiters(item.unpaidLiters)}</span>
-                          </div>
-                          <div className="h-8 w-px bg-amber-200" />
-                          <div>
-                            <span className="text-[10px] text-amber-800 font-bold uppercase tracking-wider block">Pickups</span>
-                            <span className="text-sm font-extrabold text-amber-950">{item.unpaidPickups.length} entries</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Payment Bank / UPI Info Badge */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <div>
-                          <span className="text-gray-500 font-semibold">Registered Payment Method: </span>
-                          {item.paymentMethod ? (
-                            <span className="font-bold text-gray-800">
-                              {item.paymentMethod.method_type === "bank" && `Bank (${item.paymentMethod.bank_name || "Bank"}) — A/C: ${item.paymentMethod.account_number || "N/A"} (IFSC: ${item.paymentMethod.ifsc_code || "N/A"})`}
-                              {item.paymentMethod.method_type === "upi" && `UPI ID: ${item.paymentMethod.upi_id || "N/A"}`}
-                              {item.paymentMethod.method_type === "cash" && "Cash Disbursement"}
-                            </span>
-                          ) : (
-                            <span className="text-amber-700 italic font-medium">Bank details pending from FBO</span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setViewEntriesFbo(item)}
-                            className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-800 font-semibold text-xs flex items-center gap-1.5 transition-all"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-blue-600" />
-                            View Pickups ({item.unpaidPickups.length})
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPayoutFbo(item);
-                              setPayMethod(item.paymentMethod?.method_type || "bank");
-                              setReferenceNo("");
-                              setPeriodLabel(`Settlement for ${item.unpaidPickups.length} verified pickup(s)`);
-                            }}
-                            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-95"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            Disburse Payment
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 2: SETTLEMENT RECEIPTS & HISTORY */}
-          {activeTab === "history" && (
-            <div className="space-y-4">
-              {filteredReceipts.length === 0 ? (
-                <div className="rounded-2xl p-12 text-center text-gray-400 bg-white border border-gray-100 shadow-sm">
-                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="font-bold text-gray-800 text-base">No payment receipts issued yet.</p>
-                  <p className="text-xs text-gray-400 mt-1">Disbursed FBO payments will generate official settlement receipts listed here.</p>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto shadow-xl shadow-gray-200/80">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-600 text-xs border-b border-gray-200 font-bold uppercase tracking-wider">
-                        <th className="p-4">Receipt #</th>
-                        <th className="p-4">FBO Supplier</th>
-                        <th className="p-4">Date & Time</th>
-                        <th className="p-4 text-right">Volume</th>
-                        <th className="p-4 text-right">Disbursed Amount</th>
-                        <th className="p-4">Method & Reference</th>
-                        <th className="p-4 text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs">
-                      {filteredReceipts.map((r) => (
-                        <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                          <td className="p-4 font-mono font-bold text-emerald-800">
-                            {r.receipt_number}
-                          </td>
-                          <td className="p-4">
-                            <span className="font-bold text-gray-900 block">{r.fbo?.business_name || "FBO"}</span>
-                            <span className="text-[10px] text-gray-400">{r.period_label}</span>
-                          </td>
-                          <td className="p-4 text-gray-600">
-                            {formatDate(r.paid_at)}
-                          </td>
-                          <td className="p-4 text-right font-bold text-gray-800">
-                            {formatLiters(Number(r.total_liters))}
-                          </td>
-                          <td className="p-4 text-right font-black text-emerald-800 text-sm">
-                            {formatCurrency(Number(r.amount))}
-                          </td>
-                          <td className="p-4">
-                            <span className="capitalize font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md text-[11px]">
-                              {r.payment_method}
-                            </span>
-                            {r.reference_number && (
-                              <span className="block font-mono text-[10px] text-gray-500 mt-0.5">
-                                UTR: {r.reference_number}
+                            <span className="text-gray-500 font-semibold">Registered Payment Method: </span>
+                            {item.paymentMethod ? (
+                              <span className="font-bold text-gray-800">
+                                {item.paymentMethod.method_type === "bank" && `Bank (${item.paymentMethod.bank_name || "Bank"}) — A/C: ${item.paymentMethod.account_number || "N/A"} (IFSC: ${item.paymentMethod.ifsc_code || "N/A"})`}
+                                {item.paymentMethod.method_type === "upi" && `UPI ID: ${item.paymentMethod.upi_id || "N/A"}`}
+                                {item.paymentMethod.method_type === "cash" && "Cash Disbursement"}
                               </span>
+                            ) : (
+                              <span className="text-amber-700 italic font-medium">Bank details pending from FBO</span>
                             )}
-                          </td>
-                          <td className="p-4 text-center">
+                          </div>
+
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => setSelectedReceipt(r)}
-                              className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs font-semibold flex items-center justify-center gap-1.5 mx-auto transition-all shadow-sm"
+                              type="button"
+                              onClick={() => setViewEntriesFbo(item)}
+                              className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-800 font-semibold text-xs flex items-center gap-1.5 transition-all"
                             >
-                              <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                              Statement
+                              <Eye className="w-3.5 h-3.5 text-blue-600" />
+                              View Pickups ({item.unpaidPickups.length})
                             </button>
-                          </td>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPayoutFbo(item);
+                                setPayMethod(item.paymentMethod?.method_type || "bank");
+                                setReferenceNo("");
+                                setPeriodLabel(`Settlement for ${item.unpaidPickups.length} verified pickup(s)`);
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-95"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              Disburse Payment
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: SETTLEMENT RECEIPTS & HISTORY */}
+            {activeTab === "history" && (
+              <div className="space-y-4">
+                {filteredReceipts.length === 0 ? (
+                  <div className="rounded-2xl p-12 text-center text-gray-400 bg-white border border-gray-100 shadow-sm">
+                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="font-bold text-gray-800 text-base">No payment receipts issued yet.</p>
+                    <p className="text-xs text-gray-400 mt-1">Disbursed FBO payments will generate official settlement receipts listed here.</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto shadow-xl shadow-gray-200/80">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 text-gray-600 text-xs border-b border-gray-200 font-bold uppercase tracking-wider">
+                          <th className="p-4">Receipt #</th>
+                          <th className="p-4">FBO Supplier</th>
+                          <th className="p-4">Date & Time</th>
+                          <th className="p-4 text-right">Volume</th>
+                          <th className="p-4 text-right">Disbursed Amount</th>
+                          <th className="p-4">Method & Reference</th>
+                          <th className="p-4 text-center">Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs">
+                        {filteredReceipts.map((r) => (
+                          <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
+                            <td className="p-4 font-mono font-bold text-emerald-800">
+                              {r.receipt_number}
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-gray-900 block">{r.fbo?.business_name || "FBO"}</span>
+                              <span className="text-[10px] text-gray-400">{r.period_label}</span>
+                            </td>
+                            <td className="p-4 text-gray-600">
+                              {formatDate(r.paid_at)}
+                            </td>
+                            <td className="p-4 text-right font-bold text-gray-800">
+                              {formatLiters(Number(r.total_liters))}
+                            </td>
+                            <td className="p-4 text-right font-black text-emerald-800 text-sm">
+                              {formatCurrency(Number(r.amount))}
+                            </td>
+                            <td className="p-4">
+                              <span className="capitalize font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md text-[11px]">
+                                {r.payment_method}
+                              </span>
+                              {r.reference_number && (
+                                <span className="block font-mono text-[10px] text-gray-500 mt-0.5">
+                                  UTR: {r.reference_number}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => setSelectedReceipt(r)}
+                                className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs font-semibold flex items-center justify-center gap-1.5 mx-auto transition-all shadow-sm"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                                Statement
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       )}
 
       {/* MODAL 1: VIEW ENTRIES */}

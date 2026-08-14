@@ -11,6 +11,7 @@ import type { AttendanceData } from "./use-attendance-data";
 import { formatDate } from "@/lib/utils";
 import type { LeaveCategory, LeaveType, WorkMode } from "@/lib/types";
 import StaffCalendarInspector from "@/components/attendance/StaffCalendarInspector";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function StaffAttendanceView({ data }: { data: AttendanceData }) {
   const {
@@ -227,8 +228,8 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
         </div>
       </div>
 
-      {/* ── Main Tab Navigation Bar (Simple Analytics Style, Below Small KPI Containers) ── */}
-      <div className="border-b border-gray-200 flex items-center gap-6 md:gap-8 px-2 text-sm font-bold text-gray-500 overflow-x-auto">
+      {/* ── Main Tab Navigation Bar (Smooth Spring Pill Slider) ──────────────── */}
+      <div className="flex bg-slate-100/90 p-1.5 rounded-2xl gap-1.5 border border-slate-200/80 overflow-x-auto relative">
         {[
           { id: "workspace", label: "My Workspace & Check-In" },
           { id: "calendar", label: "Staff Calendar & Quotas" },
@@ -236,16 +237,30 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as "workspace" | "calendar")}
-            className={`pb-3 transition-all relative whitespace-nowrap ${
-              activeTab === tab.id
-                ? "text-emerald-600 font-extrabold border-b-2 border-emerald-600"
-                : "hover:text-gray-900"
+            className={`relative z-10 flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-colors whitespace-nowrap text-center cursor-pointer ${
+              activeTab === tab.id ? "text-emerald-950 font-black" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            {tab.label}
+            {activeTab === tab.id && (
+              <motion.div
+                layoutId="staffAttendanceTabActivePill"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+              />
+            )}
+            <span className="relative z-10">{tab.label}</span>
           </button>
         ))}
       </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
 
       {activeTab === "calendar" ? (
         <StaffCalendarInspector
@@ -572,6 +587,8 @@ export default function StaffAttendanceView({ data }: { data: AttendanceData }) 
       </div>
       </>
       )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* ── Request Leave Modal ───────────────────────────────────────── */}
       {showLeaveModal && (

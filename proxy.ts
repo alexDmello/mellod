@@ -1,14 +1,50 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { checkPayloadSize, DEFAULT_MAX_JSON_SIZE, DEFAULT_MAX_UPLOAD_SIZE } from "@/lib/security";
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // 1. Enforce Rate Limiting & Payload Size checks on all API endpoints
+  if (pathname.startsWith("/api")) {
+    const rateLimit = checkRateLimit(request);
+    const rateHeaders = getRateLimitHeaders(rateLimit);
+
+    if (!rateLimit.allowed) {
+      const errorMessage = rateLimit.isAuth
+        ? "Too many authentication attempts. Maximum 5 attempts allowed per 15 minutes."
+        : "Too many requests. Maximum rate limit exceeded per 15 minutes.";
+
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 429, headers: rateHeaders }
+      );
+    }
+
+    const isUploadRoute = pathname.includes("/pickup/log");
+    const maxPayloadSize = isUploadRoute ? DEFAULT_MAX_UPLOAD_SIZE : DEFAULT_MAX_JSON_SIZE;
+    const sizeCheck = checkPayloadSize(request, maxPayloadSize);
+
+    if (!sizeCheck.valid) {
+      return NextResponse.json(
+        { error: `Payload too large. Maximum allowed request size is ${Math.round(maxPayloadSize / (1024 * 1024))}MB.` },
+        { status: 413, headers: rateHeaders }
+      );
+    }
+
+    const apiResponse = NextResponse.next({ request });
+    Object.entries(rateHeaders).forEach(([k, v]) => apiResponse.headers.set(k, v));
+    return apiResponse;
+  }
+
+  // 2. Supabase Client Setup for Page Authentication
   let supabaseResponse = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-  // If env vars are missing (e.g. before .env.local is configured),
-  // skip auth and let the app render the login page unauthenticated.
+  // If env vars are missing, skip page auth checks
   if (!supabaseUrl || !supabaseKey) {
     return supabaseResponse;
   }
@@ -34,13 +70,10 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-
-  // Public routes — always accessible
+  // Public page routes — always accessible
   if (
     pathname === "/" ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
     pathname.startsWith("/widgets") ||
     pathname === "/sw.js" ||
     pathname === "/offline.html"
@@ -77,7 +110,7 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Protected routes — require auth
+  // Protected page routes — require auth
   if (!user) {
     return NextResponse.redirect(new URL("/", request.url));
   }

@@ -29,6 +29,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { LocationPicker } from "@/components/LocationPicker";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface DirectoryUser {
   id: string;
@@ -902,34 +903,61 @@ export default function CredentialsPage() {
       {/* Directory Filters & Search Bar Card */}
       <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Role Tabs Pill */}
-          <div className="flex bg-gray-100 p-1 rounded-xl gap-1 w-full md:w-auto">
+          {/* Role Tabs Pill (Smooth Spring Slider) */}
+          <div className="flex bg-slate-100 p-1 rounded-xl gap-1 w-full md:w-auto relative">
             <button
               type="button"
               onClick={() => setRoleFilter("all")}
-              className={`flex-1 md:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                roleFilter === "all" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+              className={`relative z-10 flex-1 md:flex-initial px-4 py-2 text-xs font-extrabold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                roleFilter === "all" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              <Users className="w-3.5 h-3.5" /> All ({directory.length})
+              {roleFilter === "all" && (
+                <motion.div
+                  layoutId="credentialsRoleFilterActivePill"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200/60"
+                />
+              )}
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <Users className="w-3.5 h-3.5" /> All ({directory.length})
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setRoleFilter("fbo")}
-              className={`flex-1 md:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                roleFilter === "fbo" ? "bg-white text-emerald-800 shadow-sm" : "text-gray-500 hover:text-gray-800"
+              className={`relative z-10 flex-1 md:flex-initial px-4 py-2 text-xs font-extrabold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                roleFilter === "fbo" ? "text-emerald-900" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              <Building2 className="w-3.5 h-3.5 text-emerald-600" /> FBOs ({metrics.fbosCount})
+              {roleFilter === "fbo" && (
+                <motion.div
+                  layoutId="credentialsRoleFilterActivePill"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200/60"
+                />
+              )}
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-emerald-600" /> FBOs ({metrics.fbosCount})
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setRoleFilter("picker")}
-              className={`flex-1 md:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                roleFilter === "picker" ? "bg-white text-blue-800 shadow-sm" : "text-gray-500 hover:text-gray-800"
+              className={`relative z-10 flex-1 md:flex-initial px-4 py-2 text-xs font-extrabold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                roleFilter === "picker" ? "text-blue-900" : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              <Truck className="w-3.5 h-3.5 text-blue-600" /> Pickers ({metrics.pickersCount})
+              {roleFilter === "picker" && (
+                <motion.div
+                  layoutId="credentialsRoleFilterActivePill"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  className="absolute inset-0 bg-white rounded-lg shadow-xs border border-slate-200/60"
+                />
+              )}
+              <span className="relative z-10 flex items-center justify-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-blue-600" /> Pickers ({metrics.pickersCount})
+              </span>
             </button>
           </div>
 

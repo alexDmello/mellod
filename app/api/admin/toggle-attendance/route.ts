@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseAndSanitizeJson } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden: Internal admin staff required" }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { profileId, enabled } = body;
+    const rawText = await request.text();
+    const parseResult = parseAndSanitizeJson<{ profileId?: string; enabled?: boolean }>(rawText);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error }, { status: parseResult.status });
+    }
+
+    const { profileId, enabled } = parseResult.data;
 
     if (!profileId) {
       return NextResponse.json({ error: "Missing profileId" }, { status: 400 });

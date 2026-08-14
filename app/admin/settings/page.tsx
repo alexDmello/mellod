@@ -33,6 +33,7 @@ import {
   Building2,
 } from "lucide-react";
 import { ADMIN_SECTIONS } from "@/lib/types";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface PriceRecord {
   id: string;
@@ -556,330 +557,361 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => setActiveTab("staff")}
-          className={`px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-all duration-200 flex items-center gap-2 ${
-            activeTab === "staff"
-              ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          className={`relative z-10 px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-colors duration-200 flex items-center gap-2 cursor-pointer ${
+            activeTab === "staff" ? "text-white" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          <Users className="w-4 h-4" />
-          Staff &amp; User Accounts ({staffList.length})
+          {activeTab === "staff" && (
+            <motion.div
+              layoutId="settingsTabActivePill"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="absolute inset-0 bg-slate-900 rounded-full shadow-md shadow-slate-900/20"
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Staff &amp; User Accounts ({staffList.length})
+          </span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("roles")}
-          className={`px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-all duration-200 flex items-center gap-2 ${
-            activeTab === "roles"
-              ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          className={`relative z-10 px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-colors duration-200 flex items-center gap-2 cursor-pointer ${
+            activeTab === "roles" ? "text-white" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          <Shield className="w-4 h-4" />
-          Role Templates &amp; Presets ({rolesList.length})
+          {activeTab === "roles" && (
+            <motion.div
+              layoutId="settingsTabActivePill"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="absolute inset-0 bg-slate-900 rounded-full shadow-md shadow-slate-900/20"
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <Shield className="w-4 h-4" />
+            Role Templates &amp; Presets ({rolesList.length})
+          </span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("marketprice")}
-          className={`px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-all duration-200 flex items-center gap-2 ${
-            activeTab === "marketprice"
-              ? "bg-slate-900 text-white shadow-md shadow-slate-900/20"
-              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+          className={`relative z-10 px-5 py-2.5 rounded-full text-xs font-bold font-mono transition-colors duration-200 flex items-center gap-2 cursor-pointer ${
+            activeTab === "marketprice" ? "text-white" : "text-slate-600 hover:text-slate-900"
           }`}
         >
-          <TrendingUp className="w-4 h-4" />
-          Market UCO Pricing
+          {activeTab === "marketprice" && (
+            <motion.div
+              layoutId="settingsTabActivePill"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="absolute inset-0 bg-slate-900 rounded-full shadow-md shadow-slate-900/20"
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Market UCO Pricing
+          </span>
         </button>
       </div>
 
-      {/* TAB 1: STAFF & USER ACCOUNTS */}
-      {activeTab === "staff" && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-5 rounded-[2rem] border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold text-slate-400">01/03</span>
-                <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                  <Users className="w-5 h-5 text-emerald-700" />
-                  Staff Accounts &amp; Roles
-                </h2>
-              </div>
-              <p className="text-xs text-slate-500 font-mono mt-1">
-                Create staff credentials by assigning a defined Role Template. Section access permissions are automatically inherited from the selected role.
-              </p>
-            </div>
-
-            <button
-              onClick={openCreateStaffModal}
-              className="btn btn-primary text-xs py-2.5 px-5 font-bold font-mono rounded-full flex items-center gap-2 shadow-sm self-start sm:self-auto"
-            >
-              <UserPlus className="w-4 h-4" />
-              + Create Staff Account
-            </button>
-          </div>
-
-          {fetchingStaff ? (
-            <div className="p-12 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">
-              <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto mb-2" />
-              Loading staff accounts...
-            </div>
-          ) : staffList.length === 0 ? (
-            <div className="card p-12 text-center text-gray-400 bg-white">
-              <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-              <p className="font-bold text-gray-700 text-sm">No internal staff accounts found</p>
-              <p className="text-xs text-gray-400 mt-1">Create accounts for staff or sub-admins to delegate portal access.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {staffList.map((sa) => (
-                <div key={sa.id} className="card p-5 bg-white border border-gray-200 shadow-sm space-y-4 hover:border-green-300 transition-all">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-green-100 text-green-800 flex items-center justify-center font-bold flex-shrink-0">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-gray-900 text-base">{sa.full_name}</h3>
-                          <span className="badge bg-green-100 text-green-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">
-                            Role: {sa.role}
-                          </span>
-                          {sa.is_active === false && (
-                            <span className="badge bg-red-100 text-red-700 text-[10px] font-bold">Offboarded</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Username: <span className="font-mono font-bold text-gray-700">{sa.username}</span> {sa.phone ? `· Phone: ${sa.phone}` : ""}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingStaffDetails(sa);
-                          setEditDetailForm({ fullName: sa.full_name, username: sa.username, phone: sa.phone || "", role: sa.role });
-                        }}
-                        className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold flex items-center gap-1.5"
-                        title="Edit Details"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Edit Details</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setPasswordStaff(sa);
-                          setNewStaffPassword("");
-                        }}
-                        className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
-                        title="Change Password"
-                      >
-                        <Key className="w-3.5 h-3.5 text-amber-600" />
-                      </button>
-
-                      <button
-                        onClick={() => setDeletingStaff(sa)}
-                        className={`btn text-xs py-1.5 px-2.5 border font-semibold ${
-                          sa.is_active === false
-                            ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                            : "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                        }`}
-                        title={sa.is_active === false ? "Reactivate Account" : "Offboard Account"}
-                      >
-                        {sa.is_active === false ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {/* TAB 1: STAFF & USER ACCOUNTS */}
+          {activeTab === "staff" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-5 rounded-[2rem] border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-slate-400">01/03</span>
+                    <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-700" />
+                      Staff Accounts &amp; Roles
+                    </h2>
                   </div>
-
-                  {/* Section Access Preview Pills */}
-                  <div className="bg-gray-50 p-3 rounded-xl">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1.5">
-                      Authorized Admin Sections ({sa.allowed_routes?.length || 0}):
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {ADMIN_SECTIONS.map((sec) => {
-                        const isAllowed = sa.allowed_routes?.includes(sec.href);
-                        return (
-                          <span
-                            key={sec.href}
-                            className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-all ${
-                              isAllowed
-                                ? "bg-green-700 text-white font-bold"
-                                : "bg-gray-200 text-gray-400 line-through opacity-60"
-                            }`}
-                          >
-                            {sec.label}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <p className="text-xs text-slate-500 font-mono mt-1">
+                    Create staff credentials by assigning a defined Role Template. Section access permissions are automatically inherited from the selected role.
+                  </p>
                 </div>
-              ))}
+
+                <button
+                  onClick={openCreateStaffModal}
+                  className="btn btn-primary text-xs py-2.5 px-5 font-bold font-mono rounded-full flex items-center gap-2 shadow-sm self-start sm:self-auto"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  + Create Staff Account
+                </button>
+              </div>
+
+              {fetchingStaff ? (
+                <div className="p-12 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">
+                  <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto mb-2" />
+                  Loading staff accounts...
+                </div>
+              ) : staffList.length === 0 ? (
+                <div className="card p-12 text-center text-gray-400 bg-white">
+                  <Users className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="font-bold text-gray-700 text-sm">No internal staff accounts found</p>
+                  <p className="text-xs text-gray-400 mt-1">Create accounts for staff or sub-admins to delegate portal access.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {staffList.map((sa) => (
+                    <div key={sa.id} className="card p-5 bg-white border border-gray-200 shadow-sm space-y-4 hover:border-green-300 transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-green-100 text-green-800 flex items-center justify-center font-bold flex-shrink-0">
+                            <Users className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-gray-900 text-base">{sa.full_name}</h3>
+                              <span className="badge bg-green-100 text-green-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">
+                                Role: {sa.role}
+                              </span>
+                              {sa.is_active === false && (
+                                <span className="badge bg-red-100 text-red-700 text-[10px] font-bold">Offboarded</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Username: <span className="font-mono font-bold text-gray-700">{sa.username}</span> {sa.phone ? `· Phone: ${sa.phone}` : ""}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingStaffDetails(sa);
+                              setEditDetailForm({ fullName: sa.full_name, username: sa.username, phone: sa.phone || "", role: sa.role });
+                            }}
+                            className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold flex items-center gap-1.5"
+                            title="Edit Details"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Edit Details</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setPasswordStaff(sa);
+                              setNewStaffPassword("");
+                            }}
+                            className="btn btn-secondary text-xs py-1.5 px-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
+                            title="Change Password"
+                          >
+                            <Key className="w-3.5 h-3.5 text-amber-600" />
+                          </button>
+
+                          <button
+                            onClick={() => setDeletingStaff(sa)}
+                            className={`btn text-xs py-1.5 px-2.5 border font-semibold ${
+                              sa.is_active === false
+                                ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                : "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                            }`}
+                            title={sa.is_active === false ? "Reactivate Account" : "Offboard Account"}
+                          >
+                            {sa.is_active === false ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Section Access Preview Pills */}
+                      <div className="bg-gray-50 p-3 rounded-xl">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1.5">
+                          Authorized Admin Sections ({sa.allowed_routes?.length || 0}):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ADMIN_SECTIONS.map((sec) => {
+                            const isAllowed = sa.allowed_routes?.includes(sec.href);
+                            return (
+                              <span
+                                key={sec.href}
+                                className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-all ${
+                                  isAllowed
+                                    ? "bg-green-700 text-white font-bold"
+                                    : "bg-gray-200 text-gray-400 line-through opacity-60"
+                                }`}
+                              >
+                                {sec.label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* TAB 2: ROLE TEMPLATES & PRESETS */}
-      {activeTab === "roles" && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
-            <div>
-              <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
-                <Shield className="w-5 h-5 text-green-700" />
-                Role Templates & Default Presets
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Create, edit, or delete role templates (e.g., Regional Supervisor, Auditor) and define their default section permissions.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setShowRoleModal(true)}
-              className="btn btn-primary text-xs py-2 px-4 font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" />
-              + Create New Role Template
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {rolesList.map((rt) => (
-              <div key={rt.role_key} className="card p-5 bg-white border border-gray-200 shadow-sm space-y-3 hover:border-green-300 transition-all">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">{rt.role_name}</h3>
-                    <span className="font-mono text-[11px] text-gray-400">role_key: {rt.role_key}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">
-                      {rt.default_routes?.length || 0} Sections
-                    </span>
-
-                    <button
-                      onClick={() => {
-                        setEditingRole(rt);
-                        setEditRoleName(rt.role_name);
-                        setEditRoleDesc(rt.description || "");
-                        setEditRoleRoutes(rt.default_routes || []);
-                      }}
-                      className="btn btn-secondary text-xs p-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
-                      title="Edit Role Template"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-blue-600" />
-                    </button>
-
-                    <button
-                      onClick={() => setDeletingRole(rt)}
-                      className="btn btn-secondary text-xs p-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold"
-                      title="Delete Role Template"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+          {/* TAB 2: ROLE TEMPLATES & PRESETS */}
+          {activeTab === "roles" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                <div>
+                  <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-green-700" />
+                    Role Templates & Default Presets
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Create, edit, or delete role templates (e.g., Regional Supervisor, Auditor) and define their default section permissions.
+                  </p>
                 </div>
 
-                {rt.description && (
-                  <p className="text-xs text-gray-600">{rt.description}</p>
-                )}
+                <button
+                  onClick={() => setShowRoleModal(true)}
+                  className="btn btn-primary text-xs py-2 px-4 font-bold flex items-center gap-2 shadow-sm self-start sm:self-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  + Create New Role Template
+                </button>
+              </div>
 
-                <div className="bg-gray-50 p-3 rounded-xl space-y-1">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
-                    Default Allowed Sections:
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {ADMIN_SECTIONS.map((sec) => {
-                      const isAllowed = rt.default_routes?.includes(sec.href);
-                      return (
-                        <span
-                          key={sec.href}
-                          className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                            isAllowed ? "bg-green-100 text-green-900 border border-green-200 font-bold" : "bg-gray-100 text-gray-400"
-                          }`}
-                        >
-                          {sec.label}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {rolesList.map((rt) => (
+                  <div key={rt.role_key} className="card p-5 bg-white border border-gray-200 shadow-sm space-y-3 hover:border-green-300 transition-all">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-base">{rt.role_name}</h3>
+                        <span className="font-mono text-[11px] text-gray-400">role_key: {rt.role_key}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">
+                          {rt.default_routes?.length || 0} Sections
                         </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* TAB 3: MARKET PRICE SETTINGS */}
-      {activeTab === "marketprice" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="card p-6 bg-white space-y-4 lg:col-span-1">
-            <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-green-700" />
-              Update Daily UCO Price
-            </h2>
-            <p className="text-xs text-gray-500">
-              Set the benchmark rate (₹/Liter) offered to FBOs for verified oil collections.
-            </p>
+                        <button
+                          onClick={() => {
+                            setEditingRole(rt);
+                            setEditRoleName(rt.role_name);
+                            setEditRoleDesc(rt.description || "");
+                            setEditRoleRoutes(rt.default_routes || []);
+                          }}
+                          className="btn btn-secondary text-xs p-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold"
+                          title="Edit Role Template"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                        </button>
 
-            <form onSubmit={handleSetPrice} className="space-y-4">
-              <div>
-                <label className="font-semibold text-xs text-gray-700 block mb-1">New Price per Liter (₹)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  placeholder="e.g. 52.50"
-                  className="form-input text-base font-bold font-mono"
-                  value={inputPrice}
-                  onChange={(e) => setInputPrice(e.target.value)}
-                />
-              </div>
-
-              {priceError && <p className="text-xs text-red-600 font-semibold">{priceError}</p>}
-              {priceSuccess && <p className="text-xs text-green-700 font-bold">Daily market price updated successfully!</p>}
-
-              <button
-                type="submit"
-                disabled={loadingPrice}
-                className="btn btn-primary w-full text-xs py-2.5 font-bold flex items-center justify-center gap-2"
-              >
-                {loadingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Publish New Benchmark Rate
-              </button>
-            </form>
-          </div>
-
-          <div className="card p-6 bg-white lg:col-span-2 space-y-4">
-            <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
-              <History className="w-5 h-5 text-gray-700" />
-              Recent UCO Price History
-            </h2>
-
-            {fetchingPrice ? (
-              <div className="p-8 text-center text-gray-400">
-                <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto" />
-              </div>
-            ) : priceHistory.length === 0 ? (
-              <p className="text-xs text-gray-400">No price records found.</p>
-            ) : (
-              <div className="space-y-2">
-                {priceHistory.map((ph, idx) => (
-                  <div key={ph.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="font-bold text-gray-900 text-sm">{formatCurrency(ph.price_per_liter)} / Liter</span>
-                      <span className="text-gray-400 block text-[11px]">Effective from {new Date(ph.effective_from).toLocaleString()}</span>
+                        <button
+                          onClick={() => setDeletingRole(rt)}
+                          className="btn btn-secondary text-xs p-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold"
+                          title="Delete Role Template"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    {idx === 0 && <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">Active Rate</span>}
+
+                    {rt.description && (
+                      <p className="text-xs text-gray-600">{rt.description}</p>
+                    )}
+
+                    <div className="bg-gray-50 p-3 rounded-xl space-y-1">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+                        Default Allowed Sections:
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {ADMIN_SECTIONS.map((sec) => {
+                          const isAllowed = rt.default_routes?.includes(sec.href);
+                          return (
+                            <span
+                              key={sec.href}
+                              className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                isAllowed ? "bg-green-100 text-green-900 border border-green-200 font-bold" : "bg-gray-100 text-gray-400"
+                              }`}
+                            >
+                              {sec.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
+
+          {/* TAB 3: MARKET PRICE SETTINGS */}
+          {activeTab === "marketprice" && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="card p-6 bg-white space-y-4 lg:col-span-1">
+                <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                  <IndianRupee className="w-5 h-5 text-green-700" />
+                  Update Daily UCO Price
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Set the benchmark rate (₹/Liter) offered to FBOs for verified oil collections.
+                </p>
+
+                <form onSubmit={handleSetPrice} className="space-y-4">
+                  <div>
+                    <label className="font-semibold text-xs text-gray-700 block mb-1">New Price per Liter (₹)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      placeholder="e.g. 52.50"
+                      className="form-input text-base font-bold font-mono"
+                      value={inputPrice}
+                      onChange={(e) => setInputPrice(e.target.value)}
+                    />
+                  </div>
+
+                  {priceError && <p className="text-xs text-red-600 font-semibold">{priceError}</p>}
+                  {priceSuccess && <p className="text-xs text-green-700 font-bold">Daily market price updated successfully!</p>}
+
+                  <button
+                    type="submit"
+                    disabled={loadingPrice}
+                    className="btn btn-primary w-full text-xs py-2.5 font-bold flex items-center justify-center gap-2"
+                  >
+                    {loadingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Publish New Benchmark Rate
+                  </button>
+                </form>
+              </div>
+
+              <div className="card p-6 bg-white lg:col-span-2 space-y-4">
+                <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
+                  <History className="w-5 h-5 text-gray-700" />
+                  Recent UCO Price History
+                </h2>
+
+                {fetchingPrice ? (
+                  <div className="p-8 text-center text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin text-green-700 mx-auto" />
+                  </div>
+                ) : priceHistory.length === 0 ? (
+                  <p className="text-xs text-gray-400">No price records found.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {priceHistory.map((ph, idx) => (
+                      <div key={ph.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-gray-900 text-sm">{formatCurrency(ph.price_per_liter)} / Liter</span>
+                          <span className="text-gray-400 block text-[11px]">Effective from {new Date(ph.effective_from).toLocaleString()}</span>
+                        </div>
+                        {idx === 0 && <span className="badge bg-green-100 text-green-800 text-[10px] font-bold">Active Rate</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* MODAL 1: CREATE STAFF ACCOUNT */}
       {showCreateModal && (

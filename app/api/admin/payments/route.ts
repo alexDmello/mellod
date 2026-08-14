@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseAndSanitizeJson, sanitizeInput } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,6 @@ export async function GET() {
     });
 
     (pickups || []).forEach((p) => {
-      // Only consider verified (status === 'completed') pickups for payouts
       if (p.status !== "completed") return;
 
       const summary = fboSummaryMap.get(p.fbo_id);
@@ -91,7 +91,6 @@ export async function GET() {
       }
     });
 
-    // 5. Fetch historical payment receipts from fbo_payments (graceful if table missing)
     let paymentReceipts: any[] = [];
     try {
       const { data: receipts } = await adminSupabase
@@ -120,7 +119,20 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const rawText = await request.text();
+    const parseResult = parseAndSanitizeJson<{
+      fboId?: string;
+      pickupIds?: string[];
+      paymentMethod?: string;
+      referenceNumber?: string;
+      notes?: string;
+      periodLabel?: string;
+    }>(rawText);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error }, { status: parseResult.status });
+    }
+
     const {
       fboId,
       pickupIds,
@@ -128,7 +140,7 @@ export async function POST(request: Request) {
       referenceNumber,
       notes,
       periodLabel,
-    } = body;
+    } = parseResult.data;
 
     if (!fboId || !Array.isArray(pickupIds) || pickupIds.length === 0) {
       return NextResponse.json(
@@ -139,7 +151,7 @@ export async function POST(request: Request) {
 
     const adminSupabase = createAdminClient();
 
-    // 1. Fetch targeted pickups to calculate total amount & liters
+    // 1. Fetch targeted pickups
     const { data: targetPickups, error: fetchErr } = await adminSupabase
       .from("pickups")
       .select("*")
@@ -152,11 +164,11 @@ export async function POST(request: Request) {
     const totalAmount = targetPickups.reduce((sum, p) => sum + Number(p.total_amount || 0), 0);
     const totalLiters = targetPickups.reduce((sum, p) => sum + Number(p.liters || 0), 0);
 
-    // 2. Generate unique receipt number (e.g., PAY-2026-98124)
+    // 2. Generate unique receipt number
     const randomCode = Math.floor(10000 + Math.random() * 90000);
     const receiptNumber = `PAY-${new Date().getFullYear()}-${randomCode}`;
 
-    // 3. Update payment_status to 'paid' in pickups table (graceful if column missing)
+    // 3. Update payment_status to 'paid' in pickups table
     const { error: updateErr } = await adminSupabase
       .from("pickups")
       .update({ payment_status: "paid" })
@@ -164,7 +176,6 @@ export async function POST(request: Request) {
 
     if (updateErr) {
       console.warn("Notice: payment_status column update error:", updateErr.message);
-      // If error is strictly about missing column, we proceed so disbursement receipt is recorded!
       if (!updateErr.message.includes("payment_status")) {
         return NextResponse.json({ error: updateErr.message }, { status: 500 });
       }

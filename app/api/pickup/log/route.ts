@@ -1,31 +1,53 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeInput, DEFAULT_MAX_UPLOAD_SIZE } from "@/lib/security";
 
 export async function POST(request: Request) {
   try {
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > DEFAULT_MAX_UPLOAD_SIZE) {
+      return NextResponse.json(
+        { error: `Payload too large. Maximum allowed size for log upload is ${Math.round(DEFAULT_MAX_UPLOAD_SIZE / (1024 * 1024))}MB.` },
+        { status: 413 }
+      );
+    }
+
     const formData = await request.formData();
-    const pickerId = formData.get("picker_id") as string;
-    const fboId = formData.get("fbo_id") as string;
-    const routeId = (formData.get("route_id") as string) || null;
+    const rawPickerId = formData.get("picker_id") as string;
+    const rawFboId = formData.get("fbo_id") as string;
+    const rawRouteId = formData.get("route_id") as string;
     const litersStr = formData.get("liters") as string;
     const pricePerLiterStr = formData.get("price_per_liter") as string;
-    const notes = (formData.get("notes") as string) || "";
+    const rawNotes = formData.get("notes") as string;
     const photo = formData.get("photo") as File | null;
 
-    if (!pickerId || !fboId || !litersStr) {
+    if (!rawPickerId || !rawFboId || !litersStr) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
     }
 
+    const pickerId = sanitizeInput(rawPickerId);
+    const fboId = sanitizeInput(rawFboId);
+    const routeId = rawRouteId ? sanitizeInput(rawRouteId) : null;
+    const notes = rawNotes ? sanitizeInput(rawNotes) : "";
+
     const liters = parseFloat(litersStr);
     const pricePerLiter = parseFloat(pricePerLiterStr || "0");
-    const totalAmount = liters * pricePerLiter;
+
+    if (isNaN(liters) || liters <= 0) {
+      return NextResponse.json({ error: "Malformed payload: liters must be a positive number." }, { status: 400 });
+    }
 
     const adminSupabase = createAdminClient();
-
     let photoUrl: string | null = null;
 
-    // Handle photo upload bypassing RLS using admin client
     if (photo && photo.size > 0) {
+      if (photo.size > DEFAULT_MAX_UPLOAD_SIZE) {
+        return NextResponse.json(
+          { error: `Photo payload too large. Maximum size is ${Math.round(DEFAULT_MAX_UPLOAD_SIZE / (1024 * 1024))}MB.` },
+          { status: 413 }
+        );
+      }
+
       const arrayBuffer = await photo.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const fileName = `pickup_${pickerId}_${Date.now()}.jpg`;
@@ -52,8 +74,6 @@ export async function POST(request: Request) {
       photoUrl = urlData.publicUrl;
     }
 
-    // Insert pickup record with status "pending" for Admin review
-    // Note: total_amount is a GENERATED ALWAYS column in PostgreSQL, so we omit it from insert
     const { data: pickup, error: insertError } = await adminSupabase
       .from("pickups")
       .insert({
@@ -61,10 +81,10 @@ export async function POST(request: Request) {
         fbo_id: fboId,
         route_id: routeId,
         liters: liters,
-        price_per_liter: pricePerLiter,
+        price_per_liter: isNaN(pricePerLiter) ? 0 : pricePerLiter,
         photo_url: photoUrl,
         notes: notes.trim() || null,
-        status: "pending", // Sent for Admin Review
+        status: "pending",
         picked_up_at: new Date().toISOString(),
       })
       .select()

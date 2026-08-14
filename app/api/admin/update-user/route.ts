@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseAndSanitizeJson, sanitizeInput } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden: Internal staff role required" }, { status: 403 });
     }
 
-    // 2. Parse request body
-    const body = await request.json();
+    // 2. Parse & sanitize request body
+    const rawText = await request.text();
+    const parseResult = parseAndSanitizeJson<Record<string, any>>(rawText);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error }, { status: parseResult.status });
+    }
+
+    const body = parseResult.data;
     const {
       userId,
       action,
@@ -78,9 +86,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Delete action is currently only allowed for staff/sub-admin accounts" }, { status: 400 });
       }
 
-      // Delete profile
       await adminClient.from("profiles").delete().eq("id", userId);
-      // Delete auth user
       const { error: deleteAuthErr } = await adminClient.auth.admin.deleteUser(userId);
       if (deleteAuthErr) {
         console.error("Failed to delete auth user:", deleteAuthErr);
@@ -116,9 +122,8 @@ export async function POST(request: Request) {
         }
       }
 
-      // Ban or unban user credentials in Supabase Auth across all roles (fbo, picker, sub_admin)
       if (!isActive) {
-        await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" }); // Ban for ~100 yrs
+        await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
       } else {
         await adminClient.auth.admin.updateUserById(userId, { ban_duration: "none" });
       }
@@ -131,13 +136,12 @@ export async function POST(request: Request) {
 
     // ACTION: Change Password
     if (action === "change_password") {
-      if (!password || password.trim().length < 6) {
+      if (!password || String(password).trim().length < 6) {
         return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 });
       }
 
-      const cleanPassword = password.trim();
+      const cleanPassword = String(password).trim();
 
-      // Update auth system password
       const { error: authUpdateError } = await adminClient.auth.admin.updateUserById(userId, {
         password: cleanPassword,
       });
@@ -146,7 +150,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Failed to update authentication password: " + authUpdateError.message }, { status: 500 });
       }
 
-      // Update generated_password in profiles for directory tracking
       const { error: profileUpdateError } = await adminClient
         .from("profiles")
         .update({ generated_password: cleanPassword })
@@ -167,11 +170,10 @@ export async function POST(request: Request) {
 
     // ACTION: Update Details
     if (action === "update_details") {
-      // Update profile fields
       const profileUpdates: Record<string, any> = {};
-      if (fullName !== undefined) profileUpdates.full_name = fullName.trim();
-      if (phone !== undefined) profileUpdates.phone = phone ? phone.trim() : null;
-      if (username !== undefined && username.trim()) profileUpdates.username = username.trim().toLowerCase();
+      if (fullName !== undefined) profileUpdates.full_name = sanitizeInput(fullName);
+      if (phone !== undefined) profileUpdates.phone = phone ? sanitizeInput(phone) : null;
+      if (username !== undefined && String(username).trim()) profileUpdates.username = sanitizeInput(username).toLowerCase();
 
       if (Object.keys(profileUpdates).length > 0) {
         const { error: pErr } = await adminClient
@@ -184,9 +186,8 @@ export async function POST(request: Request) {
         }
       }
 
-      // If username changed for staff account, sync Auth email
       if (targetRole !== "fbo" && targetRole !== "picker" && targetRole !== "admin" && username !== undefined) {
-        const newUsername = username.trim().toLowerCase();
+        const newUsername = sanitizeInput(username).toLowerCase();
         const internalEmail = `${newUsername}@mellod.internal`;
         await adminClient.auth.admin.updateUserById(userId, {
           email: internalEmail,
@@ -194,16 +195,15 @@ export async function POST(request: Request) {
         });
       }
 
-      // Update role-specific fields for FBO / Picker
       if (targetRole === "fbo") {
         const fboUpdates: Record<string, any> = {};
-        if (businessName !== undefined) fboUpdates.business_name = businessName.trim();
-        if (contactPerson !== undefined) fboUpdates.contact_person = contactPerson.trim();
-        if (phone !== undefined) fboUpdates.phone = phone ? phone.trim() : null;
-        if (address !== undefined) fboUpdates.address = address ? address.trim() : null;
-        if (fssaiLicense !== undefined) fboUpdates.fssai_license = fssaiLicense ? fssaiLicense.trim() : null;
-        if (latitude !== undefined) fboUpdates.latitude = latitude;
-        if (longitude !== undefined) fboUpdates.longitude = longitude;
+        if (businessName !== undefined) fboUpdates.business_name = sanitizeInput(businessName);
+        if (contactPerson !== undefined) fboUpdates.contact_person = sanitizeInput(contactPerson);
+        if (phone !== undefined) fboUpdates.phone = phone ? sanitizeInput(phone) : null;
+        if (address !== undefined) fboUpdates.address = address ? sanitizeInput(address) : null;
+        if (fssaiLicense !== undefined) fboUpdates.fssai_license = fssaiLicense ? sanitizeInput(fssaiLicense) : null;
+        if (latitude !== undefined) fboUpdates.latitude = Number(latitude);
+        if (longitude !== undefined) fboUpdates.longitude = Number(longitude);
 
         if (Object.keys(fboUpdates).length > 0) {
           const { error: fboErr } = await adminClient
@@ -216,7 +216,6 @@ export async function POST(request: Request) {
           }
         }
 
-        // Handle UPI ID update in payment_methods
         if (body.upiId !== undefined) {
           const { data: fboRow } = await adminClient
             .from("fbos")
@@ -225,7 +224,7 @@ export async function POST(request: Request) {
             .single();
 
           if (fboRow?.id) {
-            const cleanUpi = body.upiId ? String(body.upiId).trim() : null;
+            const cleanUpi = body.upiId ? sanitizeInput(String(body.upiId)) : null;
 
             const { data: existingMethods } = await adminClient
               .from("payment_methods")
@@ -254,7 +253,6 @@ export async function POST(request: Request) {
           }
         }
 
-        // Handle Bank Details update in payment_methods
         if (
           body.accountHolder !== undefined ||
           body.bankName !== undefined ||
@@ -268,10 +266,10 @@ export async function POST(request: Request) {
             .single();
 
           if (fboRow?.id) {
-            const cleanHolder = body.accountHolder ? String(body.accountHolder).trim() : null;
-            const cleanBank = body.bankName ? String(body.bankName).trim() : null;
-            const cleanAcc = body.accountNumber ? String(body.accountNumber).trim() : null;
-            const cleanIfsc = body.ifscCode ? String(body.ifscCode).trim().toUpperCase() : null;
+            const cleanHolder = body.accountHolder ? sanitizeInput(String(body.accountHolder)) : null;
+            const cleanBank = body.bankName ? sanitizeInput(String(body.bankName)) : null;
+            const cleanAcc = body.accountNumber ? sanitizeInput(String(body.accountNumber)) : null;
+            const cleanIfsc = body.ifscCode ? sanitizeInput(String(body.ifscCode)).toUpperCase() : null;
 
             const { data: existingMethods } = await adminClient
               .from("payment_methods")
@@ -309,7 +307,7 @@ export async function POST(request: Request) {
         }
       } else if (targetRole === "picker") {
         const pickerUpdates: Record<string, any> = {};
-        if (vehicleInfo !== undefined) pickerUpdates.vehicle_info = vehicleInfo ? vehicleInfo.trim() : null;
+        if (vehicleInfo !== undefined) pickerUpdates.vehicle_info = vehicleInfo ? sanitizeInput(vehicleInfo) : null;
 
         if (Object.keys(pickerUpdates).length > 0) {
           const { error: pickErr } = await adminClient

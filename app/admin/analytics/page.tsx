@@ -32,6 +32,7 @@ import {
   ArrowUpRight,
   Filter,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type TimeRange = "7d" | "30d" | "90d" | "ytd" | "custom" | "all";
 type ActiveTab = "overview" | "collections" | "financials" | "network";
@@ -1095,8 +1096,8 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* ── Main Tab Navigation Bar ─────────────────────────────────────── */}
-      <div className="border-b border-gray-200 flex items-center gap-8 px-2 text-sm font-bold text-gray-500">
+      {/* ── Main Tab Navigation Bar (Smooth Spring Pill Slider) ───────────────── */}
+      <div className="flex bg-slate-100/90 p-1.5 rounded-2xl gap-1.5 border border-slate-200/80">
         {[
           { id: "overview", label: "Executive Overview" },
           { id: "collections", label: "Collections & Volume" },
@@ -1106,14 +1107,18 @@ export default function AnalyticsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as ActiveTab)}
-            className={`pb-3 transition-colors relative ${
-              activeTab === tab.id ? "text-gray-900 font-black" : "hover:text-gray-700"
+            className={`relative z-10 flex-1 py-2.5 px-4 text-xs font-extrabold rounded-xl transition-colors text-center cursor-pointer ${
+              activeTab === tab.id ? "text-emerald-950 font-black" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            {tab.label}
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-600 rounded-t-md" />
+              <motion.div
+                layoutId="analyticsActiveTabPill"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute inset-0 bg-white rounded-xl shadow-xs border border-slate-200/60"
+              />
             )}
+            <span className="relative z-10">{tab.label}</span>
           </button>
         ))}
       </div>
