@@ -19,6 +19,10 @@ import {
   AlertCircle,
   LogOut,
   Sparkles,
+  Ban,
+  Camera,
+  X,
+  CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -42,6 +46,15 @@ export default function PickerDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [expandedFboId, setExpandedFboId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"pending" | "completed">("pending");
+
+  // Report Closed Modal States
+  const [reportingClosedRoute, setReportingClosedRoute] = useState<RouteWithDetails | null>(null);
+  const [closedReason, setClosedReason] = useState("Outlet Closed / Shutter Down");
+  const [closedNotes, setClosedNotes] = useState("");
+  const [closedPhoto, setClosedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [submittingClosed, setSubmittingClosed] = useState(false);
+  const [closedError, setClosedError] = useState<string | null>(null);
 
   const supabase = createClient();
   const router = useRouter();
@@ -140,6 +153,100 @@ export default function PickerDashboard() {
     router.refresh();
   }
 
+  async function handleReportClosedSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reportingClosedRoute) return;
+
+    setSubmittingClosed(true);
+    setClosedError(null);
+
+    let lat = "";
+    let lng = "";
+
+    // Grab geolocation
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+          });
+        });
+        lat = pos.coords.latitude.toString();
+        lng = pos.coords.longitude.toString();
+      } catch (geoErr) {
+        console.warn("GPS fetch skipped or denied:", geoErr);
+      }
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Authentication user not found.");
+
+      const { data: picker } = await supabase
+        .from("pickers")
+        .select("id")
+        .eq("profile_id", user.id)
+        .single();
+
+      if (!picker) throw new Error("Picker profile record not found.");
+
+      const formData = new FormData();
+      formData.append("picker_id", picker.id);
+      formData.append("fbo_id", reportingClosedRoute.fbo_id);
+      formData.append("route_id", reportingClosedRoute.id);
+      formData.append("reason", closedReason);
+      formData.append("notes", closedNotes);
+      if (lat) formData.append("latitude", lat);
+      if (lng) formData.append("longitude", lng);
+      if (closedPhoto) formData.append("photo", closedPhoto);
+
+      const res = await fetch("/api/pickup/report-closed", {
+        method: "POST",
+        body: formData,
+      });
+
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to log closed outlet.");
+
+      // Mark this route as attempted locally
+      setRoutes((prev) =>
+        prev.map((r) =>
+          r.id === reportingClosedRoute.id
+            ? {
+                ...r,
+                pickup: {
+                  id: resData.exception?.id || `closed_${Date.now()}`,
+                  fbo_id: r.fbo_id,
+                  picker_id: picker.id,
+                  route_id: r.id,
+                  liters: 0,
+                  price_per_liter: 0,
+                  total_amount: 0,
+                  picked_up_at: new Date().toISOString(),
+                  status: "pending" as any,
+                  notes: `[ATTEMPTED_CLOSED] ${closedReason}`,
+                  photo_url: resData.photo_url || null,
+                  created_at: new Date().toISOString(),
+                },
+              }
+            : r
+        )
+      );
+
+      // Close modal & reset
+      setReportingClosedRoute(null);
+      setClosedReason("Outlet Closed / Shutter Down");
+      setClosedNotes("");
+      setClosedPhoto(null);
+      setPhotoPreview(null);
+    } catch (err: any) {
+      setClosedError(err.message || "Failed to report closed outlet. Try again.");
+    } finally {
+      setSubmittingClosed(false);
+    }
+  }
+
   const pendingStops = routes.filter((r) => !r.pickup);
   const completedStops = routes.filter((r) => r.pickup);
 
@@ -180,8 +287,8 @@ export default function PickerDashboard() {
           </motion.button>
         </div>
 
-        {/* Welcome Agent Greeting */}
-        <div className="flex justify-between items-center">
+        {/* Welcome Agent Greeting & Check-In Action */}
+        <div className="flex justify-between items-center gap-2">
           <div>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 w-max">
               <Sparkles className="w-3 h-3 text-amber-300" />
@@ -192,16 +299,25 @@ export default function PickerDashboard() {
             </h1>
             <p className="text-emerald-200/80 text-xs font-medium mt-0.5">{formatDate(new Date())}</p>
           </div>
-          <motion.button
-            whileHover={{ rotate: 180 }}
-            whileTap={{ scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-            onClick={fetchData}
-            className="w-10 h-10 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center text-white hover:bg-white/25 border border-white/20 transition-all shadow-sm cursor-pointer"
-            title="Refresh Route Data"
-          >
-            <RefreshCw className="w-4.5 h-4.5" />
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/check-in"
+              className="flex items-center gap-1.5 text-xs font-black text-emerald-950 bg-gradient-to-r from-emerald-400 to-teal-300 hover:from-emerald-300 hover:to-teal-200 px-3.5 py-2.5 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              <CalendarDays className="w-4 h-4 text-emerald-950" />
+              <span>Check-In</span>
+            </Link>
+            <motion.button
+              whileHover={{ rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              onClick={fetchData}
+              className="w-10 h-10 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center text-white hover:bg-white/25 border border-white/20 transition-all shadow-sm cursor-pointer"
+              title="Refresh Route Data"
+            >
+              <RefreshCw className="w-4.5 h-4.5" />
+            </motion.button>
+          </div>
         </div>
 
         {/* Route Progress HUD Card */}
@@ -398,7 +514,7 @@ export default function PickerDashboard() {
                             >
                               <FBODetailInfo fbo={route.fbo} />
 
-                              <div className="flex gap-2">
+                              <div className="flex flex-wrap sm:flex-nowrap gap-2">
                                 {destination ? (
                                   <a
                                     href={`https://www.google.com/maps/dir/?api=1&destination=${destination}`}
@@ -417,6 +533,15 @@ export default function PickerDashboard() {
                                     No GPS Coords
                                   </button>
                                 )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setReportingClosedRoute(route)}
+                                  className="flex-1 text-xs py-2.5 rounded-xl font-bold bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <Ban className="w-3.5 h-3.5 text-amber-700" />
+                                  Report Closed 🚫
+                                </button>
 
                                 <Link
                                   href={`/picker/pickup/${route.fbo_id}?routeId=${route.id}`}
@@ -539,6 +664,140 @@ export default function PickerDashboard() {
           </div>
         )}
       </div>
+
+      {/* ── REPORT CLOSED OUTLET MODAL ────────────────────────────────────── */}
+      <AnimatePresence>
+        {reportingClosedRoute && (
+          <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                    <Ban className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-sm">Report Closed Outlet</h3>
+                    <p className="text-[11px] text-slate-400 font-medium">{reportingClosedRoute.fbo.business_name}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReportingClosedRoute(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-bold transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {closedError && (
+                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                  <span>{closedError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleReportClosedSubmit} className="space-y-4">
+                <div>
+                  <label className="text-xs font-extrabold text-slate-700 block mb-1.5">
+                    Reason for Unavailability *
+                  </label>
+                  <select
+                    value={closedReason}
+                    onChange={(e) => setClosedReason(e.target.value)}
+                    className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl p-3 text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                  >
+                    <option value="Outlet Closed / Shutter Down">Outlet Closed / Shutter Down</option>
+                    <option value="Owner / Staff Unavailable">Owner / Staff Unavailable</option>
+                    <option value="Access Blocked / No Entry">Access Blocked / No Entry</option>
+                    <option value="Zero UCO Stock Available">Zero UCO Stock Available</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-extrabold text-slate-700 block mb-1.5">
+                    Geotagged Photo Evidence (Optional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setClosedPhoto(file);
+                          setPhotoPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="hidden"
+                      id="closedPhotoInput"
+                    />
+                    <label
+                      htmlFor="closedPhotoInput"
+                      className="w-full py-4 px-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-amber-400 bg-slate-50 hover:bg-amber-50/30 text-slate-600 flex items-center justify-center gap-2 text-xs font-bold cursor-pointer transition-all"
+                    >
+                      <Camera className="w-4 h-4 text-amber-600" />
+                      <span>{closedPhoto ? "Change Photo Evidence" : "Take / Upload Photo of Closed Shutter"}</span>
+                    </label>
+                  </div>
+                  {photoPreview && (
+                    <div className="mt-2 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={photoPreview} alt="Closed outlet proof" className="w-full h-36 object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-extrabold text-slate-700 block mb-1.5">
+                    Additional Field Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={closedNotes}
+                    onChange={(e) => setClosedNotes(e.target.value)}
+                    placeholder="e.g. Spoke to security, outlet opens at 5 PM..."
+                    className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-2xl p-3 text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReportingClosedRoute(null)}
+                    className="flex-1 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingClosed}
+                    className="flex-1 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold shadow-md shadow-amber-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingClosed ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Ban className="w-4 h-4" />
+                        <span>Log Closed &amp; Release Route</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

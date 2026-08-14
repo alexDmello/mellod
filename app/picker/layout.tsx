@@ -10,8 +10,6 @@ import PwaLaunchManager from "@/components/PwaLaunchManager";
 
 const navItems = [
   { href: "/picker", label: "Home Route", icon: Home },
-  { href: "/check-in", label: "Check-In", icon: MapPin },
-  { href: "/attendance", label: "Attendance", icon: CalendarDays },
   { href: "/picker/history", label: "Collection History", icon: History },
 ];
 

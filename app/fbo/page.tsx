@@ -26,6 +26,8 @@ async function getFBOData() {
   };
 }
 
+import FBOMissedPickupBanner from "@/components/FBOMissedPickupBanner";
+
 export default async function FBODashboard() {
   const data = await getFBOData();
   if (!data?.fbo) {
@@ -70,6 +72,9 @@ export default async function FBODashboard() {
       </FBOHeader>
 
       <div className="px-4 -mt-6 relative z-10 space-y-4">
+        {/* Missed Pickup Reschedule Banner */}
+        <FBOMissedPickupBanner fboId={fbo.id} />
+
         {/* KPI Stats Cards */}
         <div className="grid grid-cols-2 gap-3.5">
           {/* Oil Contributed Card */}
