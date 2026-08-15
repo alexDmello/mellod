@@ -57,17 +57,17 @@ export default async function FBODashboard() {
   const { fbo, stats, currentPrice, recentPickups } = data;
 
   return (
-    <div className="animate-fade-in space-y-4 pb-8 font-sans">
+    <div className="animate-fade-in space-y-5 pb-8 font-sans text-slate-900">
       {/* Unified Top Bar & Hero Banner */}
       <FBOHeader subtitle="Verified Partner Hub">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-300/40 text-emerald-100 text-[10px] font-extrabold uppercase tracking-wider">
               Partner Dashboard
             </span>
           </div>
-          <h1 className="text-white text-2xl font-black tracking-tight">{fbo.business_name}</h1>
-          <p className="text-emerald-200/80 text-xs font-medium line-clamp-1">{fbo.address || "Location address active"}</p>
+          <h1 className="text-white text-2xl font-black tracking-tight drop-shadow-sm">{fbo.business_name}</h1>
+          <p className="text-emerald-100/90 text-xs font-semibold line-clamp-1">{fbo.address || "Location address active"}</p>
         </div>
       </FBOHeader>
 
@@ -78,40 +78,39 @@ export default async function FBODashboard() {
         {/* KPI Stats Cards */}
         <div className="grid grid-cols-2 gap-3.5">
           {/* Oil Contributed Card */}
-          <div className="bg-white p-4.5 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80 transition-all hover:shadow-2xl">
-            <div className="w-10 h-10 bg-teal-50 text-teal-700 rounded-xl flex items-center justify-center mb-3 shadow-sm border border-teal-100">
-              <Droplets className="w-5 h-5 text-teal-600" />
+          <div className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-lg shadow-slate-200/50">
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-700 rounded-xl flex items-center justify-center mb-3 border border-emerald-100 shadow-sm">
+              <Droplets className="w-5 h-5 text-emerald-600" />
             </div>
-            <p className="text-2xl font-black text-gray-900 tracking-tight">
+            <p className="text-2xl font-black text-slate-900 tracking-tight">
               {formatLiters(Number(stats?.total_liters ?? 0))}
             </p>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">Total Oil Contributed</p>
+            <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mt-1">Total Oil Contributed</p>
           </div>
 
           {/* Earnings Card */}
-          <div className="bg-white p-4.5 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80 transition-all hover:shadow-2xl">
-            <div className="w-10 h-10 bg-emerald-50 text-emerald-700 rounded-xl flex items-center justify-center mb-3 shadow-sm border border-emerald-100">
-              <IndianRupee className="w-5 h-5 text-emerald-600" />
+          <div className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-lg shadow-slate-200/50">
+            <div className="w-10 h-10 bg-teal-50 text-teal-700 rounded-xl flex items-center justify-center mb-3 border border-teal-100 shadow-sm">
+              <IndianRupee className="w-5 h-5 text-teal-600" />
             </div>
-            <p className="text-2xl font-black text-gray-900 tracking-tight">
+            <p className="text-2xl font-black text-slate-900 tracking-tight">
               {formatCurrency(Number(stats?.total_earnings ?? 0))}
             </p>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">Total Money Earned</p>
+            <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mt-1">Total Money Earned</p>
           </div>
         </div>
 
-        {/* Live Market Price Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-800 to-teal-900 rounded-2xl p-5 text-white shadow-xl shadow-emerald-900/20 border border-emerald-700/50">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full blur-xl pointer-events-none" />
+        {/* Live Market Price Card (Green Banner) */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-2xl p-5 text-white shadow-xl shadow-emerald-700/20 border border-emerald-500/30">
           <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-emerald-200 text-xs font-bold uppercase tracking-wider">Live Market Buying Rate</p>
-              <p className="text-3xl font-black mt-1 tracking-tight text-white">
+              <p className="text-emerald-100 text-xs font-extrabold uppercase tracking-wider">Live Market Buying Rate</p>
+              <p className="text-3xl font-black mt-1 tracking-tight text-white drop-shadow-sm">
                 {currentPrice ? `${formatCurrency(currentPrice.price_per_liter)}/L` : "—"}
               </p>
-              <p className="text-emerald-200/90 text-xs font-medium mt-1">Per Liter of Used Cooking Oil (UCO)</p>
+              <p className="text-emerald-100/90 text-xs font-medium mt-1">Per Liter of Used Cooking Oil (UCO)</p>
               {currentPrice && (
-                <p className="text-emerald-300 text-[10px] font-semibold mt-1 bg-emerald-950/40 px-2 py-0.5 rounded-md inline-block border border-emerald-500/20">
+                <p className="text-emerald-950 text-[10px] font-extrabold mt-1.5 bg-emerald-200 px-2.5 py-0.5 rounded-md inline-block border border-emerald-300 shadow-sm">
                   Effective from {formatDate(currentPrice.effective_from)}
                 </p>
               )}
@@ -123,37 +122,37 @@ export default async function FBODashboard() {
         </div>
 
         {/* Total Pickups Completed */}
-        <div className="bg-white p-4.5 rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80 flex items-center gap-4">
-          <div className="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-amber-100">
-            <Clock className="w-5 h-5 text-amber-600" />
+        <div className="bg-white rounded-2xl p-4.5 flex items-center gap-4 border border-slate-100 shadow-lg shadow-slate-200/50">
+          <div className="w-11 h-11 bg-emerald-600 text-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-600/20">
+            <Clock className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Completed Pickups</p>
-            <p className="text-xl font-black text-gray-900">{stats?.total_pickups ?? 0} Collections</p>
+            <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Completed Pickups</p>
+            <p className="text-xl font-black text-slate-900">{stats?.total_pickups ?? 0} Collections</p>
           </div>
           {stats?.last_pickup_at && (
             <div className="text-right text-xs">
-              <p className="text-[10px] text-gray-400 font-semibold">LAST COLLECTION</p>
-              <p className="font-bold text-gray-700 mt-0.5">{formatDate(stats.last_pickup_at)}</p>
+              <p className="text-[9px] text-slate-400 font-extrabold uppercase">LAST COLLECTION</p>
+              <p className="font-bold text-slate-800 mt-0.5">{formatDate(stats.last_pickup_at)}</p>
             </div>
           )}
         </div>
 
         {/* Recent Pickups Timeline */}
         {recentPickups.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/80 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h2 className="font-bold text-gray-900 text-sm">Recent Collection Activity</h2>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="font-black text-slate-900 text-sm">Recent Collection Activity</h2>
+              <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                 Live Status
               </span>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-slate-100">
               {recentPickups.map((pickup: any) => (
-                <div key={pickup.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors">
+                <div key={pickup.id} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/80 transition-colors">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-xs font-bold text-gray-900">
+                      <p className="text-xs font-bold text-slate-900">
                         {formatDate(pickup.picked_up_at)}
                       </p>
                       <span
@@ -166,11 +165,11 @@ export default async function FBODashboard() {
                         {pickup.status === "completed" ? "Verified ✓" : "Pending Review ⏳"}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 font-medium">{formatTime(pickup.picked_up_at)}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">{formatTime(pickup.picked_up_at)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black text-gray-900">{formatLiters(Number(pickup.liters))}</p>
-                    <p className="text-xs text-emerald-700 font-bold">{formatCurrency(Number(pickup.total_amount))}</p>
+                    <p className="text-xs font-black text-slate-900">{formatLiters(Number(pickup.liters))}</p>
+                    <p className="text-xs text-emerald-700 font-extrabold">{formatCurrency(Number(pickup.total_amount))}</p>
                   </div>
                 </div>
               ))}

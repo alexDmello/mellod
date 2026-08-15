@@ -197,70 +197,70 @@ export default function FBOProfilePage() {
   }
 
   return (
-    <div className="animate-fade-in space-y-4 pb-8">
+    <div className="animate-fade-in space-y-5 pb-8 font-sans text-slate-900">
       {/* Modern Unified Header */}
       <FBOHeader subtitle="FBO Partner Portal">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-xl font-black border border-white/20 shadow-inner">
+          <div className="w-12 h-12 rounded-2xl bg-white text-emerald-700 font-black text-xl flex items-center justify-center border border-emerald-100 shadow-md">
             {fbo?.business_name?.charAt(0) || "F"}
           </div>
           <div>
-            <h1 className="text-xl font-black tracking-tight">{fbo?.business_name}</h1>
-            <p className="text-emerald-200/80 text-xs mt-0.5 font-medium">Partner Profile & Payout Preferences</p>
+            <h1 className="text-xl font-black tracking-tight text-white drop-shadow-sm">{fbo?.business_name}</h1>
+            <p className="text-emerald-100 text-xs mt-0.5 font-semibold">Partner Profile & Payout Preferences</p>
           </div>
         </div>
       </FBOHeader>
 
       <div className="px-4 -mt-6 relative z-10 space-y-4">
         {/* ── SECTION 1: Business Details & FSSAI License ────────────────── */}
-        <div className="bg-white rounded-2xl p-5 space-y-4 border border-gray-100 shadow-xl shadow-gray-200/80">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-emerald-700" />
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="font-black text-slate-900 text-sm flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-emerald-600" />
               Business & Regulatory Details
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] uppercase font-extrabold tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] uppercase font-bold tracking-wider border border-emerald-200">
               Verified Partner
             </span>
           </div>
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-gray-400 block font-bold text-[10px] uppercase">Contact Person</span>
-              <span className="font-bold text-gray-900 text-sm mt-0.5 block">{fbo?.contact_person || "—"}</span>
+              <span className="text-slate-400 block font-bold text-[10px] uppercase">Contact Person</span>
+              <span className="font-black text-slate-900 text-sm mt-0.5 block">{fbo?.contact_person || "—"}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <span className="text-gray-400 block font-bold text-[10px] uppercase">Phone Number</span>
-                <span className="font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
-                  <Phone className="w-3.5 h-3.5 text-gray-400" /> {fbo?.phone || "Not provided"}
+                <span className="text-slate-400 block font-bold text-[10px] uppercase">Phone Number</span>
+                <span className="font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" /> {fbo?.phone || "Not provided"}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 block font-bold text-[10px] uppercase">Pickup Location Address</span>
-                <span className="font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span className="text-slate-400 block font-bold text-[10px] uppercase">Pickup Location Address</span>
+                <span className="font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
                   <span className="truncate">{fbo?.address || "Address configured"}</span>
                 </span>
               </div>
             </div>
 
             {/* FSSAI License Row */}
-            <div className="pt-3 border-t border-gray-100">
+            <div className="pt-3 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-gray-700 font-bold block flex items-center gap-1.5">
-                    <FileCheck className="w-4 h-4 text-emerald-700" />
+                  <span className="text-slate-900 font-bold block flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-emerald-600" />
                     FSSAI License / Registration No.
                   </span>
-                  <p className="text-[11px] text-gray-400 font-medium">Used Cooking Oil regulatory compliance identifier</p>
+                  <p className="text-[11px] text-slate-500 font-medium">Used Cooking Oil regulatory compliance identifier</p>
                 </div>
 
                 {!fbo?.fssai_license && !isEditingFssai && (
                   <button
                     onClick={() => setIsEditingFssai(true)}
-                    className="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm transition-all"
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer"
                   >
                     + Add FSSAI
                   </button>
@@ -272,21 +272,21 @@ export default function FBOProfilePage() {
                   <input
                     type="text"
                     placeholder="Enter 14-digit FSSAI license no..."
-                    className="w-full px-3 py-2 text-xs font-mono uppercase bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-bold"
+                    className="w-full px-3 py-2 text-xs font-mono uppercase bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
                     value={fssaiLicense}
                     onChange={(e) => setFssaiLicense(e.target.value)}
                   />
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={() => setIsEditingFssai(false)}
-                      className="px-3 py-1.5 text-xs text-gray-600 font-bold rounded-xl hover:bg-gray-100"
+                      className="px-3 py-1.5 text-xs text-slate-600 font-bold rounded-xl hover:bg-slate-100"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveFssai}
                       disabled={savingFssai || !fssaiLicense.trim()}
-                      className="py-1.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-md shadow-emerald-700/20"
+                      className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer"
                     >
                       {savingFssai ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save & Lock"}
                     </button>
@@ -296,23 +296,23 @@ export default function FBOProfilePage() {
                 <div className="mt-2">
                   {fbo?.fssai_license ? (
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between bg-emerald-50/80 p-3 rounded-xl border border-emerald-200">
+                      <div className="flex items-center justify-between bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
                         <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-                          <span className="bg-emerald-100 text-emerald-950 font-mono text-xs px-2.5 py-0.5 rounded-md font-bold">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <span className="bg-white text-slate-900 font-mono text-xs px-2.5 py-0.5 rounded-md font-extrabold border border-slate-200 shadow-xs">
                             {fbo.fssai_license}
                           </span>
                         </div>
-                        <span className="text-[10px] text-gray-500 font-bold flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-gray-200">
-                          Verified & Locked
+                        <span className="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                          Verified & Locked ✓
                         </span>
                       </div>
-                      <p className="text-[10px] text-gray-400 italic">
+                      <p className="text-[10px] text-slate-400 italic font-medium">
                         Contact your administrator to request updates.
                       </p>
                     </div>
                   ) : (
-                    <span className="text-gray-400 text-xs italic">
+                    <span className="text-slate-400 text-xs italic font-medium">
                       No FSSAI license added yet. Click "+ Add FSSAI" above to register license details.
                     </span>
                   )}
@@ -328,54 +328,54 @@ export default function FBOProfilePage() {
           </div>
         </div>
 
-        {/* ── SECTION 2: Payment & Payout Options (Read Only) ────────────────────────── */}
-        <div className="bg-white rounded-2xl p-5 space-y-4 border border-gray-100 shadow-xl shadow-gray-200/80">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        {/* ── SECTION 2: Payment & Payout Options ────────────────────────── */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-emerald-700" />
+              <h2 className="font-black text-slate-900 text-sm flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-emerald-600" />
                 Payout Payment Methods
               </h2>
-              <p className="text-[11px] text-gray-500 font-medium">Bank details and UPI accounts configured for receiving earnings</p>
+              <p className="text-[11px] text-slate-500 font-medium">Bank details and UPI accounts configured for receiving earnings</p>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] uppercase font-extrabold tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] uppercase font-bold tracking-wider border border-slate-200">
               Admin Managed
             </span>
           </div>
 
-          {/* Existing payment methods list (Read-Only) */}
+          {/* Existing payment methods list */}
           {paymentMethods.length > 0 ? (
             <div className="space-y-3">
               {paymentMethods.map((method) => (
-                <div key={method.id} className="p-3.5 border border-gray-100 rounded-xl bg-gray-50/50">
+                <div key={method.id} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/50">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        method.is_primary ? "bg-emerald-100 text-emerald-800" : "bg-gray-200 text-gray-500"
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                        method.is_primary ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20" : "bg-emerald-50 text-emerald-700 border-emerald-100"
                       }`}
                     >
                       {methodIcons[method.method_type]}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-gray-900 text-xs">{methodLabels[method.method_type]}</p>
+                        <p className="font-extrabold text-slate-900 text-xs">{methodLabels[method.method_type]}</p>
                         {method.is_primary && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-extrabold uppercase">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase border border-emerald-200">
                             Primary Payout
                           </span>
                         )}
                       </div>
 
                       {method.method_type === "bank" && (
-                        <div className="mt-1 space-y-0.5 text-xs text-gray-600 font-medium">
-                          <p>{method.account_holder} · {method.bank_name}</p>
-                          <p className="font-mono text-[11px] text-gray-400">
+                        <div className="mt-1 space-y-0.5 text-xs text-slate-600 font-medium">
+                          <p className="text-slate-900 font-bold">{method.account_holder} · {method.bank_name}</p>
+                          <p className="font-mono text-[11px] text-slate-500">
                             ···· {method.account_number?.slice(-4)} · IFSC: {method.ifsc_code}
                           </p>
                         </div>
                       )}
                       {method.method_type === "upi" && (
-                        <p className="text-xs text-gray-700 mt-1 font-mono font-bold">{method.upi_id}</p>
+                        <p className="text-xs text-slate-900 mt-1 font-mono font-black">{method.upi_id}</p>
                       )}
                     </div>
                   </div>
@@ -383,10 +383,10 @@ export default function FBOProfilePage() {
               ))}
             </div>
           ) : (
-            <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-2xl border border-dashed border-gray-200 space-y-2">
-              <CreditCard className="w-8 h-8 text-gray-300 mx-auto" />
-              <p className="text-xs text-gray-700 font-bold">No payout method assigned yet</p>
-              <p className="text-[11px] text-gray-400 font-medium max-w-sm mx-auto">
+            <div className="py-6 text-center text-slate-500 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200 space-y-2 p-4">
+              <CreditCard className="w-8 h-8 text-emerald-600/50 mx-auto" />
+              <p className="text-xs text-slate-800 font-bold">No payout method assigned yet</p>
+              <p className="text-[11px] text-slate-500 font-medium max-w-sm mx-auto">
                 Payout payment methods are managed centrally by your administrator. Contact support if you need to update your payout account.
               </p>
             </div>
@@ -394,36 +394,36 @@ export default function FBOProfilePage() {
         </div>
 
         {/* ── SECTION 3: Support Desk ───────────────────────── */}
-        <div className="bg-white rounded-2xl p-5 space-y-3 border border-gray-100 shadow-xl shadow-gray-200/80 text-xs">
-          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
-            <HelpCircle className="w-4 h-4 text-emerald-700" />
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-3 text-xs">
+          <h2 className="font-black text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-2">
+            <HelpCircle className="w-4 h-4 text-emerald-600" />
             Support & Assistance
           </h2>
 
           <a
             href="tel:+919876543210"
-            className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-950 font-bold hover:bg-emerald-100 transition-colors shadow-sm"
+            className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold transition-colors shadow-xs"
           >
             <span className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-emerald-700" />
+              <Phone className="w-4 h-4 text-emerald-600" />
               Mellod Biofuels Support Line
             </span>
-            <ExternalLink className="w-4 h-4 text-emerald-700" />
+            <ExternalLink className="w-4 h-4 text-emerald-600" />
           </a>
         </div>
 
         {/* ── SECTION 4: Account Session & Sign Out ───────────────────────── */}
-        <div className="bg-white rounded-2xl p-5 space-y-3 border border-gray-100 shadow-xl shadow-gray-200/80 text-xs">
-          <h2 className="font-bold text-gray-900 text-sm flex items-center gap-2 border-b border-gray-100 pb-2">
-            <LogOut className="w-4 h-4 text-rose-600" />
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-3 text-xs">
+          <h2 className="font-black text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-2">
+            <LogOut className="w-4 h-4 text-rose-500" />
             Account Session
           </h2>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 transition-colors"
+            className="w-full py-3 flex items-center justify-center gap-2 text-xs font-extrabold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 text-rose-600" />
             Sign Out of Partner Account
           </button>
         </div>

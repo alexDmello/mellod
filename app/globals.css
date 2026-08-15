@@ -50,6 +50,118 @@ body {
 }
 
 /* ============================================================
+   ENGINEERING PAPER & PASTEL TERRACOTTA DESIGN SYSTEM
+   ============================================================ */
+
+:root {
+  --paper-cream: #F4F9F5;
+  --paper-card-bg: #FFFFFF;
+  --paper-teal: #064e3b;
+  --paper-teal-muted: #047857;
+  --paper-terracotta: #059669;
+  --paper-terracotta-dark: #047857;
+  --paper-peach: #dcfce7;
+  --paper-coral: #10b981;
+  --paper-sage: #86efac;
+}
+
+/* Engineering Grid Background - Green & White Edition */
+.bg-paper-grid {
+  background-color: #F4F9F5;
+  background-image: 
+    linear-gradient(to right, rgba(5, 150, 105, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(5, 150, 105, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Realistic Vertical Paper Fold Line on the Left - Emerald Tinted */
+.paper-fold-line {
+  position: relative;
+}
+.paper-fold-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 24px;
+  width: 2px;
+  background: linear-gradient(
+    to right,
+    rgba(6, 78, 59, 0.12) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(6, 78, 59, 0.06) 100%
+  );
+  box-shadow: -1px 0 3px rgba(6, 78, 59, 0.05), 1px 0 2px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Paper Card Component - White & Emerald */
+.paper-card {
+  background: #FFFFFF;
+  border: 1.5px solid #064e3b;
+  border-radius: 1.25rem;
+  box-shadow: 3px 3px 0px #064e3b;
+  color: #064e3b;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.paper-card:hover {
+  border-color: #047857;
+  box-shadow: 4px 4px 0px #047857;
+}
+
+/* Buttons in Paper & Green/White Palette */
+.btn-paper-primary {
+  background-color: #10b981;
+  color: #FFFFFF;
+  border: 1.5px solid #064e3b;
+  border-radius: 0.875rem;
+  font-weight: 800;
+  box-shadow: 2px 2px 0px #064e3b;
+  transition: all 0.15s ease;
+}
+.btn-paper-primary:hover:not(:disabled) {
+  background-color: #059669;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #064e3b;
+}
+.btn-paper-primary:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #064e3b;
+}
+
+.btn-paper-secondary {
+  background-color: #dcfce7;
+  color: #064e3b;
+  border: 1.5px solid #064e3b;
+  border-radius: 0.875rem;
+  font-weight: 800;
+  box-shadow: 2px 2px 0px #064e3b;
+  transition: all 0.15s ease;
+}
+.btn-paper-secondary:hover:not(:disabled) {
+  background-color: #bbf7d0;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #064e3b;
+}
+
+.btn-paper-terracotta {
+  background-color: #047857;
+  color: #FFFFFF;
+  border: 1.5px solid #064e3b;
+  border-radius: 0.875rem;
+  font-weight: 800;
+  box-shadow: 2px 2px 0px #064e3b;
+  transition: all 0.15s ease;
+}
+.btn-paper-terracotta:hover:not(:disabled) {
+  background-color: #065f46;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #064e3b;
+}
+
+/* ============================================================
    PWA SAFE AREA SUPPORT
    ============================================================ */
 .safe-bottom {

@@ -140,46 +140,46 @@ export default function PickupPage({ params }: Props) {
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center animate-slide-up">
-        <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mb-4 border border-emerald-200 shadow-xl shadow-emerald-500/20">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center animate-slide-up text-slate-900">
+        <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mb-4 border border-emerald-200 shadow-xl shadow-emerald-600/20">
           <CheckCircle2 className="w-10 h-10 text-emerald-700" />
         </div>
-        <h2 className="text-xl font-black text-gray-900 mb-1">Pickup Logged Successfully!</h2>
-        <p className="text-gray-600 text-xs font-semibold">
+        <h2 className="text-xl font-black text-slate-900 mb-1">Pickup Logged Successfully!</h2>
+        <p className="text-slate-600 text-xs font-bold">
           {liters} Liters collected from {fbo?.business_name}
         </p>
-        <p className="text-xs text-gray-400 mt-4 font-medium animate-pulse">Returning to route dashboard...</p>
+        <p className="text-xs text-emerald-600 mt-4 font-bold animate-pulse">Returning to route dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in space-y-4 pb-8 font-sans">
+    <div className="animate-fade-in space-y-4 pb-8 font-sans text-slate-900">
       {/* Modern Emerald Unified Sub-Header */}
       <PickerHeader subtitle="Log Collection Stop" showBack={true}>
         <div>
-          <h1 className="font-black text-white text-lg leading-none tracking-tight">Log UCO Collection</h1>
-          <p className="text-emerald-300 text-xs mt-1 truncate max-w-64 font-medium">{fbo?.business_name ?? "Loading partner..."}</p>
+          <h1 className="font-black text-white text-lg leading-none tracking-tight drop-shadow-sm">Log UCO Collection</h1>
+          <p className="text-emerald-100 text-xs mt-1 truncate max-w-64 font-semibold">{fbo?.business_name ?? "Loading partner..."}</p>
         </div>
       </PickerHeader>
 
       <form onSubmit={handleSubmit} className="px-4 space-y-4">
         {/* FBO Info Card */}
         {fbo && (
-          <div className="bg-white rounded-2xl p-4 flex items-center gap-3.5 border border-gray-100 shadow-xl shadow-gray-200/80">
+          <div className="bg-white rounded-2xl p-4 flex items-center gap-3.5 border border-slate-100 shadow-lg shadow-slate-200/50">
             <div className="w-11 h-11 bg-teal-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-teal-100">
               <Building2 className="w-5 h-5 text-teal-700" />
             </div>
             <div className="min-w-0">
-              <p className="font-extrabold text-gray-900 text-sm truncate">{fbo.business_name}</p>
-              <p className="text-xs text-gray-500 truncate mt-0.5 font-medium">{fbo.address ?? "No address listed"}</p>
+              <p className="font-black text-slate-900 text-sm truncate">{fbo.business_name}</p>
+              <p className="text-xs text-slate-500 truncate mt-0.5 font-medium">{fbo.address ?? "No address listed"}</p>
             </div>
           </div>
         )}
 
         {/* Liters Input */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-xl shadow-gray-200/80 space-y-2">
-          <label htmlFor="liters" className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-2">
+          <label htmlFor="liters" className="text-xs font-extrabold text-slate-700 uppercase tracking-wider block">
             Liters Collected *
           </label>
           <div className="relative">
@@ -191,31 +191,31 @@ export default function PickupPage({ params }: Props) {
               min="0.1"
               max="10000"
               inputMode="decimal"
-              className="w-full pl-12 pr-10 py-3 text-2xl font-black bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900"
+              className="w-full pl-12 pr-10 py-3 text-2xl font-black bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900"
               placeholder="0.0"
               value={liters}
               onChange={(e) => setLiters(e.target.value)}
               required
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-extrabold text-sm">L</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-sm">L</span>
           </div>
         </div>
 
         {/* Camera Photo Capture */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-xl shadow-gray-200/80 space-y-3">
-          <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-3">
+          <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider block">
             Photo Verification of Drums
           </label>
 
           {photoPreview ? (
-            <div className="relative overflow-hidden rounded-2xl border border-gray-200 shadow-inner">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photoPreview}
                 alt="Pickup photo preview"
                 className="w-full h-48 object-cover"
               />
-              <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 bg-black/70 backdrop-blur-md text-white text-[11px] px-3 py-1 rounded-full font-bold">
+              <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md text-white text-[11px] px-3 py-1 rounded-full font-bold">
                 {compressing ? (
                   <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Compressing...</>
                 ) : (
@@ -228,7 +228,7 @@ export default function PickupPage({ params }: Props) {
               <button
                 type="button"
                 onClick={clearPhoto}
-                className="absolute top-2.5 left-2.5 w-8 h-8 bg-black/70 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/90 transition-colors shadow-sm"
+                className="absolute top-2.5 left-2.5 w-8 h-8 bg-slate-900/80 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-slate-900 transition-colors shadow-sm cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -237,13 +237,13 @@ export default function PickupPage({ params }: Props) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full h-40 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 transition-all bg-gray-50/40"
+              className="w-full h-40 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 transition-all bg-slate-50/50 cursor-pointer"
             >
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-                <Camera className="w-6 h-6" />
+                <Camera className="w-6 h-6 text-emerald-600" />
               </div>
-              <span className="text-xs font-bold text-gray-800">Tap to Take Canister Photo</span>
-              <span className="text-[10px] text-gray-400 font-medium">Auto-compressed for instant upload</span>
+              <span className="text-xs font-bold text-slate-800">Tap to Take Canister Photo</span>
+              <span className="text-[10px] text-slate-400 font-medium">Auto-compressed for instant upload</span>
             </button>
           )}
 
@@ -261,23 +261,23 @@ export default function PickupPage({ params }: Props) {
             <button
               type="button"
               onClick={() => { if (fileInputRef.current) { fileInputRef.current.removeAttribute("capture"); fileInputRef.current.click(); } }}
-              className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 hover:text-emerald-700 font-bold transition-colors"
+              className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 hover:text-emerald-700 font-bold transition-colors cursor-pointer"
             >
-              <ImageIcon className="w-4 h-4 text-gray-400" />
+              <ImageIcon className="w-4 h-4 text-emerald-600" />
               Select from device gallery
             </button>
           )}
         </div>
 
         {/* Notes Input */}
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-xl shadow-gray-200/80 space-y-2">
-          <label htmlFor="notes" className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-2">
+          <label htmlFor="notes" className="text-xs font-extrabold text-slate-700 uppercase tracking-wider block">
             Pickup Notes (Optional)
           </label>
           <textarea
             id="notes"
             rows={2}
-            className="w-full p-3 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium resize-none text-gray-800"
+            className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium resize-none text-slate-900"
             placeholder="e.g. Canisters full, restaurant owner signed verification slip..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -286,7 +286,7 @@ export default function PickupPage({ params }: Props) {
 
         {error && (
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs flex items-start gap-2.5 font-bold shadow-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />
             {error}
           </div>
         )}
@@ -294,7 +294,7 @@ export default function PickupPage({ params }: Props) {
         <button
           type="submit"
           disabled={submitting || compressing || !liters}
-          className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-emerald-700/25 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-black text-sm rounded-2xl shadow-xl shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           {submitting ? (
             <><Loader2 className="w-5 h-5 animate-spin" /> Submitting Collection...</>
