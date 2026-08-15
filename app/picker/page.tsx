@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, todayISO } from "@/lib/utils";
+import { useAttendanceData } from "../attendance/use-attendance-data";
 import {
   MapPin,
   CheckCircle2,
@@ -23,6 +24,8 @@ import {
   Camera,
   X,
   CalendarDays,
+  ShieldCheck,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,12 +59,70 @@ export default function PickerDashboard() {
   const [submittingClosed, setSubmittingClosed] = useState(false);
   const [closedError, setClosedError] = useState<string | null>(null);
 
+  // Embedded Check-In Hook Integration
+  const attendance = useAttendanceData();
+  const {
+    todayAttendance,
+    actionPending: attendancePending,
+    errorMessage: attendanceError,
+    successMessage: attendanceSuccess,
+    checkIn,
+    checkOut,
+  } = attendance;
+
+  const [gettingGps, setGettingGps] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+
   const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  function handleEmbeddedCheckIn() {
+    setGettingGps(true);
+    setGpsError(null);
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation is not supported by your device browser.");
+      setGettingGps(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGettingGps(false);
+        checkIn({ lat: pos.coords.latitude, lng: pos.coords.longitude, workMode: "wfo" });
+      },
+      (err) => {
+        setGettingGps(false);
+        let msg = "Location access denied. Please enable GPS in browser settings to check in.";
+        if (err.code === err.TIMEOUT) msg = "GPS search timed out. Try again.";
+        setGpsError(msg);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  function handleEmbeddedCheckOut() {
+    setGettingGps(true);
+    setGpsError(null);
+    if (!navigator.geolocation) {
+      checkOut({ lat: 0, lng: 0 });
+      setGettingGps(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGettingGps(false);
+        checkOut({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {
+        setGettingGps(false);
+        checkOut({ lat: 0, lng: 0 });
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
 
   async function fetchData() {
     setLoading(true);
@@ -100,7 +161,8 @@ export default function PickerDashboard() {
 
       const today = todayISO();
 
-      const { data: routesData } = await supabase
+      // 1. Fetch routes assigned for today
+      let { data: routesData } = await supabase
         .from("routes")
         .select(`
           id, fbo_id, route_date, sort_order,
@@ -110,12 +172,37 @@ export default function PickerDashboard() {
         .eq("route_date", today)
         .order("sort_order");
 
+      // 2. Fallback to latest assigned route date if today has no explicit route records
+      if (!routesData || routesData.length === 0) {
+        const { data: latestRoute } = await supabase
+          .from("routes")
+          .select("route_date")
+          .eq("picker_id", picker.id)
+          .order("route_date", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestRoute?.route_date) {
+          const { data: fallbackRoutes } = await supabase
+            .from("routes")
+            .select(`
+              id, fbo_id, route_date, sort_order,
+              fbo:fbos(*)
+            `)
+            .eq("picker_id", picker.id)
+            .eq("route_date", latestRoute.route_date)
+            .order("sort_order");
+
+          routesData = fallbackRoutes || [];
+        }
+      }
+
       const fboIds = (routesData ?? []).map((r: any) => r.fbo_id);
 
-      // Start window 36 hours lookback from start of local today to prevent timezone boundary clipping
+      // Start window strictly at start of TODAY (00:00:00 local time) to prevent yesterday's pickups from bleeding into today's assigned route stops
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
-      const lookbackWindowISO = new Date(startOfToday.getTime() - 36 * 60 * 60 * 1000).toISOString();
+      const startOfTodayISO = startOfToday.toISOString();
 
       let pickupsData: any[] = [];
       let exceptionsData: any[] = [];
@@ -127,14 +214,14 @@ export default function PickerDashboard() {
             .select("*")
             .eq("picker_id", picker.id)
             .in("fbo_id", fboIds)
-            .gte("picked_up_at", lookbackWindowISO)
+            .gte("picked_up_at", startOfTodayISO)
             .order("picked_up_at", { ascending: false }),
           supabase
             .from("pickup_exceptions")
             .select("*")
             .eq("picker_id", picker.id)
             .in("fbo_id", fboIds)
-            .gte("created_at", lookbackWindowISO)
+            .gte("created_at", startOfTodayISO)
             .order("created_at", { ascending: false }),
         ]);
 
@@ -144,14 +231,14 @@ export default function PickerDashboard() {
 
       const pickupsByFBO: Record<string, Pickup> = {};
 
-      // 1. Fill from pickups table (latest record per FBO)
+      // 1. Fill from pickups table (latest record per FBO today)
       pickupsData.forEach((p: any) => {
         if (!pickupsByFBO[p.fbo_id]) {
           pickupsByFBO[p.fbo_id] = p;
         }
       });
 
-      // 2. Fill from exceptions table if pickups table did not contain entry
+      // 2. Fill from exceptions table if pickups table did not contain entry today
       exceptionsData.forEach((exc: any) => {
         if (!pickupsByFBO[exc.fbo_id]) {
           pickupsByFBO[exc.fbo_id] = {
@@ -304,7 +391,7 @@ export default function PickerDashboard() {
   const progressPct = totalStops > 0 ? Math.round((completedCount / totalStops) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-paper-grid paper-fold-line pb-16 font-sans text-emerald-950">
+    <div className="min-h-screen bg-paper-grid pb-16 font-sans text-emerald-950">
       {/* Modern Field Header with Emerald Theme & Paper Accents */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -341,7 +428,7 @@ export default function PickerDashboard() {
           </motion.button>
         </div>
 
-        {/* Welcome Agent Greeting & Check-In Action */}
+        {/* Welcome Agent Greeting & Refresh */}
         <div className="flex justify-between items-center gap-2 relative z-10">
           <div>
             <span className="px-2.5 py-0.5 rounded-full bg-white border border-emerald-950 text-emerald-950 text-[10px] font-black uppercase tracking-wider shadow-[1px_1px_0px_#064e3b] flex items-center gap-1 w-max">
@@ -353,25 +440,16 @@ export default function PickerDashboard() {
             </h1>
             <p className="text-emerald-100 text-xs font-bold mt-0.5">{formatDate(new Date())}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/check-in"
-              className="flex items-center gap-1.5 text-xs font-black text-emerald-950 bg-white hover:bg-emerald-50 px-3.5 py-2.5 rounded-2xl border-2 border-emerald-950 shadow-[2px_2px_0px_#064e3b] transition-all cursor-pointer"
-            >
-              <CalendarDays className="w-4 h-4 text-emerald-700" />
-              <span>Check-In</span>
-            </Link>
-            <motion.button
-              whileHover={{ rotate: 180 }}
-              whileTap={{ scale: 0.9 }}
-              transition={{ duration: 0.3 }}
-              onClick={fetchData}
-              className="w-10 h-10 bg-white hover:bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-950 border-2 border-emerald-950 shadow-[2px_2px_0px_#064e3b] transition-all cursor-pointer"
-              title="Refresh Route Data"
-            >
-              <RefreshCw className="w-4.5 h-4.5 text-emerald-700" />
-            </motion.button>
-          </div>
+          <motion.button
+            whileHover={{ rotate: 180 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+            onClick={fetchData}
+            className="w-10 h-10 bg-white hover:bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-950 border-2 border-emerald-950 shadow-[2px_2px_0px_#064e3b] transition-all cursor-pointer"
+            title="Refresh Route Data"
+          >
+            <RefreshCw className="w-4.5 h-4.5 text-emerald-700" />
+          </motion.button>
         </div>
 
         {/* Route Progress HUD Card */}
@@ -379,28 +457,125 @@ export default function PickerDashboard() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-            className="mt-5 bg-white/15 backdrop-blur-md rounded-2xl p-4 border border-white/30 relative z-10 shadow-xs"
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="mt-5 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white relative z-10"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-emerald-100 text-xs font-black uppercase tracking-wider">Daily Route Progress</span>
-              <span className="text-white font-black text-xs">{completedCount} / {totalStops} Stops Done</span>
+            <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider mb-2">
+              <span className="flex items-center gap-1.5">
+                <Navigation className="w-4 h-4 text-emerald-300" />
+                Shift Progress
+              </span>
+              <span className="bg-white/20 px-2.5 py-0.5 rounded-full text-[11px]">
+                {completedCount} / {totalStops} Stops ({progressPct}%)
+              </span>
             </div>
-            <div className="h-3 bg-emerald-950/40 rounded-full overflow-hidden p-0.5 border border-white/30">
+
+            <div className="w-full bg-emerald-950/40 rounded-full h-3.5 p-0.5 border border-white/20">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPct}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-emerald-400 rounded-full shadow-xs"
+                className="bg-gradient-to-r from-emerald-400 to-teal-300 h-full rounded-full shadow-sm"
               />
-            </div>
-            <div className="flex justify-between text-white text-[10px] mt-2 font-bold">
-              <span>{progressPct}% Completed</span>
-              <span>{totalStops - completedCount} pending collections</span>
             </div>
           </motion.div>
         )}
       </motion.div>
+
+      {/* Embedded Simple Check-In Card directly on Home Dashboard */}
+      <div className="mx-4 mt-4 bg-white rounded-3xl p-5 border-2 border-emerald-950 shadow-[4px_4px_0px_#064e3b]">
+        <div className="flex items-center justify-between mb-3 border-b-2 border-emerald-950/10 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-950 flex items-center justify-center text-emerald-950 font-black shadow-[1px_1px_0px_#064e3b]">
+              <MapPin className="w-4.5 h-4.5 text-emerald-800" />
+            </div>
+            <div>
+              <h2 className="text-xs font-black text-emerald-950 uppercase tracking-wider">Shift Check-In</h2>
+              <p className="text-[11px] text-emerald-800/80 font-bold">
+                {todayAttendance?.check_out_at
+                  ? "Shift Completed for Today"
+                  : todayAttendance?.check_in_at
+                  ? `Checked In at ${new Date(todayAttendance.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                  : "Mark daily check-in to start pickups"}
+              </p>
+            </div>
+          </div>
+          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border border-emerald-950 shadow-[1px_1px_0px_#064e3b] ${
+            todayAttendance?.check_out_at
+              ? "bg-blue-100 text-blue-950"
+              : todayAttendance?.check_in_at
+              ? "bg-emerald-100 text-emerald-950"
+              : "bg-amber-100 text-amber-950"
+          }`}>
+            {todayAttendance?.check_out_at ? "Completed" : todayAttendance?.check_in_at ? "On Duty" : "Pending"}
+          </span>
+        </div>
+
+        {(gpsError || attendanceError) && (
+          <div className="mb-3 p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-950 text-xs font-bold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <span>{gpsError || attendanceError}</span>
+          </div>
+        )}
+
+        {attendanceSuccess && (
+          <div className="mb-3 p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 text-xs font-bold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>{attendanceSuccess}</span>
+          </div>
+        )}
+
+        {!todayAttendance?.check_in_at ? (
+          <button
+            onClick={handleEmbeddedCheckIn}
+            disabled={gettingGps || attendancePending}
+            className="btn-paper-primary w-full py-3.5 px-4 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[3px_3px_0px_#064e3b] border-1.5 border-emerald-950"
+          >
+            {gettingGps ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                Acquiring GPS Location...
+              </>
+            ) : attendancePending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                Logging Check-In...
+              </>
+            ) : (
+              <>
+                <MapPin className="w-4 h-4 text-white" />
+                Check In for Today&apos;s Shift
+              </>
+            )}
+          </button>
+        ) : !todayAttendance?.check_out_at ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 bg-emerald-50 border border-emerald-950/20 rounded-2xl p-3 text-xs font-bold text-emerald-950">
+              <span className="text-[10px] text-emerald-800 uppercase block font-black">Active Shift</span>
+              Checked in: {new Date(todayAttendance.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </div>
+            <button
+              onClick={handleEmbeddedCheckOut}
+              disabled={gettingGps || attendancePending}
+              className="bg-slate-900 hover:bg-black text-white font-black text-xs uppercase px-4 py-3.5 rounded-2xl border-1.5 border-emerald-950 shadow-[2px_2px_0px_#064e3b] flex items-center gap-1.5 cursor-pointer"
+            >
+              {gettingGps || attendancePending ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  Check Out
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="p-3 bg-emerald-50 border border-emerald-950/20 rounded-2xl text-center text-xs font-bold text-emerald-950 flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>Shift completed today ({new Date(todayAttendance.check_out_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})</span>
+          </div>
+        )}
+      </div>
 
       <div className="px-4 mt-5 space-y-4 relative z-10">
         {loading ? (

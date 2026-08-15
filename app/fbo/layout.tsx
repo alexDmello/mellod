@@ -16,7 +16,7 @@ export default function FBOLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col min-h-screen bg-paper-grid paper-fold-line font-sans text-emerald-950">
+    <div className="flex flex-col min-h-screen bg-paper-grid font-sans text-emerald-950">
       {/* Main Page Content */}
       <main className="flex-1 pb-28 overflow-y-auto relative z-10">{children}</main>
 

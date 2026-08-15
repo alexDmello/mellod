@@ -111,19 +111,17 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 font-sans relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-emerald-200/50 rounded-full blur-3xl animate-float-green-1 pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/3 w-[30rem] h-[30rem] bg-teal-200/40 rounded-full blur-3xl animate-float-green-2 pointer-events-none" />
-
+      <div className="min-h-screen flex flex-col items-center justify-center bg-paper-grid px-4 font-sans relative overflow-hidden text-emerald-950">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
           className="relative z-10 flex flex-col items-center space-y-4 text-center"
         >
-          <img src="/icons/logo.png" alt="Mellod Logo" className="w-16 h-16 object-contain drop-shadow-md" />
-          <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold bg-white/90 backdrop-blur-xl px-5 py-2.5 rounded-full border border-emerald-200 shadow-lg">
-            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/logo.png" alt="Mellod Logo" className="w-20 h-20 object-contain drop-shadow-md" />
+          <div className="flex items-center gap-2 text-emerald-950 text-xs font-black bg-white px-5 py-2.5 rounded-full border-1.5 border-emerald-950 shadow-[3px_3px_0px_#064e3b]">
+            <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
             Initializing Mellod PWA...
           </div>
         </motion.div>
@@ -132,14 +130,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-4 py-8 font-sans relative overflow-hidden selection:bg-emerald-600 selection:text-white safe-top safe-bottom">
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-canvas-grid opacity-60 pointer-events-none" />
-
-      {/* Subtle Fluid Ambient Orbs for White Theme */}
-      <div className="absolute -top-24 -left-24 w-[36rem] h-[36rem] bg-gradient-to-br from-emerald-200/60 via-teal-100/40 to-transparent rounded-full blur-3xl animate-float-green-1 pointer-events-none" />
-      <div className="absolute -bottom-28 -right-24 w-[38rem] h-[38rem] bg-gradient-to-tr from-teal-200/50 via-emerald-100/40 to-transparent rounded-full blur-3xl animate-float-green-2 pointer-events-none" />
-
+    <div className="min-h-screen flex flex-col items-center justify-center bg-paper-grid px-4 py-8 font-sans text-emerald-950 relative overflow-hidden selection:bg-emerald-700 selection:text-white safe-top safe-bottom">
       {/* Main Container */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -154,35 +145,39 @@ export default function LoginPage() {
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/logo.png" alt="Mellod Logo" className="w-20 h-20 object-contain mb-3 drop-shadow-md" />
           </motion.div>
           
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Mellod</h1>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">
-            UCO Collection & Operations Portal
+          <h1 className="text-3xl font-black text-emerald-950 tracking-tight">Mellod</h1>
+          <p className="text-xs font-black text-emerald-800/80 uppercase tracking-wider mt-0.5">
+            UCO Collection &amp; Operations Portal
           </p>
         </div>
 
-        {/* Crisp White Card */}
+        {/* Tactile Paper Card - Green & White */}
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-white/95 backdrop-blur-2xl rounded-3xl p-7 border border-slate-200/90 shadow-xl shadow-slate-200/80 space-y-6"
+          className="bg-white rounded-3xl p-7 border-2 border-emerald-950 shadow-[6px_6px_0px_#064e3b] space-y-6"
         >
-          <div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Sign In</h2>
-            <p className="text-xs text-slate-500 font-semibold mt-1">Enter your assigned username & password</p>
+          <div className="border-b-2 border-emerald-950/15 pb-4">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-950 text-[10px] font-black uppercase tracking-wider shadow-[1px_1px_0px_#064e3b] inline-block mb-1.5">
+              Secure Access
+            </span>
+            <h2 className="text-xl font-black text-emerald-950 tracking-tight">Sign In</h2>
+            <p className="text-xs text-emerald-800/80 font-bold mt-0.5">Enter your assigned username &amp; password</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Username Field */}
             <div className="space-y-1.5">
-              <label htmlFor="username" className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+              <label htmlFor="username" className="text-[11px] font-black text-emerald-950 uppercase tracking-wider block">
                 Username
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-emerald-800/70 pointer-events-none" />
                 <input
                   id="username"
                   type="text"
@@ -190,7 +185,7 @@ export default function LoginPage() {
                   autoCapitalize="none"
                   inputMode="text"
                   enterKeyHint="next"
-                  className="w-full pl-11 pr-4 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+                  className="w-full pl-11 pr-4 py-3 text-xs font-bold bg-emerald-50/50 border-1.5 border-emerald-950 rounded-2xl focus:bg-white text-emerald-950 transition-all placeholder:text-emerald-800/40 outline-none shadow-[1px_1px_0px_#064e3b]"
                   placeholder="e.g. fbo_hotel_01 or picker_rajesh"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -201,17 +196,17 @@ export default function LoginPage() {
 
             {/* Password Field */}
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+              <label htmlFor="password" className="text-[11px] font-black text-emerald-950 uppercase tracking-wider block">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-emerald-800/70 pointer-events-none" />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   enterKeyHint="go"
-                  className="w-full pl-11 pr-11 py-3 text-xs font-bold bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-600 focus:bg-white text-slate-900 transition-all placeholder:text-slate-400 outline-none"
+                  className="w-full pl-11 pr-11 py-3 text-xs font-bold bg-emerald-50/50 border-1.5 border-emerald-950 rounded-2xl focus:bg-white text-emerald-950 transition-all placeholder:text-emerald-800/40 outline-none shadow-[1px_1px_0px_#064e3b]"
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -220,7 +215,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-700 transition-colors p-1.5 cursor-pointer rounded-lg hover:bg-slate-100"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-800 hover:text-emerald-950 transition-colors p-1.5 cursor-pointer rounded-lg hover:bg-emerald-100/50"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -231,16 +226,16 @@ export default function LoginPage() {
 
             {/* DPDP Consent */}
             <div className="pt-1 pb-1 space-y-2">
-              <label className="flex items-start gap-2.5 cursor-pointer text-[11px] text-slate-600 font-medium select-none">
+              <label className="flex items-start gap-2.5 cursor-pointer text-[11px] text-emerald-900 font-bold select-none">
                 <input
                   type="checkbox"
                   required
                   checked={consentAgreed}
                   onChange={(e) => setConsentAgreed(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer flex-shrink-0"
+                  className="mt-0.5 w-4 h-4 text-emerald-700 border-emerald-950 rounded focus:ring-emerald-500 cursor-pointer flex-shrink-0"
                 />
                 <span>
-                  I give explicit consent for processing my credentials and pickup records in accordance with India&apos;s <strong className="text-slate-800 font-bold">DPDP Act, 2023</strong>.
+                  I give explicit consent for processing my credentials and pickup records in accordance with India&apos;s <strong className="text-emerald-950 font-black">DPDP Act, 2023</strong>.
                 </span>
               </label>
             </div>
@@ -252,25 +247,23 @@ export default function LoginPage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-xs font-bold flex items-center gap-2 shadow-xs"
+                  className="p-3.5 bg-rose-50 border border-rose-300 rounded-2xl text-rose-950 text-xs font-bold flex items-center gap-2 shadow-xs"
                 >
-                  <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
                   <span>{error}</span>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Submit Button */}
-            <motion.button
+            <button
               type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
               disabled={loading || !username || !password || !consentAgreed}
-              className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
+              className="btn-paper-primary w-full py-3.5 px-4 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 mt-2 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                   Authenticating...
                 </>
               ) : (
@@ -278,13 +271,13 @@ export default function LoginPage() {
                   Sign In <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </motion.button>
+            </button>
           </form>
         </motion.div>
 
         {/* Footer info */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-semibold">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-800 font-bold">
+          <ShieldCheck className="w-4 h-4 text-emerald-700" />
           <span>Secured by Mellod Operations Platform</span>
         </div>
       </motion.div>
