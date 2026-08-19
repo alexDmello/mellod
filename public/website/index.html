@@ -20,6 +20,9 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- CURSOR GLOW EFFECT -->
+  <div class="cursor-glow" id="cursorGlow"></div>
+
 
   <!-- NAV -->
   <nav id="navbar">
@@ -55,6 +58,21 @@
     <div class="hero-grid-bg"></div>
     <div class="hero-blob blob-1"></div>
     <div class="hero-blob blob-2"></div>
+    
+    <!-- Animated Floating Objects -->
+    <div class="float-object float-leaf-1" title="Bio Leaf">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+    </div>
+    <div class="float-object float-drop-1" title="UCO Oil Drop">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+    </div>
+    <div class="float-object float-spark-1" title="Clean Energy Spark">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <div class="float-object float-orbit-ring" title="Circular Economy">
+      <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#86efac" stroke-width="1.5"><circle cx="12" cy="12" r="9" stroke-dasharray="4 3"/></svg>
+    </div>
+
     <div class="hero-inner">
       <div class="hero-content">
         <div class="hero-badge">
@@ -90,20 +108,30 @@
         </div>
       </div>
       <div class="hero-visual">
-        <div class="hero-card-main">
+        <div class="hero-card-main tilt-card">
           <div class="hc-header">
-            <div class="hc-icon">🛢️</div>
+            <div class="hc-icon pulse-icon">🛢️</div>
             <div>
               <div class="hc-title">Today's Collection</div>
               <div class="hc-sub">Live Operations</div>
             </div>
-            <span class="live-dot">LIVE</span>
+            <span class="live-dot"><span class="radar-ping"></span>LIVE</span>
           </div>
           <div class="hc-progress-row">
             <span>Route Completion</span>
             <span class="hc-pct">87%</span>
           </div>
-          <div class="hc-progress-bar"><div class="hc-progress-fill" style="width:87%"></div></div>
+          <!-- Liquid Wave Tank Visual -->
+          <div class="hc-liquid-tank">
+            <div class="liquid-wave-fill" style="height:87%">
+              <div class="liquid-wave"></div>
+              <div class="liquid-bubbles">
+                <span class="bubble b1"></span>
+                <span class="bubble b2"></span>
+                <span class="bubble b3"></span>
+              </div>
+            </div>
+          </div>
           <div class="hc-grid">
             <div class="hc-cell">
               <div class="hc-cell-num">24</div>
@@ -119,18 +147,25 @@
             </div>
           </div>
         </div>
-        <div class="hero-card-float fc-1">
-          <span class="fc-icon">♻️</span>
+        <div class="hero-card-float fc-1 tilt-card">
+          <span class="fc-icon spin-eco">♻️</span>
           <div>
             <div class="fc-label">CO₂ Saved Today</div>
             <div class="fc-val">1.4 Tonnes</div>
           </div>
         </div>
-        <div class="hero-card-float fc-2">
-          <span class="fc-icon">⚡</span>
+        <div class="hero-card-float fc-2 tilt-card">
+          <span class="fc-icon spark-icon">⚡</span>
           <div>
             <div class="fc-label">Biodiesel Yield</div>
             <div class="fc-val">280 Litres</div>
+          </div>
+        </div>
+        <div class="hero-card-float fc-3 tilt-card">
+          <span class="fc-icon">🚛</span>
+          <div>
+            <div class="fc-label">Active Pickers</div>
+            <div class="fc-val">12 Vehicles</div>
           </div>
         </div>
       </div>
@@ -202,36 +237,41 @@
       <div class="impact-blob ib-1"></div>
       <div class="impact-blob ib-2"></div>
     </div>
+    <!-- Floating Bio Energy Fireflies -->
+    <div class="fireflies-container" id="firefliesContainer"></div>
+
     <div class="container">
       <div class="section-badge badge-light">Our Impact</div>
       <h2 class="section-title light">Built for a Greener India</h2>
       <p class="section-sub light">Every litre we collect is a step towards cleaner cities, lower emissions, and a circular economy.</p>
+      
       <div class="impact-grid">
-        <div class="impact-card reveal">
-          <div class="impact-icon">🌍</div>
+        <div class="impact-card reveal tilt-card">
+          <div class="impact-icon pulse-icon">🌍</div>
           <div class="impact-num" data-target="520">0</div>
           <div class="impact-unit">Tonnes</div>
           <div class="impact-lbl">CO₂ Emissions Prevented</div>
         </div>
-        <div class="impact-card reveal" style="animation-delay:0.1s">
-          <div class="impact-icon">🛢️</div>
+        <div class="impact-card reveal tilt-card" style="animation-delay:0.1s">
+          <div class="impact-icon float-mini">🛢️</div>
           <div class="impact-num" data-target="180000">0</div>
           <div class="impact-unit">Litres</div>
           <div class="impact-lbl">UCO Collected This Year</div>
         </div>
-        <div class="impact-card reveal" style="animation-delay:0.2s">
-          <div class="impact-icon">⚡</div>
+        <div class="impact-card reveal tilt-card" style="animation-delay:0.2s">
+          <div class="impact-icon spark-icon">⚡</div>
           <div class="impact-num" data-target="144000">0</div>
           <div class="impact-unit">Litres</div>
           <div class="impact-lbl">Biodiesel Produced</div>
         </div>
-        <div class="impact-card reveal" style="animation-delay:0.3s">
-          <div class="impact-icon">🤝</div>
+        <div class="impact-card reveal tilt-card" style="animation-delay:0.3s">
+          <div class="impact-icon glow-icon">🤝</div>
           <div class="impact-num" data-target="42">0</div>
           <div class="impact-unit">Jobs</div>
           <div class="impact-lbl">Local Livelihoods Created</div>
         </div>
       </div>
+
       <div class="sdg-strip">
         <span class="sdg-label">Aligned with UN SDGs:</span>
         <span class="sdg-chip">🎯 SDG 7 — Clean Energy</span>

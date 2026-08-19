@@ -106,3 +106,45 @@ const activateNav = () => {
 };
 window.addEventListener('scroll', activateNav, { passive: true });
 
+// ─── CURSOR GLOW FOLLOWER ───
+const cursorGlow = document.getElementById('cursorGlow');
+if (cursorGlow) {
+  window.addEventListener('mousemove', (e) => {
+    cursorGlow.style.left = `${e.clientX}px`;
+    cursorGlow.style.top = `${e.clientY}px`;
+  });
+}
+
+// ─── 3D CARD TILT EFFECT ───
+document.querySelectorAll('.tilt-card').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const tiltX = (y / rect.height) * -12;
+    const tiltY = (x / rect.width) * 12;
+    card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-4px)`;
+  });
+
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)';
+  });
+});
+
+// ─── FIREFLIES / PARALLAX PARTICLES IN DARK SECTION ───
+const firefliesContainer = document.getElementById('firefliesContainer');
+if (firefliesContainer) {
+  const particleCount = 18;
+  for (let i = 0; i < particleCount; i++) {
+    const f = document.createElement('div');
+    f.className = 'firefly';
+    f.style.left = `${Math.random() * 100}%`;
+    f.style.top = `${Math.random() * 100}%`;
+    f.style.animationDuration = `${6 + Math.random() * 8}s`;
+    f.style.animationDelay = `${Math.random() * 5}s`;
+    firefliesContainer.appendChild(f);
+  }
+}
+
+
+

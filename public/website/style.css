@@ -237,3 +237,126 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f4f9f5;color:#064e3b;-
   .hero-card-float{display:none}
 }
 
+/* ─── CURSOR GLOW ─── */
+.cursor-glow{
+  position:fixed;width:350px;height:350px;
+  background:radial-gradient(circle,rgba(52,211,153,.15),transparent 70%);
+  border-radius:50%;pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);transition:transform .08s ease-out,opacity .3s ease;
+  opacity:0;mix-blend-mode:multiply;
+}
+body:hover .cursor-glow{opacity:1}
+
+/* ─── FLOATING OBJECTS (HERO & SECTIONS) ─── */
+.float-object{
+  position:absolute;z-index:1;pointer-events:none;opacity:.85;
+  filter:drop-shadow(0 4px 10px rgba(16,185,129,.2));
+  animation:floatObject 8s ease-in-out infinite alternate;
+}
+.float-leaf-1{top:15%;left:4%;animation-duration:9s}
+.float-drop-1{top:25%;right:6%;animation-duration:11s;animation-delay:-3s}
+.float-spark-1{bottom:20%;left:8%;animation-duration:7s;animation-delay:-2s}
+.float-orbit-ring{bottom:15%;right:12%;animation:floatRotate 20s linear infinite}
+
+@keyframes floatObject{
+  0%{transform:translateY(0) rotate(0deg) scale(1)}
+  50%{transform:translateY(-18px) rotate(6deg) scale(1.05)}
+  100%{transform:translateY(12px) rotate(-5deg) scale(0.95)}
+}
+@keyframes floatRotate{
+  0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.1)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+
+/* ─── MICRO-ANIMATION UTILITIES ─── */
+.pulse-icon{animation:pulseIcon 2.5s ease-in-out infinite}
+@keyframes pulseIcon{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+.spin-eco{display:inline-block;animation:spinEco 10s linear infinite}
+@keyframes spinEco{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+.spark-icon{display:inline-block;animation:sparkPulse 1.8s ease-in-out infinite}
+@keyframes sparkPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.2)}}
+
+.glow-icon{animation:glowPulse 2s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 2px #34d399)}50%{filter:drop-shadow(0 0 12px #10b981)}}
+
+.float-mini{display:inline-block;animation:floatMini 4s ease-in-out infinite}
+@keyframes floatMini{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+/* RADAR PING ON LIVE DOT */
+.live-dot{position:relative;display:inline-flex;align-items:center;gap:.3rem}
+.radar-ping{
+  width:6px;height:6px;background:#059669;border-radius:50%;
+  position:relative;
+}
+.radar-ping::after{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  border:1.5px solid #059669;animation:radarRing 1.8s cubic-bezier(0,0.2,0.8,1) infinite;
+}
+@keyframes radarRing{
+  0%{transform:scale(.5);opacity:1}
+  100%{transform:scale(2.2);opacity:0}
+}
+
+/* ─── LIQUID TANK VISUAL ─── */
+.hc-liquid-tank{
+  height:48px;background:#e6f7ec;border:1.5px solid #a7f3d0;
+  border-radius:1rem;margin-bottom:1.25rem;position:relative;overflow:hidden;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.04);
+}
+.liquid-wave-fill{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(180deg,#34d399 0%,#059669 100%);
+  transition:height 1.5s cubic-bezier(.16,1,.3,1);
+  overflow:hidden;
+}
+.liquid-wave{
+  position:absolute;top:-8px;left:0;width:200%;height:16px;
+  background:radial-gradient(circle,rgba(255,255,255,.4) 30%,transparent 70%);
+  animation:waveMove 4s linear infinite;
+}
+@keyframes waveMove{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+.liquid-bubbles{position:absolute;inset:0;pointer-events:none}
+.bubble{
+  position:absolute;bottom:-10px;background:rgba(255,255,255,.6);
+  border-radius:50%;animation:bubbleRise 3s ease-in infinite;
+}
+.b1{width:6px;height:6px;left:20%;animation-delay:0s;animation-duration:2.5s}
+.b2{width:8px;height:8px;left:55%;animation-delay:.8s;animation-duration:3.2s}
+.b3{width:5px;height:5px;left:80%;animation-delay:1.5s;animation-duration:2.8s}
+@keyframes bubbleRise{
+  0%{transform:translateY(0);opacity:0.8}
+  100%{transform:translateY(-50px);opacity:0}
+}
+
+/* ─── THIRD FLOAT CARD IN HERO ─── */
+.fc-3{
+  bottom:-35px;right:10px;
+  animation:floatCard 6s ease-in-out infinite;animation-delay:-4.5s;
+}
+
+/* ─── TILT CARD ─── */
+.tilt-card{
+  will-change:transform;
+  transition:transform .15s ease-out, box-shadow .2s ease;
+}
+
+/* ─── FIREFLIES IN DARK SECTION ─── */
+.fireflies-container{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.firefly{
+  position:absolute;width:4px;height:4px;background:#34d399;
+  border-radius:50%;box-shadow:0 0 8px #34d399, 0 0 12px #10b981;
+  animation:fireflyMove linear infinite alternate;
+}
+@keyframes fireflyMove{
+  0%{transform:translate(0,0) scale(0.6);opacity:.2}
+  50%{opacity:1;transform:scale(1.2)}
+  100%{transform:translate(40px,-60px) scale(0.4);opacity:.1}
+}
+
+
+
+
