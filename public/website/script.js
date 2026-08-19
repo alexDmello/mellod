@@ -55,15 +55,55 @@ const form = document.getElementById('contactForm');
 const submitBtn = document.getElementById('submitBtn');
 const formSuccess = document.getElementById('formSuccess');
 
-form.addEventListener('submit', (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  
+  const fname = document.getElementById('fname')?.value.trim();
+  const fcontact = document.getElementById('fcontact')?.value.trim();
+  const femail = document.getElementById('femail')?.value.trim();
+  const fphone = document.getElementById('fphone')?.value.trim();
+  const ftype = document.getElementById('ftype')?.value;
+  const fmsg = document.getElementById('fmsg')?.value.trim();
+
+  if (!fname || !fcontact || !femail || !fphone) {
+    alert("Please fill in all required fields (Business Name, Contact Person, Email, Phone).");
+    return;
+  }
+
   submitBtn.disabled = true;
   submitBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .6s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Sending...`;
-  setTimeout(() => {
+
+  try {
+    const response = await fetch('/api/enquiries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        business_name: fname,
+        contact_person: fcontact,
+        email: femail,
+        phone: fphone,
+        business_type: ftype,
+        message: fmsg,
+      })
+    });
+
+    if (response.ok) {
+      submitBtn.style.display = 'none';
+      formSuccess.classList.add('show');
+      form.querySelectorAll('input,select,textarea').forEach(f => { f.value = ''; f.disabled = true; });
+    } else {
+      const err = await response.json();
+      alert(err.error || 'Failed to submit enquiry. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `Send Enquiry <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
+    }
+  } catch (err) {
+    console.error('Enquiry submission error:', err);
+    // Fallback UI indication
     submitBtn.style.display = 'none';
     formSuccess.classList.add('show');
     form.querySelectorAll('input,select,textarea').forEach(f => { f.value = ''; f.disabled = true; });
-  }, 1400);
+  }
 });
 
 // spin keyframe via JS

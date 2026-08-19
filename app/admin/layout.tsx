@@ -21,6 +21,7 @@ import {
   UserCog,
   CreditCard,
   CalendarDays,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn, todayISO } from "@/lib/utils";
@@ -28,6 +29,7 @@ import { cn, todayISO } from "@/lib/utils";
 const ALL_NAV_ITEMS = [
   { href: "/admin/check-in", label: "My Profile & Workspace", icon: UserCog },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/enquiries", label: "Website Enquiries", icon: MessageSquare },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/financials", label: "Financials", icon: Wallet },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
@@ -52,6 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loadingUser, setLoadingUser] = useState(true);
   const [userName, setUserName] = useState<string>("");
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  const [pendingEnquiryCount, setPendingEnquiryCount] = useState(0);
   const [isAttendanceGateLocked, setIsAttendanceGateLocked] = useState(false);
 
   const supabase = createClient();
@@ -151,8 +154,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     loadUserPermissions();
 
-    // Fetch pending pickup review count
-    async function fetchPendingCount() {
+    // Fetch pending counts
+    async function fetchPendingCounts() {
       try {
         const { count } = await supabase
           .from("pickups")
@@ -160,9 +163,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           .eq("status", "pending");
         setPendingReviewCount(count ?? 0);
       } catch {}
+
+      try {
+        const res = await fetch("/api/enquiries?status=pending");
+        if (res.ok) {
+          const data = await res.json();
+          setPendingEnquiryCount(data.pending_count ?? 0);
+        }
+      } catch {}
     }
-    fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 60_000);
+
+    fetchPendingCounts();
+    const interval = setInterval(fetchPendingCounts, 30_000);
     return () => clearInterval(interval);
   }, [pathname]);
 
@@ -275,6 +287,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {href === "/admin/pickers" && pendingReviewCount > 0 && (
                 <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-extrabold shadow-sm shadow-amber-500/40 animate-pulse">
                   {pendingReviewCount > 99 ? "99+" : pendingReviewCount}
+                </span>
+              )}
+              {href === "/admin/enquiries" && pendingEnquiryCount > 0 && (
+                <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-extrabold shadow-sm shadow-emerald-500/40 animate-pulse">
+                  {pendingEnquiryCount > 99 ? "99+" : pendingEnquiryCount}
                 </span>
               )}
             </Link>
