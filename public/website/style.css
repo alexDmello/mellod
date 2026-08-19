@@ -208,3 +208,29 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f4f9f5;color:#064e3b;-
 .footer-col a{font-size:.85rem;font-weight:600;color:#a7f3d0;text-decoration:none;transition:color .15s}
 .footer-col a:hover{color:#f0fdf4}
 .footer-bottom{max-width:1200px;margin:1.5rem auto 0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;font-size:.75rem;font-weight:600;color:#6ee7b7}
+
+/* ─── COMPLIANCE SECTION ─── */
+.compliance-section{background:#f4f9f5}
+.compliance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin-bottom:2.5rem}
+.compliance-card{background:#fff;border:2px solid #064e3b;border-radius:1.5rem;box-shadow:var(--shadow);padding:2rem;transition:all .25s cubic-bezier(.16,1,.3,1)}
+.compliance-card:hover{transform:translate(-3px,-3px);box-shadow:7px 7px 0 #064e3b}
+.compliance-icon{font-size:2.25rem;margin-bottom:1rem}
+.compliance-card h4{font-size:1rem;font-weight:800;color:#052e16;margin-bottom:.6rem}
+.compliance-card p{font-size:.85rem;line-height:1.65;color:#047857}
+.compliance-cta{display:flex;align-items:center;justify-content:center;gap:1.5rem;flex-wrap:wrap;background:#fff;border:2px solid #064e3b;border-radius:1.5rem;box-shadow:var(--shadow-sm);padding:1.5rem 2rem;margin-top:.5rem}
+.compliance-cta span{font-size:.95rem;font-weight:700;color:#052e16}
+
+/* ─── SCROLL TO TOP ─── */
+#scrollTop{position:fixed;bottom:1.75rem;right:1.75rem;z-index:99;width:44px;height:44px;background:#064e3b;color:#fff;border:1.5px solid #052e16;border-radius:.875rem;box-shadow:3px 3px 0 #052e16;font-size:1.25rem;font-weight:900;line-height:1;cursor:pointer;opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;justify-content:center}
+#scrollTop.visible{opacity:1;pointer-events:auto}
+#scrollTop:hover{background:#052e16;transform:translate(-2px,-2px);box-shadow:5px 5px 0 #052e16}
+
+/* ─── ACTIVE NAV ─── */
+.nav-links a.active{background:#dcfce7;color:#052e16}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:600px){
+  .compliance-cta{flex-direction:column;text-align:center;gap:1rem}
+  .hero-card-float{display:none}
+}
+
