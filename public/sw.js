@@ -3,11 +3,16 @@
    Supports: Offline Caching, Background Sync, Periodic Sync, Push Notifications
    ============================================================ */
 
-const CACHE_NAME = "mellod-pwa-v1";
+const CACHE_NAME = "mellod-pwa-v2";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
   OFFLINE_URL,
+  "/",
+  "/website/index.html",
+  "/website/style.css",
+  "/website/script.js",
+  "/logo.png",
   "/manifest.json",
   "/favicon.ico",
   "/icons/icon-192x192.png",
@@ -64,17 +69,29 @@ self.addEventListener("fetch", (event) => {
     event.request.mode === "navigate" ||
     event.request.headers.get("accept")?.includes("text/html");
 
-  // A. Network-First Strategy for HTML pages & navigations (preserves session cookies & auth redirects in PWA)
+  // A. Network-First Strategy for HTML pages & navigations (caches successful responses for seamless offline access)
   if (isHtmlNavigation) {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
           return networkResponse;
         })
         .catch(async () => {
-          // If offline, attempt to serve cached matching route or offline fallback
+          // Attempt exact URL match first
           const cached = await caches.match(event.request);
-          return cached || (await caches.match(OFFLINE_URL));
+          if (cached) return cached;
+
+          // If request is for public website / landing pages, serve cached website page instead of offline.html fallback
+          if (url.pathname === "/" || url.pathname.includes("website") || url.pathname.endsWith(".html")) {
+            const siteCached = (await caches.match("/")) || (await caches.match("/website/index.html")) || (await caches.match("/index.html"));
+            if (siteCached) return siteCached;
+          }
+
+          return (await caches.match(OFFLINE_URL)) || (await caches.match("/"));
         })
     );
     return;

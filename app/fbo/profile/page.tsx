@@ -58,6 +58,7 @@ const methodLabels: Record<PaymentMethodType, string> = {
 };
 
 import FBOHeader from "@/components/FBOHeader";
+import FBOProfileLoading from "./loading";
 
 export default function FBOProfilePage() {
   const [fbo, setFbo] = useState<FBO | null>(null);
@@ -188,12 +189,7 @@ export default function FBOProfilePage() {
   }
 
   if (fetching) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="text-xs font-semibold text-gray-600">Loading partner profile...</p>
-      </div>
-    );
+    return <FBOProfileLoading />;
   }
 
   return (

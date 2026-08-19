@@ -21,6 +21,7 @@ import {
 import type { Pickup, FBO, FBOPayment } from "@/lib/types";
 
 import FBOHeader from "@/components/FBOHeader";
+import FBOPickupsLoading from "./loading";
 
 export default function FBOPickupsPage() {
   const [loading, setLoading] = useState(true);
@@ -75,12 +76,7 @@ export default function FBOPickupsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="text-xs font-semibold text-gray-600">Loading collection logs & statements...</p>
-      </div>
-    );
+    return <FBOPickupsLoading />;
   }
 
   return (
