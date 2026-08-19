@@ -6,10 +6,10 @@ import "./globals.css";
 const interVariable = "font-sans";
 
 export const metadata: Metadata = {
-  title: "Mellod Biofuels — UCO Collection Platform",
+  title: "Mellod Biofuels — Authorized UCO Aggregator",
   description:
-    "Mellod Biofuels is an FSSAI RUCO-registered Used Cooking Oil (UCO) aggregator and feedstock supplier, collecting UCO from restaurants, hotels, and food businesses across India.",
-  keywords: ["UCO collection", "used cooking oil", "FSSAI RUCO", "Mellod Biofuels", "biodiesel feedstock"],
+    "Mellod Biofuels is an authorized Used Cooking Oil (UCO) aggregator operating in partnership with FSSAI RUCO-registered NFP processing units across India.",
+  keywords: ["UCO collection", "used cooking oil", "FSSAI RUCO partner", "Mellod Biofuels", "biodiesel feedstock"],
   authors: [{ name: "Mellod Biofuels" }],
   manifest: "/manifest.json",
   icons: {
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: "Mellod Biofuels — UCO Collection Platform",
-    description: "FSSAI RUCO-registered UCO aggregator — sustainable used cooking oil collection and biodiesel feedstock supply.",
+    title: "Mellod Biofuels — Authorized UCO Aggregator",
+    description: "Authorized UCO aggregator partnered with FSSAI RUCO-registered NFP units — sustainable UCO collection & biodiesel feedstock supply.",
     type: "website",
   },
 };
