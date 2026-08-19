@@ -6,23 +6,35 @@ import "./globals.css";
 const interVariable = "font-sans";
 
 export const metadata: Metadata = {
-  title: "Mellod — UCO Collection Platform",
+  title: "Mellod Biofuels — UCO Collection Platform",
   description:
-    "Mellod is a technology-driven Used Cooking Oil (UCO) collection and logistics platform connecting restaurants, food businesses, and collection agents.",
-  keywords: ["UCO collection", "used cooking oil", "cooking oil recycling", "Mellod"],
-  authors: [{ name: "Mellod" }],
+    "Mellod Biofuels is an FSSAI RUCO-registered Used Cooking Oil (UCO) aggregator and feedstock supplier, collecting UCO from restaurants, hotels, and food businesses across India.",
+  keywords: ["UCO collection", "used cooking oil", "FSSAI RUCO", "Mellod Biofuels", "biodiesel feedstock"],
+  authors: [{ name: "Mellod Biofuels" }],
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png" },
+    ],
+    shortcut: "/favicon.ico",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Mellod",
+    title: "Mellod Biofuels",
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
-    title: "Mellod — UCO Collection Platform",
-    description: "Sustainable used cooking oil collection and logistics.",
+    title: "Mellod Biofuels — UCO Collection Platform",
+    description: "FSSAI RUCO-registered UCO aggregator — sustainable used cooking oil collection and biodiesel feedstock supply.",
     type: "website",
   },
 };
