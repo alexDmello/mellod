@@ -15,34 +15,7 @@ let inMemoryEnquiries: Array<{
   notes: string;
   created_at: string;
   updated_at: string;
-}> = [
-  {
-    id: "enq_demo_1",
-    business_name: "The Grand Pavilion Hotel",
-    contact_person: "Vikram Malhotra",
-    email: "vikram@grandpavilion.com",
-    phone: "+91 98765 12345",
-    business_type: "Hotel / Resort",
-    message: "Generates around 350-400 litres of UCO per week. Looking for daily/weekly scheduled pickups and FSSAI RUCO compliance documentation.",
-    status: "pending",
-    notes: "",
-    created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
-    updated_at: new Date(Date.now() - 3600000 * 4).toISOString(),
-  },
-  {
-    id: "enq_demo_2",
-    business_name: "Urban Spice Chain",
-    contact_person: "Ananya Roy",
-    email: "ananya@urbanspice.in",
-    phone: "+91 98112 34567",
-    business_type: "Restaurant / Cafe",
-    message: "We have 4 restaurant branches across South Bengaluru. Need bulk UCO aggregation and monthly carbon reduction certificates.",
-    status: "pending",
-    notes: "",
-    created_at: new Date(Date.now() - 3600000 * 18).toISOString(),
-    updated_at: new Date(Date.now() - 3600000 * 18).toISOString(),
-  }
-];
+}> = [];
 
 export async function POST(request: Request) {
   try {

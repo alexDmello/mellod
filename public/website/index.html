@@ -763,21 +763,33 @@
                 <input type="tel" id="fphone" placeholder="+91 98765 43210" required />
               </div>
             </div>
-            <div class="form-group">
-              <label for="ftype">Business Type</label>
-              <select id="ftype">
-                <option value="">Select your business type</option>
-                <option>Hotel / Resort</option>
-                <option>Restaurant / Cafe</option>
-                <option>Food Manufacturer</option>
-                <option>Canteen / Catering</option>
-                <option>Other</option>
-              </select>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="ftype">Business Type</label>
+                <select id="ftype" required>
+                  <option value="">Select business type</option>
+                  <option value="Hotel / Resort">Hotel / Resort</option>
+                  <option value="Restaurant / Cafe">Restaurant / Cafe</option>
+                  <option value="Food Manufacturer">Food Manufacturer</option>
+                  <option value="Canteen / Catering">Canteen / Catering</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="fucovolume">Estimated UCO Output</label>
+                <select id="fucovolume" required>
+                  <option value="">Select monthly volume</option>
+                  <option value="Under 50 Litres / month">Under 50 Litres / month</option>
+                  <option value="50 - 150 Litres / month">50 - 150 Litres / month</option>
+                  <option value="150 - 500 Litres / month">150 - 500 Litres / month</option>
+                  <option value="500 - 1,000 Litres / month">500 - 1,000 Litres / month</option>
+                  <option value="1,000+ Litres / month (Bulk)">1,000+ Litres / month (Bulk)</option>
+                </select>
+              </div>
             </div>
             <div class="form-group">
-              <label for="fmsg">Tell us about your UCO output</label>
-              <textarea id="fmsg" rows="3"
-                placeholder="Approx litres per week, current disposal method, any specific requirements..."></textarea>
+              <label for="fmsg">Additional Notes / Preferred Timing <span style="font-size:0.7rem; font-weight:600; color:#047857;">(Optional - Max 200 chars)</span></label>
+              <textarea id="fmsg" rows="2" maxlength="200" placeholder="Any additional pickup details, preferred day/time..."></textarea>
             </div>
             <button type="submit" class="btn-form" id="submitBtn">
               Send Enquiry
