@@ -37,6 +37,12 @@
   ],
   "scope_extensions": [
     {
+      "origin": "https://*.mellod.in"
+    },
+    {
+      "origin": "https://mellod.in"
+    },
+    {
       "origin": "https://*.mellod.com"
     },
     {
