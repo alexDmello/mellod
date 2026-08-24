@@ -113,9 +113,10 @@ export async function proxy(request: NextRequest) {
       .single();
 
     const role = (profile as { role: string } | null)?.role;
+    const isNonAdminRole = role === "picker" || role === "fbo";
 
     if (isAdminSubdomain) {
-      if (role === "picker" || role === "fbo") {
+      if (isNonAdminRole) {
         const destDomain = isProduction ? "https://app.mellod.in" : request.url;
         const targetPath = role === "picker" ? "/picker" : "/fbo";
         return NextResponse.redirect(new URL(targetPath, destDomain));
@@ -126,7 +127,7 @@ export async function proxy(request: NextRequest) {
     }
 
     if (isAppSubdomain) {
-      if (role === "admin") {
+      if (!isNonAdminRole) {
         const destDomain = isProduction ? "https://admin.mellod.in" : request.url;
         return NextResponse.redirect(new URL("/admin", destDomain));
       }
@@ -144,7 +145,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(destination, request.url));
     }
 
-    if (pathname.startsWith("/admin") && role !== "admin") {
+    if (pathname.startsWith("/admin") && isNonAdminRole) {
       const destPath = role === "picker" ? "/picker" : "/fbo";
       return NextResponse.redirect(new URL(destPath, request.url));
     }
