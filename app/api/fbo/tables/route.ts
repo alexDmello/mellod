@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { signTableToken, generateTenantSalt } from '@/lib/hmac'
+import { getTenantBaseUrl } from '@/lib/constants'
 import QRCode from 'qrcode'
 
 export async function GET(req: NextRequest) {
@@ -51,12 +52,14 @@ export async function GET(req: NextRequest) {
       .eq('fbo_id', fbo.id)
       .order('table_number', { ascending: true })
 
-    const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'localhost:3000'
+    const hostHeader = req.headers.get('host')
+    const tenantBaseUrl = getTenantBaseUrl(fbo.slug || 'outlet', hostHeader)
 
     // Attach QR Data URLs
     const tablesWithQr = await Promise.all(
       (tables || []).map(async (tbl: { id: string; table_number: string; signed_token: string }) => {
-        const qrUrl = `https://${appDomain}/qr/${fbo.slug}?t=${encodeURIComponent(tbl.signed_token)}`
+        const joiner = tenantBaseUrl.includes('?') ? '&' : '?'
+        const qrUrl = `${tenantBaseUrl}${joiner}t=${encodeURIComponent(tbl.signed_token)}`
         const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 300, margin: 2 })
         return { ...tbl, qr_url: qrDataUrl, full_url: qrUrl }
       })
@@ -67,7 +70,8 @@ export async function GET(req: NextRequest) {
       { fbo_id: fbo.id, table_id: 'counter', table_number: 'counter', issued_at: Date.now() },
       fbo.token_signing_salt || 'default_salt'
     )
-    const counterUrl = `https://${appDomain}/qr/${fbo.slug}?type=counter&ct=${encodeURIComponent(counterToken)}`
+    const joiner = tenantBaseUrl.includes('?') ? '&' : '?'
+    const counterUrl = `${tenantBaseUrl}${joiner}type=counter&ct=${encodeURIComponent(counterToken)}`
     const counterQrData = await QRCode.toDataURL(counterUrl, { width: 300, margin: 2 })
 
     return NextResponse.json({

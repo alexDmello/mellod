@@ -50,3 +50,28 @@ export const ORDER_RATE_LIMIT_PER_IP = 10 // per minute
 export const PAYMENT_RATE_LIMIT_PER_IP = 5 // per minute
 
 export const APP_DOMAIN = process.env.NEXT_PUBLIC_APP_DOMAIN || 'localhost:3000'
+
+/** Helper to build multi-tenant subdomain or fallback URL for an FBO slug */
+export function getTenantBaseUrl(slug: string, hostHeader?: string | null): string {
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'mellod.in').toLowerCase()
+
+  let currentHost = hostHeader ? hostHeader.split(':')[0].toLowerCase() : ''
+  if (!currentHost && typeof window !== 'undefined') {
+    currentHost = window.location.host.split(':')[0].toLowerCase()
+  }
+
+  const isLocal =
+    !currentHost ||
+    currentHost === 'localhost' ||
+    currentHost === '127.0.0.1' ||
+    currentHost.endsWith('.localhost')
+
+  if (isLocal) {
+    const port = typeof window !== 'undefined' ? window.location.port || '3000' : '3000'
+    return `http://localhost:${port}/qr/${slug}`
+  }
+
+  // Live / Production Vercel Wildcard URL: https://<slug>.<rootDomain>
+  return `https://${slug}.${rootDomain}`
+}
+

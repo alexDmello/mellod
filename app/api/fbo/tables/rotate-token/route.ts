@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { signTableToken } from '@/lib/hmac'
+import { getTenantBaseUrl } from '@/lib/constants'
 import QRCode from 'qrcode'
 
 export async function POST(req: NextRequest) {
@@ -53,8 +54,10 @@ export async function POST(req: NextRequest) {
       .update({ signed_token: newToken, token_issued_at: new Date().toISOString() })
       .eq('id', table.id)
 
-    const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'localhost:3000'
-    const qrUrl = `https://${appDomain}/qr/${fbo.slug}?t=${encodeURIComponent(newToken)}`
+    const hostHeader = req.headers.get('host')
+    const tenantBaseUrl = getTenantBaseUrl(fbo.slug || 'outlet', hostHeader)
+    const joiner = tenantBaseUrl.includes('?') ? '&' : '?'
+    const qrUrl = `${tenantBaseUrl}${joiner}t=${encodeURIComponent(newToken)}`
     const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 300, margin: 2 })
 
     return NextResponse.json({ success: true, token: newToken, qr_url: qrDataUrl })

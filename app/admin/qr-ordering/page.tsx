@@ -180,9 +180,14 @@ export default function AdminQROrderingManagementPage() {
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-600">
                       {fbo.slug ? (
-                        <span className="rounded-lg bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-indigo-700 font-bold">
-                          /qr/{fbo.slug}
-                        </span>
+                        <a
+                          href={`https://${fbo.slug}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'mellod.in'}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-indigo-700 font-bold hover:bg-indigo-100 transition inline-flex items-center gap-1"
+                        >
+                          https://{fbo.slug}.{process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'mellod.in'} ↗
+                        </a>
                       ) : (
                         <span className="text-slate-400 italic">Not set</span>
                       )}
