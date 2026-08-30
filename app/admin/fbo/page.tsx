@@ -2,7 +2,8 @@
 
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Building2, Map, IndianRupee, UserPlus } from "lucide-react";
+import { Building2, Map, IndianRupee, UserPlus, QrCode } from "lucide-react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FBOMapView } from "@/app/admin/map/page";
 import { MarketPriceTab } from "@/app/admin/settings/page";
@@ -32,6 +33,13 @@ function FBOHubContent() {
             Manage restaurant partners, view interactive geospatial map locations, and set market prices.
           </p>
         </div>
+
+        <Link
+          href="/admin/qr-ordering"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-md transition-all self-start sm:self-auto"
+        >
+          <QrCode className="w-4 h-4" /> QR Provisioning Portal ↗
+        </Link>
       </div>
 
       {/* Top Options Navigation Tabs (Smooth Spring Pill Slider) */}

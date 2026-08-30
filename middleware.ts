@@ -3,20 +3,36 @@ import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
 import { checkPayloadSize, DEFAULT_MAX_JSON_SIZE, DEFAULT_MAX_UPLOAD_SIZE } from "@/lib/security";
 
-export async function proxy(request: NextRequest) {
+const RESERVED_SUBDOMAINS = new Set([
+  "www",
+  "admin",
+  "app",
+  "portal",
+  "api",
+  "static",
+  "auth",
+  "super-admin",
+  "assets",
+  "public",
+]);
+
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const host = request.headers.get("host") || "";
+  const rawHost = request.headers.get("host") || "";
+  const host = rawHost.split(":")[0].toLowerCase();
 
-  // Identify domain / subdomain environment
-  const isMainWebsiteDomain = host.startsWith("www.") || host === "mellod.in";
-  const isAdminSubdomain = host.startsWith("admin.");
-  const isAppSubdomain = host.startsWith("app.") || host.startsWith("portal.");
+  // Root domain from environment variable (default to mellod.in)
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "mellod.in").toLowerCase();
 
-  // Determine cookie domain for cross-subdomain authentication (.mellod.in)
-  const isProduction = process.env.NODE_ENV === "production" || host.includes("mellod.in");
-  const cookieDomain = isProduction ? ".mellod.in" : undefined;
+  // Guards for localhost and Vercel preview deployments
+  const isLocalhost = host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
+  const isVercelPreview = host.endsWith(".vercel.app") || host.endsWith(".vercel.dev");
 
-  // 1. Enforce Rate Limiting & Payload Size checks on all API endpoints
+  // Cross-subdomain cookie domain setting
+  const isProduction = process.env.NODE_ENV === "production" || host.endsWith(rootDomain);
+  const cookieDomain = isProduction && !isLocalhost && !isVercelPreview ? `.${rootDomain}` : undefined;
+
+  // 1. API Rate Limiting & Payload Checks
   if (pathname.startsWith("/api")) {
     const rateLimit = checkRateLimit(request);
     const rateHeaders = getRateLimitHeaders(rateLimit);
@@ -26,10 +42,7 @@ export async function proxy(request: NextRequest) {
         ? "Too many authentication attempts. Maximum 5 attempts allowed per 15 minutes."
         : "Too many requests. Maximum rate limit exceeded per 15 minutes.";
 
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: 429, headers: rateHeaders }
-      );
+      return NextResponse.json({ error: errorMessage }, { status: 429, headers: rateHeaders });
     }
 
     const isUploadRoute = pathname.includes("/pickup/log");
@@ -48,7 +61,21 @@ export async function proxy(request: NextRequest) {
     return apiResponse;
   }
 
-  // 2. Serve Landing Page Website for www.mellod.in or apex mellod.in
+  // 2. Subdomain Extraction
+  let subdomain: string | null = null;
+  if (!isLocalhost && !isVercelPreview && host.endsWith(`.${rootDomain}`)) {
+    const parts = host.replace(`.${rootDomain}`, "").split(".");
+    if (parts.length === 1 && parts[0]) {
+      subdomain = parts[0];
+    }
+  }
+
+  const isMainWebsiteDomain = !subdomain || subdomain === "www" || host === rootDomain;
+  const isAdminSubdomain = subdomain === "admin";
+  const isAppSubdomain = subdomain === "app" || subdomain === "portal";
+  const isTenantSubdomain = !!(subdomain && !RESERVED_SUBDOMAINS.has(subdomain));
+
+  // 3. Apex / Marketing Domain Rewrites
   if (isMainWebsiteDomain) {
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/website/index.html", request.url));
@@ -58,9 +85,18 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 3. Supabase Client Setup for Middleware Session & Cookie Management
-  let supabaseResponse = NextResponse.next({ request });
+  // 4. Wildcard Subdomain Tenant Rewrite ([slug].yourdomain.com -> /qr/[slug])
+  if (isTenantSubdomain && !pathname.startsWith("/api") && !pathname.startsWith("/_next")) {
+    if (pathname === "/") {
+      return NextResponse.rewrite(new URL(`/qr/${subdomain}`, request.url));
+    }
+    if (!pathname.startsWith("/qr/")) {
+      return NextResponse.rewrite(new URL(`/qr/${subdomain}${pathname}`, request.url));
+    }
+  }
 
+  // 5. Supabase Auth & Session Verification
+  let supabaseResponse = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
@@ -70,13 +106,9 @@ export async function proxy(request: NextRequest) {
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
+      getAll() { return request.cookies.getAll(); },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) => {
           const opts = { ...options };
@@ -87,11 +119,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Public assets & internal endpoints — bypass RBAC redirects
+  // Public assets & internal endpoints bypass
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/widgets") ||
@@ -99,12 +129,13 @@ export async function proxy(request: NextRequest) {
     pathname === "/sw.js" ||
     pathname === "/offline.html" ||
     pathname === "/favicon.ico" ||
-    pathname.startsWith("/icons")
+    pathname.startsWith("/icons") ||
+    pathname.startsWith("/qr")
   ) {
     return supabaseResponse;
   }
 
-  // 4. Subdomain-Specific Routing & Role Enforcement
+  // Role RBAC
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -117,7 +148,7 @@ export async function proxy(request: NextRequest) {
 
     if (isAdminSubdomain) {
       if (isNonAdminRole) {
-        const destDomain = isProduction ? "https://app.mellod.in" : request.url;
+        const destDomain = isProduction ? `https://app.${rootDomain}` : request.url;
         const targetPath = role === "picker" ? "/picker" : "/fbo";
         return NextResponse.redirect(new URL(targetPath, destDomain));
       }
@@ -128,7 +159,7 @@ export async function proxy(request: NextRequest) {
 
     if (isAppSubdomain) {
       if (!isNonAdminRole) {
-        const destDomain = isProduction ? "https://admin.mellod.in" : request.url;
+        const destDomain = isProduction ? `https://admin.${rootDomain}` : request.url;
         return NextResponse.redirect(new URL("/admin", destDomain));
       }
       if (pathname === "/") {
@@ -137,7 +168,6 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Standard Route RBAC
     if (pathname === "/") {
       let destination = "/admin";
       if (role === "picker") destination = "/picker";
@@ -149,16 +179,7 @@ export async function proxy(request: NextRequest) {
       const destPath = role === "picker" ? "/picker" : "/fbo";
       return NextResponse.redirect(new URL(destPath, request.url));
     }
-    if (pathname.startsWith("/picker") && role !== "picker") {
-      const destPath = role === "fbo" ? "/fbo" : "/admin";
-      return NextResponse.redirect(new URL(destPath, request.url));
-    }
-    if (pathname.startsWith("/fbo") && role !== "fbo") {
-      const destPath = role === "picker" ? "/picker" : "/admin";
-      return NextResponse.redirect(new URL(destPath, request.url));
-    }
   } else {
-    // Unauthenticated user attempting to access protected portal pages
     if (pathname.startsWith("/admin") || pathname.startsWith("/picker") || pathname.startsWith("/fbo")) {
       return NextResponse.redirect(new URL("/", request.url));
     }

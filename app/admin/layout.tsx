@@ -22,6 +22,7 @@ import {
   CreditCard,
   CalendarDays,
   MessageSquare,
+  QrCode,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn, todayISO } from "@/lib/utils";
@@ -29,6 +30,7 @@ import { cn, todayISO } from "@/lib/utils";
 const ALL_NAV_ITEMS = [
   { href: "/admin/check-in", label: "My Profile & Workspace", icon: UserCog },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/qr-ordering", label: "QR Provisioning", icon: QrCode },
   { href: "/admin/enquiries", label: "Website Enquiries", icon: MessageSquare },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/financials", label: "Financials", icon: Wallet },
