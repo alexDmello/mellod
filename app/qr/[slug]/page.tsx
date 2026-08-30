@@ -131,23 +131,51 @@ export default function CustomerQROrderingPage({
         setTokenValid(true)
       }
 
-      // Fetch Menu & Categories
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: cats } = await (supabase as any)
-        .from('categories')
-        .select('*')
-        .eq('fbo_id', fboData.id)
-        .order('sort_order', { ascending: true })
+      // Fetch Menu & Categories via public menu API (bypasses RLS issues)
+      try {
+        const menuRes = await fetch(`/api/public/menu?slug=${slug}`)
+        if (menuRes.ok) {
+          const menuData = await menuRes.json()
+          setCategories(menuData.categories || [])
+          setMenuItems(menuData.menu_items || [])
+        } else {
+          // Fallback to client query
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: cats } = await (supabase as any)
+            .from('categories')
+            .select('*')
+            .eq('fbo_id', fboData.id)
+            .order('sort_order', { ascending: true })
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: items } = await (supabase as any)
-        .from('menu_items')
-        .select('*')
-        .eq('fbo_id', fboData.id)
-        .eq('is_available', true)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: items } = await (supabase as any)
+            .from('menu_items')
+            .select('*')
+            .eq('fbo_id', fboData.id)
+            .eq('is_available', true)
 
-      setCategories(cats || [])
-      setMenuItems(items || [])
+          setCategories(cats || [])
+          setMenuItems(items || [])
+        }
+      } catch {
+        // Fallback to client query
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: cats } = await (supabase as any)
+          .from('categories')
+          .select('*')
+          .eq('fbo_id', fboData.id)
+          .order('sort_order', { ascending: true })
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: items } = await (supabase as any)
+          .from('menu_items')
+          .select('*')
+          .eq('fbo_id', fboData.id)
+          .eq('is_available', true)
+
+        setCategories(cats || [])
+        setMenuItems(items || [])
+      }
     } catch (e) {
       console.error(e)
       setTokenValid(false)

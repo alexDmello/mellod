@@ -15,6 +15,7 @@ import {
   ToggleLeft,
   ToggleRight,
   Download,
+  Trash2,
 } from 'lucide-react'
 
 interface FboData {
@@ -247,6 +248,28 @@ export default function FBOQROrderingPage() {
     }
   }
 
+  // Delete menu item
+  const handleDeleteItem = async (itemId: string) => {
+    if (!confirm('Are you sure you want to delete this dish?')) return
+    try {
+      const res = await fetch(`/api/fbo/menu?type=menu_item&id=${itemId}`, { method: 'DELETE' })
+      if (res.ok) await loadMenu()
+    } catch {
+      alert('Error deleting item')
+    }
+  }
+
+  // Delete category
+  const handleDeleteCategory = async (catId: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return
+    try {
+      const res = await fetch(`/api/fbo/menu?type=category&id=${catId}`, { method: 'DELETE' })
+      if (res.ok) await loadMenu()
+    } catch {
+      alert('Error deleting category')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center text-slate-400">
@@ -469,10 +492,10 @@ export default function FBOQROrderingPage() {
       {/* TAB 2: DIGITAL MENU */}
       {activeTab === 'menu' && (
         <div className="space-y-6">
-          {/* Category Adder */}
+          {/* Category Manager */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
             <h3 className="text-lg font-bold text-white mb-2">Create Menu Category</h3>
-            <div className="flex items-center gap-3 max-w-md">
+            <div className="flex items-center gap-3 max-w-md mb-4">
               <input
                 type="text"
                 value={newCatName}
@@ -487,6 +510,24 @@ export default function FBOQROrderingPage() {
                 Add Category
               </button>
             </div>
+
+            {/* Category Badges List */}
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-800/80">
+                {categories.map((cat) => (
+                  <div key={cat.id} className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300">
+                    <span>{cat.name}</span>
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      className="hover:text-rose-400 text-slate-400 transition"
+                      title="Delete Category"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Add Item Form */}
@@ -542,33 +583,52 @@ export default function FBOQROrderingPage() {
 
           {/* Menu Items List */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md">
-            <h3 className="text-lg font-bold text-white mb-4">Dish Inventory</h3>
+            <h3 className="text-lg font-bold text-white mb-4">Dish Inventory ({menuItems.length})</h3>
             <div className="divide-y divide-slate-800">
               {menuItems.length === 0 ? (
                 <p className="py-8 text-center text-xs text-slate-500">No items added yet</p>
               ) : (
-                menuItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`h-3 w-3 rounded-full border ${item.is_veg ? 'border-emerald-500 bg-emerald-500/20' : 'border-rose-500 bg-rose-500/20'}`} />
-                      <div>
-                        <p className="text-sm font-semibold text-white">{item.name}</p>
-                        <p className="text-xs text-slate-400">₹{item.price}</p>
+                menuItems.map((item) => {
+                  const itemCat = categories.find((c) => c.id === item.category_id)
+                  return (
+                    <div key={item.id} className="flex items-center justify-between py-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`h-3 w-3 rounded-full border ${item.is_veg ? 'border-emerald-500 bg-emerald-500/20' : 'border-rose-500 bg-rose-500/20'}`} />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-white">{item.name}</p>
+                            {itemCat && (
+                              <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+                                {itemCat.name}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400">₹{item.price}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleAvailable(item)}
+                          className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                            item.is_available
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          }`}
+                        >
+                          {item.is_available ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                          {item.is_available ? 'Available' : 'Out of Stock'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-1.5 rounded-xl border border-slate-800 bg-slate-800/60 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition"
+                          title="Delete Dish"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleToggleAvailable(item)}
-                      className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-                        item.is_available
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                      }`}
-                    >
-                      {item.is_available ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                      {item.is_available ? 'Available' : 'Out of Stock'}
-                    </button>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
