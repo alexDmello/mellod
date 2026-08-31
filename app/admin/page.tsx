@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatLiters } from "@/lib/utils";
 import {
@@ -32,6 +33,7 @@ interface PlatformStats {
   todayLiters: number;
   monthPickups: number;
   monthLiters: number;
+  pendingRequestsCount: number;
 }
 
 interface RecentPickup {
@@ -54,6 +56,7 @@ export default function AdminDashboard() {
     todayLiters: 0,
     monthPickups: 0,
     monthLiters: 0,
+    pendingRequestsCount: 0,
   });
   const [recentPickups, setRecentPickups] = useState<RecentPickup[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -85,6 +88,7 @@ export default function AdminDashboard() {
         todayPickupsRes,
         monthPickupsRes,
         recentRes,
+        pendingReqRes,
       ] = await Promise.all([
         supabase.from("fbos").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("pickers").select("id", { count: "exact", head: true }).eq("is_active", true),
@@ -109,6 +113,10 @@ export default function AdminDashboard() {
           )
           .order("picked_up_at", { ascending: false })
           .limit(1),
+        supabase
+          .from("pickup_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
       ]);
 
       const totalLiters = pickupsRes.data?.reduce((s, p) => s + Number(p.liters), 0) ?? 0;
@@ -124,6 +132,7 @@ export default function AdminDashboard() {
         todayLiters,
         monthPickups: monthPickupsRes.data?.length ?? 0,
         monthLiters,
+        pendingRequestsCount: pendingReqRes.count ?? 0,
       });
 
       setRecentPickups((recentRes.data as any[]) ?? []);
@@ -297,8 +306,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── Active FBOs, Active Pickers & Recent Pickup Activity (Workstation Cards with 2rem Radii & Index Tags) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+      {/* ── Active FBOs, Active Pickers, Recent Pickups & Pickup Requests ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-1">
         {/* Active FBOs Card */}
         <div className="group relative overflow-hidden rounded-[2rem] p-6 bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.07)] hover:border-blue-300/60 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
           <div className="absolute top-0 right-0 w-36 h-36 bg-blue-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
@@ -395,6 +404,57 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Pickup Requests Card */}
+        <Link
+          href="/admin/pickup-requests"
+          className="group relative overflow-hidden rounded-[2rem] p-6 bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.07)] hover:border-amber-300/60 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+        >
+          <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                <Truck className="w-5.5 h-5.5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-bold text-slate-400">03/04</span>
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400">
+                    On-Demand
+                  </h3>
+                </div>
+                <p className="text-base font-bold text-slate-900">
+                  Pickup Requests
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-800 text-[10px] font-bold font-mono border border-amber-200/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>{stats.pendingRequestsCount} Pending</span>
+            </div>
+          </div>
+
+          <div className="my-auto py-4 flex items-baseline justify-between">
+            <div>
+              <span className="text-4xl font-black text-slate-900 group-hover:text-amber-600 transition-colors">
+                {stats.pendingRequestsCount}
+              </span>
+              <span className="ml-2 text-xs font-mono font-medium text-slate-500">
+                awaiting schedule
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-mono">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-amber-500" />
+              Action Required
+            </span>
+            <span className="font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">Review &rarr;</span>
+          </div>
+        </Link>
+
         {/* Recent Pickup Activity Card */}
         <div className="group relative overflow-hidden rounded-[2rem] p-6 bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.07)] hover:border-emerald-300/60 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
           <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:scale-150 transition-transform duration-500" />
@@ -406,7 +466,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] font-bold text-slate-400">03/04</span>
+                  <span className="font-mono text-[11px] font-bold text-slate-400">04/04</span>
                   <h3 className="text-[10px] font-bold uppercase tracking-widest font-mono text-slate-400">
                     Latest Activity
                   </h3>

@@ -36,10 +36,12 @@ export interface RouteSchedule {
 }
 
 export type PickupStatus = "pending" | "completed" | "disputed";
+export type PickupRequestStatus = "pending" | "scheduled" | "assigned" | "completed" | "cancelled";
 export type PaymentMethodType = "bank" | "upi" | "cash";
 
 export const ADMIN_SECTIONS = [
   { href: "/admin", label: "Dashboard", description: "Main stats & system overview" },
+  { href: "/admin/pickup-requests", label: "FBO Pickup Requests", description: "Review and schedule FBO oil pickup requests" },
   { href: "/admin/analytics", label: "Analytics", description: "Volume trends & performance metrics" },
   { href: "/admin/financials", label: "Financials", description: "Monthly P&L simulator & OpEx tracking" },
   { href: "/admin/payments", label: "Payments", description: "Disburse FBO payments & issue monthly statements" },
@@ -88,6 +90,11 @@ export type Database = {
         Row: Pickup;
         Insert: Omit<Pickup, "id" | "total_amount" | "created_at">;
         Update: Partial<Omit<Pickup, "id" | "total_amount" | "created_at">>;
+      };
+      pickup_requests: {
+        Row: PickupRequest;
+        Insert: Omit<PickupRequest, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<PickupRequest, "id" | "created_at">>;
       };
       payment_methods: {
         Row: PaymentMethod;
@@ -215,6 +222,22 @@ export interface RouteWithFBO extends Route {
 export interface PickupWithDetails extends Pickup {
   fbo: FBO;
   picker: Picker & { profile: Profile };
+}
+
+export interface PickupRequest {
+  id: string;
+  fbo_id: string;
+  estimated_liters: number;
+  preferred_date: string;
+  preferred_time_slot: string;
+  notes: string | null;
+  status: PickupRequestStatus;
+  assigned_picker_id: string | null;
+  admin_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  fbo?: FBO;
+  picker?: Picker & { profile?: Profile };
 }
 
 export interface GeneratedCredentials {

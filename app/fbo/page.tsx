@@ -27,6 +27,7 @@ async function getFBOData() {
 }
 
 import FBOMissedPickupBanner from "@/components/FBOMissedPickupBanner";
+import FBORequestPickupCard from "@/components/FBORequestPickupCard";
 
 export default async function FBODashboard() {
   const data = await getFBOData();
@@ -100,26 +101,8 @@ export default async function FBODashboard() {
           </div>
         </div>
 
-        {/* Live Market Price Card (Green Banner) */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-2xl p-5 text-white shadow-xl shadow-emerald-700/20 border border-emerald-500/30">
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <p className="text-emerald-100 text-xs font-extrabold uppercase tracking-wider">Live Market Buying Rate</p>
-              <p className="text-3xl font-black mt-1 tracking-tight text-white drop-shadow-sm">
-                {currentPrice ? `${formatCurrency(currentPrice.price_per_liter)}/L` : "—"}
-              </p>
-              <p className="text-emerald-100/90 text-xs font-medium mt-1">Per Liter of Used Cooking Oil (UCO)</p>
-              {currentPrice && (
-                <p className="text-emerald-950 text-[10px] font-extrabold mt-1.5 bg-emerald-200 px-2.5 py-0.5 rounded-md inline-block border border-emerald-300 shadow-sm">
-                  Effective from {formatDate(currentPrice.effective_from)}
-                </p>
-              )}
-            </div>
-            <div className="w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
-              <TrendingUp className="w-7 h-7 text-white" />
-            </div>
-          </div>
-        </div>
+        {/* Request Pickup Feature (Replaces Live Market Buying Rate Card) */}
+        <FBORequestPickupCard fboId={fbo.id} />
 
         {/* Total Pickups Completed */}
         <div className="bg-white rounded-2xl p-4.5 flex items-center gap-4 border border-slate-100 shadow-lg shadow-slate-200/50">

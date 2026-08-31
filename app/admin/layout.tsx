@@ -29,6 +29,7 @@ import { cn, todayISO } from "@/lib/utils";
 const ALL_NAV_ITEMS = [
   { href: "/admin/check-in", label: "My Profile & Workspace", icon: UserCog },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/pickup-requests", label: "FBO Pickup Requests", icon: Truck },
   { href: "/admin/enquiries", label: "Website Enquiries", icon: MessageSquare },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/financials", label: "Financials", icon: Wallet },

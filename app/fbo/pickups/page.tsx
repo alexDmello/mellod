@@ -17,16 +17,19 @@ import {
   Receipt,
   CreditCard,
   CheckCircle,
+  Truck,
+  Calendar,
 } from "lucide-react";
-import type { Pickup, FBO, FBOPayment } from "@/lib/types";
+import type { Pickup, FBO, FBOPayment, PickupRequest } from "@/lib/types";
 
 import FBOHeader from "@/components/FBOHeader";
 import FBOPickupsLoading from "./loading";
 
 export default function FBOPickupsPage() {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"pickups" | "receipts">("pickups");
+  const [activeTab, setActiveTab] = useState<"pickups" | "requests" | "receipts">("pickups");
   const [pickups, setPickups] = useState<Pickup[]>([]);
+  const [pickupRequests, setPickupRequests] = useState<PickupRequest[]>([]);
   const [disbursements, setDisbursements] = useState<FBOPayment[]>([]);
   const [fbo, setFbo] = useState<FBO | null>(null);
   const [selectedDisbursement, setSelectedDisbursement] = useState<FBOPayment | null>(null);
@@ -54,6 +57,19 @@ export default function FBOPickupsPage() {
         .order("picked_up_at", { ascending: false });
 
       setPickups(pickupData ?? []);
+
+      // Fetch pickup requests
+      try {
+        const { data: reqData } = await supabase
+          .from("pickup_requests")
+          .select("*, picker:pickers(*, profile:profiles(*))")
+          .eq("fbo_id", fboData.id)
+          .order("created_at", { ascending: false });
+
+        setPickupRequests((reqData as PickupRequest[]) ?? []);
+      } catch (e) {
+        console.warn("pickup_requests fetch error:", e);
+      }
 
       // Fetch disbursement receipts from fbo_payments
       try {
@@ -91,7 +107,7 @@ export default function FBOPickupsPage() {
                 Financial Audit Trail
               </span>
               <h1 className="text-2xl font-black tracking-tight text-white drop-shadow-sm">Collections & Receipts</h1>
-              <p className="text-emerald-100/90 text-xs font-semibold">Track oil collection earnings and settlement receipts</p>
+              <p className="text-emerald-100/90 text-xs font-semibold">Track oil collection earnings, pickup requests, and settlement receipts</p>
             </div>
             <div className="w-12 h-12 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner text-white flex-shrink-0">
               <Receipt className="w-6 h-6 text-white" />
@@ -100,34 +116,116 @@ export default function FBOPickupsPage() {
         </FBOHeader>
 
         <div className="px-4 -mt-6 relative z-10 space-y-4">
-          {/* Sub-Tabs: Individual Pickups vs Monthly Settlement Receipts */}
-          <div className="flex bg-white rounded-2xl p-1.5 border border-slate-100 shadow-lg shadow-slate-200/50 gap-1.5">
+          {/* Sub-Tabs: Individual Pickups vs Pickup Requests vs Monthly Settlement Receipts */}
+          <div className="flex bg-white rounded-2xl p-1.5 border border-slate-100 shadow-lg shadow-slate-200/50 gap-1 overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab("pickups")}
-              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                 activeTab === "pickups"
                   ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <Droplets className="w-4 h-4" />
-              Pickup Logs ({pickups.length})
+              <Droplets className="w-3.5 h-3.5" />
+              Pickups ({pickups.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("requests")}
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                activeTab === "requests"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <Truck className="w-3.5 h-3.5" />
+              Requests ({pickupRequests.length})
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab("receipts")}
-              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                 activeTab === "receipts"
                   ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               }`}
             >
-              <FileText className="w-4 h-4" />
-              Monthly Statements ({disbursements.length})
+              <FileText className="w-3.5 h-3.5" />
+              Statements ({disbursements.length})
             </button>
           </div>
+
+          {/* TAB 2: PICKUP REQUESTS */}
+          {activeTab === "requests" && (
+            <div className="space-y-3.5">
+              {pickupRequests.length === 0 ? (
+                <div className="bg-white rounded-2xl p-10 text-center border border-slate-100 shadow-lg shadow-slate-200/50 space-y-2 text-slate-500">
+                  <Truck className="w-10 h-10 mx-auto text-slate-300" />
+                  <p className="font-black text-slate-900 text-sm">No Pickup Requests Submitted</p>
+                  <p className="text-xs text-slate-500 font-medium">Use the &ldquo;Request Oil Pickup&rdquo; feature on your Home dashboard to schedule a collection.</p>
+                </div>
+              ) : (
+                pickupRequests.map((req) => (
+                  <div key={req.id} className="bg-white rounded-2xl p-4.5 border border-slate-100 shadow-lg shadow-slate-200/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <span className="font-black text-slate-900 text-sm">
+                          {formatLiters(Number(req.estimated_liters))} UCO Requested
+                        </span>
+                        <p className="text-xs text-slate-400 font-medium">
+                          Submitted on {formatDate(req.created_at)}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full border ${
+                          req.status === "pending"
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : req.status === "scheduled" || req.status === "assigned"
+                            ? "bg-blue-50 text-blue-800 border-blue-200"
+                            : req.status === "completed"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-rose-50 text-rose-800 border-rose-200"
+                        }`}
+                      >
+                        {req.status === "pending" && "Pending Admin Review ⏳"}
+                        {(req.status === "scheduled" || req.status === "assigned") && "Scheduled 🚚"}
+                        {req.status === "completed" && "Completed ✓"}
+                        {req.status === "cancelled" && "Cancelled ✖"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl text-xs border border-slate-100">
+                      <div>
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Preferred Date</span>
+                        <span className="font-bold text-slate-900 mt-0.5 block">{formatDate(req.preferred_date)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Time Window</span>
+                        <span className="font-bold text-slate-900 mt-0.5 block">{req.preferred_time_slot}</span>
+                      </div>
+                    </div>
+
+                    {req.picker?.profile?.full_name && (
+                      <div className="text-xs font-bold text-slate-700 bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100 flex items-center gap-1.5">
+                        <Truck className="w-4 h-4 text-emerald-600" />
+                        <span>Assigned Picker: <strong className="text-emerald-950">{req.picker.profile.full_name}</strong></span>
+                      </div>
+                    )}
+
+                    {req.notes && (
+                      <p className="text-xs text-slate-500 font-medium italic border-t border-slate-100 pt-2">
+                        &ldquo;{req.notes}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
 
           {/* TAB 1: INDIVIDUAL PICKUP LOGS */}
           {activeTab === "pickups" && (
