@@ -16,7 +16,7 @@ const RESERVED_SUBDOMAINS = new Set([
   "public",
 ]);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const rawHost = request.headers.get("host") || "";
   const host = rawHost.split(":")[0].toLowerCase();
@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: errorMessage }, { status: 429, headers: rateHeaders });
     }
 
-    const isUploadRoute = pathname.includes("/pickup/log");
+    const isUploadRoute = pathname.includes("/pickup/log") || pathname.includes("/fbo/menu") || pathname.includes("/fbo/links");
     const maxPayloadSize = isUploadRoute ? DEFAULT_MAX_UPLOAD_SIZE : DEFAULT_MAX_JSON_SIZE;
     const sizeCheck = checkPayloadSize(request, maxPayloadSize);
 
@@ -129,6 +129,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/sw.js" ||
     pathname === "/offline.html" ||
     pathname === "/favicon.ico" ||
+    pathname === "/login" ||
+    pathname.startsWith("/order") ||
     pathname.startsWith("/icons") ||
     pathname.startsWith("/qr")
   ) {

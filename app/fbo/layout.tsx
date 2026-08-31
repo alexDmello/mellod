@@ -3,12 +3,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, User, QrCode } from "lucide-react";
+import { Home, Clock, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/fbo", label: "Home", icon: Home },
-  { href: "/fbo/qr-ordering", label: "QR Order", icon: QrCode },
   { href: "/fbo/pickups", label: "Pickups", icon: Clock },
   { href: "/fbo/profile", label: "Profile", icon: User },
 ];
