@@ -14,11 +14,10 @@ import ZonesOverviewTab from "./ZonesOverviewTab";
 import PickersTab from "./PickersTab";
 import ExceptionsTab from "./ExceptionsTab";
 
-type Tab = "dispatch" | "schedules" | "routes" | "zones" | "pickers" | "exceptions";
+type Tab = "dispatch" | "schedules" | "routes" | "zones" | "pickers";
 
 const TABS: { id: Tab; label: string; icon: typeof Shuffle }[] = [
   { id: "dispatch",   label: "Today's Dispatch", icon: Shuffle },
-  { id: "exceptions", label: "Closed Pickups 🚨", icon: AlertTriangle },
   { id: "schedules",  label: "Schedules",        icon: CalendarDays },
   { id: "routes",     label: "Routes",           icon: FolderKanban },
   { id: "zones",      label: "Zones",            icon: Globe },
@@ -112,7 +111,6 @@ export function RoutesManagementTab() {
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
             {activeTab === "dispatch"   && <DispatchBoard data={data} />}
-            {activeTab === "exceptions" && <ExceptionsTab />}
             {activeTab === "schedules"  && <SchedulesTab data={data} />}
             {activeTab === "routes"     && <RoutesTab data={data} />}
             {activeTab === "zones"      && <ZonesOverviewTab data={data} />}

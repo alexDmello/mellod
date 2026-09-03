@@ -27,7 +27,10 @@ export async function POST(request: Request) {
 
     const pickerId = sanitizeInput(rawPickerId);
     const fboId = sanitizeInput(rawFboId);
-    const routeId = rawRouteId ? sanitizeInput(rawRouteId) : null;
+
+    const isValidUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    const routeId = rawRouteId && isValidUuid(rawRouteId) ? sanitizeInput(rawRouteId) : null;
+
     const notes = rawNotes ? sanitizeInput(rawNotes) : "";
 
     const liters = parseFloat(litersStr);

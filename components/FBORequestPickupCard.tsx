@@ -72,6 +72,14 @@ export default function FBORequestPickupCard({ fboId }: FBORequestPickupCardProp
         .maybeSingle();
 
       if (!error && data) {
+        // If request was completed over 1 hour ago, auto-reset to clean request prompt state
+        if (data.status === "completed") {
+          const completedTime = new Date(data.updated_at || data.created_at).getTime();
+          if (Date.now() - completedTime > 60 * 60 * 1000) {
+            setActiveRequest(null);
+            return;
+          }
+        }
         setActiveRequest(data as PickupRequest);
       } else {
         setActiveRequest(null);

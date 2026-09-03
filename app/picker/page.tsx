@@ -78,6 +78,28 @@ export default function PickerDashboard() {
 
   useEffect(() => {
     fetchData();
+
+    const channel = supabase
+      .channel("picker_dashboard_channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pickup_requests" },
+        () => {
+          fetchData();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "routes" },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   function handleEmbeddedCheckIn() {
@@ -162,7 +184,7 @@ export default function PickerDashboard() {
       const today = todayISO();
 
       // 1. Fetch routes assigned for today
-      let { data: routesData } = await supabase
+      const { data: routesData } = await supabase
         .from("routes")
         .select(`
           id, fbo_id, route_date, sort_order,
@@ -172,34 +194,59 @@ export default function PickerDashboard() {
         .eq("route_date", today)
         .order("sort_order");
 
-      // 2. Fallback to latest assigned route date if today has no explicit route records
-      if (!routesData || routesData.length === 0) {
-        const { data: latestRoute } = await supabase
-          .from("routes")
-          .select("route_date")
-          .eq("picker_id", picker.id)
-          .order("route_date", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      // 2. Fetch pickup_requests assigned to this picker for active processing
+      const { data: assignedRequests } = await supabase
+        .from("pickup_requests")
+        .select(`
+          id, fbo_id, created_at, status, estimated_liters,
+          fbo:fbos(*)
+        `)
+        .eq("assigned_picker_id", picker.id)
+        .in("status", ["scheduled", "assigned", "in_transit", "completed"]);
 
-        if (latestRoute?.route_date) {
-          const { data: fallbackRoutes } = await supabase
-            .from("routes")
-            .select(`
-              id, fbo_id, route_date, sort_order,
-              fbo:fbos(*)
-            `)
-            .eq("picker_id", picker.id)
-            .eq("route_date", latestRoute.route_date)
-            .order("sort_order");
+      let mergedRoutes: any[] = [...(routesData ?? [])];
+      const existingFboIds = new Set(mergedRoutes.map((r: any) => r.fbo_id));
 
-          routesData = fallbackRoutes || [];
+      (assignedRequests ?? []).forEach((req: any) => {
+        if (!existingFboIds.has(req.fbo_id)) {
+          existingFboIds.add(req.fbo_id);
+          mergedRoutes.push({
+            id: req.id,
+            fbo_id: req.fbo_id,
+            route_date: today,
+            sort_order: 999,
+            fbo: req.fbo,
+          });
+        }
+      });
+
+      // 4. Ensure 100% of stops have FBO details by directly fetching any missing fbo objects
+      const allFboIds = mergedRoutes.map((r: any) => r.fbo_id).filter(Boolean);
+      const missingFboIds = mergedRoutes
+        .filter((r: any) => !r.fbo && r.fbo_id)
+        .map((r: any) => r.fbo_id);
+
+      if (missingFboIds.length > 0) {
+        const { data: extraFbos } = await supabase
+          .from("fbos")
+          .select("*")
+          .in("id", missingFboIds);
+
+        if (extraFbos && extraFbos.length > 0) {
+          const fboMap = new Map(extraFbos.map((f: any) => [f.id, f]));
+          mergedRoutes = mergedRoutes.map((r: any) => ({
+            ...r,
+            fbo: r.fbo || fboMap.get(r.fbo_id) || null,
+          }));
         }
       }
 
-      const fboIds = (routesData ?? []).map((r: any) => r.fbo_id);
+      // Filter out any stop that completely lacks FBO entity reference
+      mergedRoutes = mergedRoutes.filter((r: any) => Boolean(r.fbo));
 
-      // Start window strictly at start of TODAY (00:00:00 local time) to prevent yesterday's pickups from bleeding into today's assigned route stops
+      const fboIds = mergedRoutes.map((r: any) => r.fbo_id);
+
+      // Start window strictly at start of TODAY (00:00:00 local time)
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
       const startOfTodayISO = startOfToday.toISOString();
@@ -258,7 +305,7 @@ export default function PickerDashboard() {
         }
       });
 
-      const enrichedRoutes: RouteWithDetails[] = (routesData ?? []).map((r: any) => ({
+      const enrichedRoutes: RouteWithDetails[] = mergedRoutes.map((r: any) => ({
         ...r,
         pickup: pickupsByFBO[r.fbo_id],
       }));
@@ -712,7 +759,7 @@ export default function PickerDashboard() {
                   ) : (
                     pendingStops.map((route, idx) => {
                       const isExpanded = expandedFboId === route.fbo_id;
-                      const destination = route.fbo.latitude && route.fbo.longitude
+                      const destination = route.fbo?.latitude && route.fbo?.longitude
                         ? `${route.fbo.latitude},${route.fbo.longitude}`
                         : null;
 
@@ -732,10 +779,10 @@ export default function PickerDashboard() {
                               </div>
                               <div className="min-w-0">
                                 <h3 className="font-black text-emerald-950 text-sm truncate">
-                                  {route.fbo.business_name}
+                                  {route.fbo?.business_name || "FBO Outlet"}
                                 </h3>
                                 <p className="text-xs text-emerald-800/80 truncate mt-0.5 font-semibold">
-                                  {route.fbo.address || "No address defined"}
+                                  {route.fbo?.address || "No address defined"}
                                 </p>
                               </div>
                             </div>
@@ -746,7 +793,7 @@ export default function PickerDashboard() {
 
                           {isExpanded && (
                             <div className="px-4 pb-4 pt-2 border-t border-emerald-950/15 bg-emerald-50/30 space-y-4 animate-fade-in">
-                              <FBODetailInfo fbo={route.fbo} />
+                              {route.fbo && <FBODetailInfo fbo={route.fbo} />}
 
                               <div className="flex flex-wrap sm:flex-nowrap gap-2">
                                 {destination ? (
@@ -825,7 +872,7 @@ export default function PickerDashboard() {
                               </div>
                               <div className="min-w-0">
                                 <h3 className="font-black text-emerald-950 text-sm truncate line-through">
-                                  {route.fbo.business_name}
+                                  {route.fbo?.business_name || "FBO Outlet"}
                                 </h3>
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-950 text-[10px] font-black border border-emerald-950 shadow-[1px_1px_0px_#064e3b]">
@@ -841,7 +888,7 @@ export default function PickerDashboard() {
 
                           {isExpanded && (
                             <div className="px-4 pb-4 pt-2 border-t border-emerald-950/15 bg-emerald-50/30 space-y-4 animate-fade-in">
-                              <FBODetailInfo fbo={route.fbo} />
+                              {route.fbo && <FBODetailInfo fbo={route.fbo} />}
 
                               <div className="p-3.5 bg-white rounded-2xl border border-emerald-950/20 space-y-2.5 shadow-xs">
                                 <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider border-b border-emerald-950/10 pb-1.5 flex items-center gap-1.5">
