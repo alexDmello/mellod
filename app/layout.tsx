@@ -15,13 +15,15 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon.png", type: "image/png" },
-      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", sizes: "64x64", type: "image/png" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png" },
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
     shortcut: "/favicon.ico",
   },
@@ -76,12 +78,43 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-gray-50 font-sans">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#022c22" />
         <meta name="background-color" content="#f9fafb" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Mellod Biofuels",
+              "url": "https://mellod.in",
+              "logo": "https://mellod.in/logo.png",
+              "image": "https://mellod.in/og-image.png",
+              "description": "Authorized Used Cooking Oil (UCO) aggregator operating in partnership with FSSAI RUCO-registered NFP processing units.",
+              "sameAs": [
+                "https://mellod.in"
+              ]
+            })
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "Mellod Biofuels",
+              "url": "https://mellod.in"
+            })
+          }}
+        />
       </head>
       <body className="min-h-screen bg-gray-50 antialiased selection:bg-emerald-600 selection:text-white">
         <DisableContextMenu />

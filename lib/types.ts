@@ -36,7 +36,7 @@ export interface RouteSchedule {
 }
 
 export type PickupStatus = "pending" | "completed" | "disputed";
-export type PickupRequestStatus = "pending" | "scheduled" | "assigned" | "completed" | "cancelled";
+export type PickupRequestStatus = "pending" | "scheduled" | "assigned" | "in_transit" | "completed" | "cancelled";
 export type PaymentMethodType = "bank" | "upi" | "cash";
 
 export const ADMIN_SECTIONS = [

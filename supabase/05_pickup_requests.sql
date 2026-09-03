@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.pickup_requests (
   preferred_date DATE NOT NULL,
   preferred_time_slot TEXT DEFAULT 'Anytime',
   notes TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'scheduled', 'assigned', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'scheduled', 'assigned', 'in_transit', 'completed', 'cancelled')),
   assigned_picker_id UUID REFERENCES public.pickers(id) ON DELETE SET NULL,
   admin_notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

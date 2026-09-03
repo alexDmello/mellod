@@ -47,6 +47,25 @@ export default function AdminPickupRequestsPage() {
 
   useEffect(() => {
     fetchData();
+
+    const channel = supabase
+      .channel("admin_pickup_requests_channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pickup_requests",
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function fetchData() {
@@ -93,7 +112,7 @@ export default function AdminPickupRequestsPage() {
 
   // KPI calculations
   const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const scheduledCount = requests.filter((r) => r.status === "scheduled" || r.status === "assigned").length;
+  const scheduledCount = requests.filter((r) => r.status === "scheduled" || r.status === "assigned" || r.status === "in_transit").length;
   const completedCount = requests.filter((r) => r.status === "completed").length;
   const totalVolumeRequested = requests
     .filter((r) => r.status !== "cancelled")
@@ -101,7 +120,7 @@ export default function AdminPickupRequestsPage() {
 
   // Update Status / Assign Picker
   async function handleUpdateRequestStatus(
-    newStatus: "scheduled" | "assigned" | "completed" | "cancelled"
+    newStatus: "scheduled" | "assigned" | "in_transit" | "completed" | "cancelled"
   ) {
     if (!selectedRequest) return;
 
@@ -276,6 +295,8 @@ export default function AdminPickupRequestsPage() {
                         ? "bg-amber-50 text-amber-800 border-amber-200"
                         : req.status === "scheduled" || req.status === "assigned"
                         ? "bg-blue-50 text-blue-800 border-blue-200"
+                        : req.status === "in_transit"
+                        ? "bg-teal-50 text-teal-800 border-teal-200 font-black animate-pulse"
                         : req.status === "completed"
                         ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                         : "bg-rose-50 text-rose-800 border-rose-200"
@@ -283,6 +304,7 @@ export default function AdminPickupRequestsPage() {
                   >
                     {req.status === "pending" && "Pending ⏳"}
                     {(req.status === "scheduled" || req.status === "assigned") && "Assigned 🚚"}
+                    {req.status === "in_transit" && "On The Way 📍"}
                     {req.status === "completed" && "Completed ✓"}
                     {req.status === "cancelled" && "Cancelled ✖"}
                   </span>
@@ -450,20 +472,30 @@ export default function AdminPickupRequestsPage() {
                     type="button"
                     onClick={() => handleUpdateRequestStatus("assigned")}
                     disabled={updating}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2.5 px-4 rounded-xl shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs py-2.5 px-3.5 rounded-xl shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserCheck className="w-3.5 h-3.5" />}
-                    Assign &amp; Schedule
+                    Assign
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateRequestStatus("in_transit")}
+                    disabled={updating}
+                    className="bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs py-2.5 px-3.5 rounded-xl shadow-md shadow-teal-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Truck className="w-3.5 h-3.5" />}
+                    On The Way
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleUpdateRequestStatus("completed")}
                     disabled={updating}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2.5 px-4 rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs py-2.5 px-3.5 rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     {updating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    Mark Completed
+                    Completed
                   </button>
                 </div>
               </div>

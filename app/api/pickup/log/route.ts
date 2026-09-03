@@ -95,6 +95,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
+    // Auto-update any matching active pickup request for this FBO to completed
+    try {
+      await adminSupabase
+        .from("pickup_requests")
+        .update({ status: "completed", updated_at: new Date().toISOString() })
+        .eq("fbo_id", fboId)
+        .in("status", ["pending", "scheduled", "assigned", "in_transit"]);
+    } catch (reqUpdateErr) {
+      console.warn("Could not update pickup_requests status to completed:", reqUpdateErr);
+    }
+
     return NextResponse.json({ success: true, pickup });
   } catch (err: any) {
     console.error("API error in /api/pickup/log:", err);

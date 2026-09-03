@@ -289,6 +289,21 @@ export default function PickerDashboard() {
     router.refresh();
   }
 
+  async function handleStartNavigation(fboId: string, destination: string | null) {
+    if (destination) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}`, "_blank");
+    }
+    try {
+      await supabase
+        .from("pickup_requests")
+        .update({ status: "in_transit", updated_at: new Date().toISOString() })
+        .eq("fbo_id", fboId)
+        .in("status", ["pending", "assigned", "scheduled"]);
+    } catch (e) {
+      console.warn("Could not set pickup request status to in_transit:", e);
+    }
+  }
+
   async function handleReportClosedSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reportingClosedRoute) return;
@@ -735,15 +750,14 @@ export default function PickerDashboard() {
 
                               <div className="flex flex-wrap sm:flex-nowrap gap-2">
                                 {destination ? (
-                                  <a
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${destination}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1 btn-paper-secondary py-2.5 text-xs flex items-center justify-center gap-1.5"
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartNavigation(route.fbo_id, destination)}
+                                    className="flex-1 btn-paper-secondary py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                                   >
                                     <Navigation className="w-3.5 h-3.5 text-emerald-900" />
                                     Navigate 📍
-                                  </a>
+                                  </button>
                                 ) : (
                                   <button
                                     disabled
