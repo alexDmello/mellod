@@ -176,29 +176,54 @@ function AnalyticsTrendChart({
           )}
 
           {/* Data Points */}
-          {coords.map((pt, idx) => (
-            <g
-              key={idx}
-              onMouseEnter={() => setHoveredPoint({ index: idx, date: pt.date, value: pt.value })}
-              onMouseLeave={() => setHoveredPoint(null)}
-              className="group cursor-pointer"
-            >
-              <circle
-                cx={pt.x}
-                cy={pt.y}
-                r="5"
-                fill="#059669"
-                stroke="#ffffff"
-                strokeWidth="2.5"
-                className="transition-transform group-hover:scale-150"
-              />
-            </g>
-          ))}
+          {coords.map((pt, idx) => {
+            const isHovered = hoveredPoint?.index === idx;
+            return (
+              <g
+                key={idx}
+                onMouseEnter={() => setHoveredPoint({ index: idx, date: pt.date, value: pt.value })}
+                onMouseLeave={() => setHoveredPoint(null)}
+                className="cursor-pointer"
+              >
+                {/* Larger invisible hit area to prevent mouseLeave trigger loops */}
+                <circle cx={pt.x} cy={pt.y} r="16" fill="transparent" />
+
+                {/* Subtle outer halo on hover */}
+                {isHovered && (
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="12"
+                    fill="#059669"
+                    fillOpacity="0.25"
+                    className="pointer-events-none"
+                  />
+                )}
+
+                {/* Visible Data Point Circle */}
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={isHovered ? "7" : "5"}
+                  fill={isHovered ? "#047857" : "#059669"}
+                  stroke="#ffffff"
+                  strokeWidth={isHovered ? "3" : "2.5"}
+                  className="transition-all duration-150 ease-out"
+                />
+              </g>
+            );
+          })}
         </svg>
 
         {/* Hover Tooltip */}
-        {hoveredPoint && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-xl z-30 pointer-events-none border border-slate-800 flex items-center gap-2">
+        {hoveredPoint && coords[hoveredPoint.index] && (
+          <div
+            className="absolute bg-slate-900 text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-xl z-30 pointer-events-none border border-slate-800 flex items-center gap-2 transition-all duration-150 -translate-x-1/2"
+            style={{
+              left: `${(coords[hoveredPoint.index].x / width) * 100}%`,
+              top: `${Math.max(8, coords[hoveredPoint.index].y - 38)}px`,
+            }}
+          >
             <span className="text-emerald-400">{hoveredPoint.date}:</span>
             <span>
               {selectedMetric === "volume"

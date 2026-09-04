@@ -215,30 +215,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
     <aside
       className={cn(
-        "bg-slate-950 text-slate-300 flex flex-col border-r border-slate-800/80 shadow-xl",
+        "bg-white/95 backdrop-blur-md text-slate-800 flex flex-col border-r border-emerald-950/10 shadow-[4px_0_20px_rgba(6,78,59,0.05)]",
         mobile
           ? "fixed inset-y-0 left-0 z-50 w-64 overflow-y-auto"
           : "hidden lg:flex w-64 h-screen sticky top-0 overflow-y-auto flex-col flex-shrink-0"
       )}
     >
       {/* Brand Header */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800/80">
-        <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-          <img src="/icons/logo.png" alt="Mellod Logo" className="w-8 h-8 object-contain" />
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-emerald-950/10 bg-emerald-50/40">
+        <div className="w-8 h-8 rounded-xl bg-white border border-emerald-600/30 p-1 flex items-center justify-center shadow-xs flex-shrink-0">
+          <img src="/icons/logo.png" alt="Mellod Logo" className="w-full h-full object-contain" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-white font-bold tracking-tight text-base leading-none truncate">
+          <div className="text-emerald-950 font-extrabold tracking-tight text-base leading-none truncate">
             Mellod Biofuels
           </div>
-          <div className="text-slate-400 text-[11px] mt-1 font-medium flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+          <div className="text-emerald-700/90 text-[11px] mt-1 font-semibold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping shadow-xs shadow-emerald-500/50" />
             <span>{userRole === "admin" ? "Super-Admin Panel" : `${userRoleName || "Staff"} Portal`}</span>
           </div>
         </div>
         {mobile && (
           <button
             onClick={() => setSidebarOpen(false)}
-            className="ml-auto text-slate-400 hover:text-white p-1"
+            className="ml-auto text-slate-400 hover:text-slate-700 p-1 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -246,16 +246,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       {/* User Info Header at Top */}
-      <div className="px-5 py-3 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
-        <span className="font-semibold truncate max-w-[140px] text-slate-200">{userName}</span>
-        <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase px-2 py-0.5 rounded-full font-bold truncate max-w-[90px]">
+      <div className="px-5 py-3 bg-emerald-100/30 border-b border-emerald-950/10 flex items-center justify-between text-xs text-emerald-950">
+        <span className="font-bold truncate max-w-[140px] text-emerald-950 tracking-tight">{userName}</span>
+        <span className="bg-emerald-600 text-white border border-emerald-700 text-[9px] uppercase px-2 py-0.5 rounded-full font-black truncate max-w-[90px] shadow-2xs">
           {userRoleName || (userRole === "admin" ? "Super Admin" : "Staff")}
         </span>
       </div>
 
       {/* Nav Items */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="px-3 pb-2 text-[10px] font-black uppercase tracking-wider text-emerald-800/70">
           Navigation
         </div>
 
@@ -267,30 +267,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               href={href}
               onClick={() => setSidebarOpen(false)}
               className={cn(
-                "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200",
+                "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 border-2",
                 active
-                  ? "bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 shadow-sm"
-                  : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+                  ? "bg-emerald-50/40 text-emerald-950 font-extrabold border-emerald-600 shadow-xs"
+                  : "border-transparent text-slate-600 hover:bg-emerald-50/50 hover:text-emerald-950 font-semibold"
               )}
             >
               {/* Simple active pill indicator on left edge */}
               {active && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-400 rounded-r-full shadow-md shadow-emerald-400/50" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-emerald-600 rounded-r-full shadow-xs" />
               )}
               <Icon
                 className={cn(
                   "w-4 h-4 flex-shrink-0 transition-colors duration-200",
-                  active ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-200"
+                  active ? "text-emerald-600 font-bold" : "text-slate-400 group-hover:text-emerald-700"
                 )}
               />
               <span className="truncate">{label}</span>
               {href === "/admin/pickers" && pendingReviewCount > 0 && (
-                <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-extrabold shadow-sm shadow-amber-500/40 animate-pulse">
+                <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-extrabold shadow-xs animate-pulse">
                   {pendingReviewCount > 99 ? "99+" : pendingReviewCount}
                 </span>
               )}
               {href === "/admin/enquiries" && pendingEnquiryCount > 0 && (
-                <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-extrabold shadow-sm shadow-emerald-500/40 animate-pulse">
+                <span className="ml-auto flex-shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-extrabold shadow-xs animate-pulse">
                   {pendingEnquiryCount > 99 ? "99+" : pendingEnquiryCount}
                 </span>
               )}
@@ -300,10 +300,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </nav>
 
       {/* Logout Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/50">
+      <div className="p-3 border-t border-emerald-950/10 bg-slate-50/80">
         <button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 border border-transparent transition-all"
+          className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-transparent transition-all duration-200"
         >
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
@@ -334,19 +334,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-teal-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
         {/* Mobile top bar */}
-        <header className="lg:hidden bg-slate-950 border-b border-slate-800 px-4 py-3 flex items-center gap-3 sticky top-0 z-30 shadow-md">
+        <header className="lg:hidden bg-white/95 backdrop-blur-md border-b border-emerald-950/10 px-4 py-3 flex items-center gap-3 sticky top-0 z-30 shadow-xs">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-slate-300 hover:text-white p-1"
+            className="text-emerald-950 hover:text-emerald-700 p-1 transition-colors"
             aria-label="Open menu"
           >
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
             <img src="/icons/logo.png" alt="Mellod Logo" className="w-6 h-6 object-contain" />
-            <span className="text-white font-bold text-sm">Mellod Biofuels</span>
+            <span className="text-emerald-950 font-extrabold text-sm">Mellod Biofuels</span>
           </div>
-          <span className="ml-auto bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] uppercase px-2 py-0.5 rounded-full font-bold truncate max-w-[90px]">
+          <span className="ml-auto bg-emerald-600 text-white text-[9px] uppercase px-2 py-0.5 rounded-full font-extrabold truncate max-w-[90px] shadow-2xs">
             {userRoleName || (userRole === "admin" ? "Super Admin" : "Staff")}
           </span>
         </header>
@@ -354,23 +354,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
           {loadingUser ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-              <div className="w-full max-w-sm p-8 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-2xl flex flex-col items-center text-center space-y-5 animate-fade-in relative overflow-hidden">
+              <div className="w-full max-w-sm p-8 rounded-3xl bg-white text-slate-900 border border-emerald-950/10 shadow-xl flex flex-col items-center text-center space-y-5 animate-fade-in relative overflow-hidden">
                 <div className="absolute w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none -top-10 -right-10" />
                 
                 <div className="relative flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-2xl border-2 border-emerald-500/20 border-t-emerald-400 border-r-teal-400 animate-spin" />
-                  <div className="absolute w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2">
+                  <div className="w-16 h-16 rounded-2xl border-2 border-emerald-500/20 border-t-emerald-600 border-r-teal-500 animate-spin" />
+                  <div className="absolute w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center p-2">
                     <img src="/icons/logo.png" alt="Mellod Logo" className="w-full h-full object-contain" />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-white font-extrabold text-base tracking-tight">Verifying Credentials</h3>
-                  <p className="text-xs text-slate-400 font-medium">Checking sub-admin permission access &amp; session token...</p>
+                  <h3 className="text-emerald-950 font-extrabold text-base tracking-tight">Verifying Credentials</h3>
+                  <p className="text-xs text-slate-500 font-medium">Checking sub-admin permission access &amp; session token...</p>
                 </div>
 
-                <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full animate-pulse w-2/3" />
+                <div className="w-full h-1 bg-emerald-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-600 rounded-full animate-pulse w-2/3" />
                 </div>
               </div>
             </div>
